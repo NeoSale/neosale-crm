@@ -19,7 +19,7 @@ export interface ApiResponse<T> {
   success: boolean;
 }
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 class LeadsApiService {
   private async request<T>(

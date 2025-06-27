@@ -81,7 +81,7 @@ export class ToastInterceptor {
     messages: {
       loading: string;
       success: string | ((data: T) => string);
-      error: string | ((error: any) => string);
+      error: string | ((error: Error | unknown) => string);
     },
     config?: ToastConfig
   ) {
