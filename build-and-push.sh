@@ -28,7 +28,7 @@ NEW_VERSION=$(increment_version $CURRENT_VERSION)
 echo -e "${GREEN}🔢 Nova versão: $NEW_VERSION${NC}"
 
 # Atualizar package.json com nova versão
-node -e "const fs = require('fs'); const pkg = require('./package.json'); pkg.version = '$NEW_VERSION'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));"
+node -e "const fs = require('fs'); const pkg = require('./package.json'); pkg.version = '$NEW_VERSION'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');"
 echo -e "${GREEN}✅ package.json atualizado com versão $NEW_VERSION${NC}"
 
 VERSION=$NEW_VERSION
