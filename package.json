@@ -1,6 +1,6 @@
 {
   "name": "neosale-crm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -8,8 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "deploy": "bash build-and-push.sh",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
     "docker:build": "docker build -t neosale-crm .",
-    "docker:run": "docker run -p 3000:3000 neosale-crm"
+    "docker:run": "docker run -p 3000:3000 neosale-crm",
+    "docker:pull": "docker pull brunobspaiva/neosale-crm:latest"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

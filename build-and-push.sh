@@ -5,7 +5,33 @@
 # Configurações
 IMAGE_NAME="neosale-crm"
 DOCKER_USERNAME="brunobspaiva"  # Substitua pelo seu usuário do Docker Hub
-VERSION="latest"
+
+# Função para incrementar versão
+increment_version() {
+    local version=$1
+    local major=$(echo $version | cut -d. -f1)
+    local minor=$(echo $version | cut -d. -f2)
+    local patch=$(echo $version | cut -d. -f3)
+    
+    # Incrementa o patch version
+    patch=$((patch + 1))
+    
+    echo "$major.$minor.$patch"
+}
+
+# Ler versão atual do package.json
+CURRENT_VERSION=$(node -p "require('./package.json').version")
+echo -e "${BLUE}📋 Versão atual: $CURRENT_VERSION${NC}"
+
+# Incrementar versão
+NEW_VERSION=$(increment_version $CURRENT_VERSION)
+echo -e "${GREEN}🔢 Nova versão: $NEW_VERSION${NC}"
+
+# Atualizar package.json com nova versão
+node -e "const fs = require('fs'); const pkg = require('./package.json'); pkg.version = '$NEW_VERSION'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2));"
+echo -e "${GREEN}✅ package.json atualizado com versão $NEW_VERSION${NC}"
+
+VERSION=$NEW_VERSION
 
 # Cores para output
 RED='\033[0;31m'
@@ -149,23 +175,46 @@ else
 fi
 
 # Tag para o Docker Hub
-echo -e "${YELLOW}🏷️  Criando tag para o Docker Hub...${NC}"
+echo -e "${YELLOW}🏷️  Criando tags para o Docker Hub...${NC}"
 docker tag $IMAGE_NAME:$VERSION $DOCKER_USERNAME/$IMAGE_NAME:$VERSION
+docker tag $IMAGE_NAME:$VERSION $DOCKER_USERNAME/$IMAGE_NAME:latest
 
 # Login no Docker Hub (opcional - descomente se necessário)
 # echo -e "${YELLOW}🔐 Fazendo login no Docker Hub...${NC}"
 # docker login
 
 # Push para o Docker Hub
-echo -e "${YELLOW}📤 Enviando imagem para o Docker Hub...${NC}"
+echo -e "${YELLOW}📤 Enviando imagem versionada para o Docker Hub...${NC}"
 docker push $DOCKER_USERNAME/$IMAGE_NAME:$VERSION
 
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}🎉 Imagem enviada com sucesso para o Docker Hub!${NC}"
-    echo -e "${GREEN}📋 Para usar a imagem: docker pull $DOCKER_USERNAME/$IMAGE_NAME:$VERSION${NC}"
-    echo -e "${GREEN}🚀 Para executar: docker run -p 3000:3000 $DOCKER_USERNAME/$IMAGE_NAME:$VERSION${NC}"
+    echo -e "${GREEN}✅ Imagem v$VERSION enviada com sucesso!${NC}"
+    
+    echo -e "${YELLOW}📤 Enviando imagem latest para o Docker Hub...${NC}"
+    docker push $DOCKER_USERNAME/$IMAGE_NAME:latest
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}🎉 Todas as imagens enviadas com sucesso para o Docker Hub!${NC}"
+        echo -e "${GREEN}📋 Versão específica: docker pull $DOCKER_USERNAME/$IMAGE_NAME:$VERSION${NC}"
+        echo -e "${GREEN}📋 Versão latest: docker pull $DOCKER_USERNAME/$IMAGE_NAME:latest${NC}"
+        echo -e "${GREEN}🚀 Para executar: docker run -p 3000:3000 $DOCKER_USERNAME/$IMAGE_NAME:$VERSION${NC}"
+        
+        # Criar tag Git para a versão
+        echo -e "${YELLOW}🏷️  Criando tag Git v$VERSION...${NC}"
+        git tag -a "v$VERSION" -m "Release version $VERSION"
+        git push origin "v$VERSION"
+        
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅ Tag Git v$VERSION criada e enviada!${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Aviso: Erro ao criar/enviar tag Git${NC}"
+        fi
+    else
+        echo -e "${RED}❌ Erro ao enviar imagem latest para o Docker Hub${NC}"
+        exit 1
+    fi
 else
-    echo -e "${RED}❌ Erro ao enviar imagem para o Docker Hub${NC}"
+    echo -e "${RED}❌ Erro ao enviar imagem versionada para o Docker Hub${NC}"
     exit 1
 fi
 
