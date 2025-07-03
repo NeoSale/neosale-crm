@@ -25,7 +25,7 @@ const LeadsManager: React.FC = () => {
   const [showMappingModal, setShowMappingModal] = useState<boolean>(false);
   const [fileData, setFileData] = useState<any[]>([]);
   const [fileHeaders, setFileHeaders] = useState<string[]>([]);
-  const [fieldMapping, setFieldMapping] = useState<{[key: string]: string}>({});
+  const [fieldMapping, setFieldMapping] = useState<{ [key: string]: string }>({});
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
@@ -42,7 +42,7 @@ const LeadsManager: React.FC = () => {
   React.useEffect(() => {
     // Verificar se estamos no lado do cliente
     if (typeof window === 'undefined') return;
-    
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (showEditModal) {
@@ -120,37 +120,35 @@ const LeadsManager: React.FC = () => {
   };
 
   const autoMapFields = (headers: string[]) => {
-    const mapping: {[key: string]: string} = {};
-    const leadFields = ['nome', 'email', 'telefone', 'empresa', 'cargo', 'status'];
-    
+    const mapping: { [key: string]: string } = {};
+    const leadFields = ['nome', 'email', 'telefone', 'empresa', 'cargo', 'status', 'contador', 'escritorio', 'responsavel', 'cnpj', 'observacao', 'segmento', 'erp_atual'];
+
     headers.forEach(header => {
       const normalizedHeader = header.toLowerCase().trim();
-      
+
       // Mapeamento automático baseado em palavras-chave
       if (normalizedHeader.includes('nome') || normalizedHeader.includes('name')) {
         mapping['nome'] = header;
-      } else if (normalizedHeader.includes('email') || normalizedHeader.includes('e-mail')) {
-        mapping['email'] = header;
       } else if (normalizedHeader.includes('telefone') || normalizedHeader.includes('phone') || normalizedHeader.includes('celular')) {
         mapping['telefone'] = header;
-      } else if (normalizedHeader.includes('empresa') || normalizedHeader.includes('company')) {
-        mapping['empresa'] = header;
-      } else if (normalizedHeader.includes('cargo') || normalizedHeader.includes('position') || normalizedHeader.includes('função')) {
-        mapping['cargo'] = header;
+      } else if (normalizedHeader.includes('email') || normalizedHeader.includes('e-mail')) {
+        mapping['email'] = header;
+      } else if (normalizedHeader.includes('cnpj') || normalizedHeader.includes('tax_id')) {
+        mapping['cnpj'] = header;
       } else if (normalizedHeader.includes('status') || normalizedHeader.includes('situação')) {
         mapping['status'] = header;
       }
     });
-    
+
     return mapping;
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     const fileExtension = file.name.toLowerCase().split('.').pop();
-    
+
     try {
       if (fileExtension === 'csv') {
         // Processar arquivo CSV
@@ -159,33 +157,33 @@ const LeadsManager: React.FC = () => {
           try {
             const csvText = e.target?.result as string;
             const lines = csvText.split('\n').filter(line => line.trim());
-            
+
             if (lines.length < 2) {
               toast.error('Arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados.');
               return;
             }
-            
+
             const headers = lines[0].split(';').map(h => h.trim().replace(/"/g, ''));
             const jsonData = [];
-            
+
             for (let i = 1; i < lines.length; i++) {
               const values = lines[i].split(';').map(v => v.trim().replace(/"/g, ''));
               const row: any = {};
               headers.forEach((header, index) => {
                 row[header] = values[index] || '';
               });
-              
+
               // Ignorar linhas vazias - verifica se pelo menos um campo tem valor
               const hasValidData = Object.values(row).some(value => {
                 if (typeof value === 'string') return value.trim() !== '';
                 return value !== null && value !== undefined;
               });
-              
+
               if (hasValidData) {
                 jsonData.push(row);
               }
             }
-            
+
             // Mapeamento automático e abertura do modal
             const autoMapping = autoMapFields(headers);
             setFileHeaders(headers);
@@ -197,12 +195,12 @@ const LeadsManager: React.FC = () => {
             toast.error('Erro ao processar arquivo CSV. Verifique se o formato está correto.');
           }
         };
-        
+
         reader.readAsText(file);
       } else if (fileExtension === 'xlsx' || fileExtension === 'xls' || fileExtension === 'xlsm') {
         // Processar arquivo Excel
         const XLSX = await import('xlsx');
-        
+
         const reader = new FileReader();
         reader.onload = async (e) => {
           try {
@@ -211,33 +209,33 @@ const LeadsManager: React.FC = () => {
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-            
+
             if (jsonData.length < 2) {
               toast.error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados.');
               return;
             }
-            
+
             const headers = (jsonData[0] as string[]).map(h => String(h || '').trim());
             const dataRows = [];
-            
+
             for (let i = 1; i < jsonData.length; i++) {
               const row: any = {};
               const values = jsonData[i] as any[];
               headers.forEach((header, index) => {
                 row[header] = String(values[index] || '').trim();
               });
-              
+
               // Ignorar linhas vazias - verifica se pelo menos um campo tem valor
               const hasValidData = Object.values(row).some(value => {
                 if (typeof value === 'string') return value.trim() !== '';
                 return value !== null && value !== undefined;
               });
-              
+
               if (hasValidData) {
                 dataRows.push(row);
               }
             }
-            
+
             // Mapeamento automático e abertura do modal
             const autoMapping = autoMapFields(headers);
             setFileHeaders(headers);
@@ -249,7 +247,7 @@ const LeadsManager: React.FC = () => {
             toast.error('Erro ao processar arquivo Excel. Verifique se o formato está correto.');
           }
         };
-        
+
         reader.readAsArrayBuffer(file);
       } else {
         toast.error('Formato de arquivo não suportado. Use apenas .xlsx, .xls ou .csv');
@@ -258,7 +256,7 @@ const LeadsManager: React.FC = () => {
       console.error('Erro ao processar arquivo:', error);
       toast.error('Erro ao processar arquivo.');
     }
-    
+
     // Limpar o input para permitir selecionar o mesmo arquivo novamente
     event.target.value = '';
   };
@@ -271,7 +269,7 @@ const LeadsManager: React.FC = () => {
   const handleUpdateLead = async (updatedData: Partial<Lead>) => {
     try {
       let success;
-      
+
       if (isCreatingLead) {
         // Criar novo lead
         success = await addLead(updatedData as Lead);
@@ -280,7 +278,7 @@ const LeadsManager: React.FC = () => {
         if (!editingLead?.id) return;
         success = await updateLead(editingLead.id, updatedData);
       }
-      
+
       if (success) {
         setShowEditModal(false);
         setEditingLead(null);
@@ -342,14 +340,14 @@ const LeadsManager: React.FC = () => {
     try {
       const deletePromises = Array.from(selectedLeads).map(leadId => deleteLead(leadId));
       const results = await Promise.all(deletePromises);
-      
+
       const successCount = results.filter(result => result).length;
       const failCount = results.length - successCount;
-      
+
       if (successCount > 0) {
         await refreshLeads();
         setSelectedLeads(new Set());
-        
+
         // Mostrar mensagem de sucesso em verde apenas se houve sucessos
         if (failCount > 0) {
           toast.error(`${successCount} leads excluídos com sucesso. ${failCount} falharam.`);
@@ -367,7 +365,7 @@ const LeadsManager: React.FC = () => {
           });
         }
       }
-      
+
       setShowBulkDeleteModal(false);
     } catch (error) {
       console.error('Erro ao excluir leads:', error);
@@ -387,7 +385,14 @@ const LeadsManager: React.FC = () => {
       telefone: '',
       empresa: '',
       cargo: '',
-      status_agendamento: false
+      status_agendamento: false,
+      contador: '',
+      escritorio: '',
+      responsavel: '',
+      cnpj: '',
+      observacao: '',
+      segmento: '',
+      erp_atual: ''
     };
     setEditingLead(newLead);
     setIsCreatingLead(true);
@@ -590,8 +595,7 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {/* {['nome', 'email', 'telefone', 'origem', 'status_agendamento', 'status', 'status_negociacao', 'etapa_funil', 'empresa', 'cargo', 'created_at'].map((header, index) => ( */}
-                    {['nome', 'email', 'telefone', 'empresa', 'cargo', 'origem', 'status_agendamento', 'created_at'].map((header, index) => (
+                    {['nome', 'telefone', 'email', 'cnpj', 'origem', 'status_agendamento', 'created_at'].map((header, index) => (
                       <th
                         key={index}
                         className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -600,7 +604,9 @@ const LeadsManager: React.FC = () => {
                           header === 'status_agendamento' ? 'Agendado' :
                             header === 'status_negociacao' ? 'Negociação' :
                               header === 'etapa_funil' ? 'Etapa' :
-                                header.charAt(0).toUpperCase() + header.slice(1)}
+                                header === 'erp_atual' ? 'ERP Atual' :
+                                  header === 'observacao' ? 'Observação' :
+                                    header.charAt(0).toUpperCase() + header.slice(1)}
                       </th>
                     ))}
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -619,8 +625,7 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {/* {['nome', 'email', 'telefone', 'origem', 'status_agendamento', 'status', 'status_negociacao', 'etapa_funil', 'empresa', 'cargo', 'created_at'].map((header, colIndex) => ( */}
-                      {['nome', 'email', 'telefone', 'empresa', 'cargo', 'origem', 'status_agendamento', 'created_at'].map((header, colIndex) => (
+                      {['nome', 'telefone', 'email', 'cnpj', 'origem', 'status_agendamento', 'created_at'].map((header, colIndex) => (
                         <td
                           key={colIndex}
                           className="px-3 py-2 whitespace-nowrap text-sm text-gray-700"
@@ -727,8 +732,8 @@ const LeadsManager: React.FC = () => {
                           key={pageNumber}
                           onClick={() => handlePageChange(pageNumber)}
                           className={`px-3 py-1 text-sm border rounded-md ${currentPage === pageNumber
-                              ? 'bg-primary text-white border-primary'
-                              : 'border-gray-300 hover:bg-gray-50'
+                            ? 'bg-primary text-white border-primary'
+                            : 'border-gray-300 hover:bg-gray-50'
                             }`}
                         >
                           {pageNumber}
@@ -866,22 +871,22 @@ const LeadsManager: React.FC = () => {
       )}
 
       {/* Modal de Mapeamento de Campos */}
-        {showMappingModal && (
-          <div 
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            onClick={handleCancelMapping}
+      {showMappingModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={handleCancelMapping}
+        >
+          <div
+            className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div 
-              className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Mapear Campos da Planilha</h2>
               <div className="text-sm text-gray-600">
                 {fileData.length} registros encontrados
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Formulário de Mapeamento */}
               <div className="lg:col-span-2">
@@ -895,7 +900,7 @@ const LeadsManager: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                
+
                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Mapeamento de Campos</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-500">
                   {/* Campo Nome */}
@@ -920,7 +925,7 @@ const LeadsManager: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Campo Email */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
@@ -943,7 +948,7 @@ const LeadsManager: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Campo Telefone */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
@@ -966,7 +971,7 @@ const LeadsManager: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Campo Empresa */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
@@ -989,7 +994,7 @@ const LeadsManager: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Campo Cargo */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
@@ -1012,9 +1017,170 @@ const LeadsManager: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
+                  {/* Campo Contador */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      Contador
+                    </label>
+                    <select
+                      value={fieldMapping['contador'] || ''}
+                      onChange={(e) => handleFieldMappingChange('contador', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione uma coluna</option>
+                      {fileHeaders.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {fieldMapping['contador'] && (
+                      <div className="mt-2 text-xs text-green-600">
+                        ✓ Mapeado para: {fieldMapping['contador']}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Campo Escritório */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      Escritório
+                    </label>
+                    <select
+                      value={fieldMapping['escritorio'] || ''}
+                      onChange={(e) => handleFieldMappingChange('escritorio', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione uma coluna</option>
+                      {fileHeaders.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {fieldMapping['escritorio'] && (
+                      <div className="mt-2 text-xs text-green-600">
+                        ✓ Mapeado para: {fieldMapping['escritorio']}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Campo Responsável */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      Responsável
+                    </label>
+                    <select
+                      value={fieldMapping['responsavel'] || ''}
+                      onChange={(e) => handleFieldMappingChange('responsavel', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione uma coluna</option>
+                      {fileHeaders.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {fieldMapping['responsavel'] && (
+                      <div className="mt-2 text-xs text-green-600">
+                        ✓ Mapeado para: {fieldMapping['responsavel']}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Campo CNPJ */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      CNPJ
+                    </label>
+                    <select
+                      value={fieldMapping['cnpj'] || ''}
+                      onChange={(e) => handleFieldMappingChange('cnpj', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione uma coluna</option>
+                      {fileHeaders.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {fieldMapping['cnpj'] && (
+                      <div className="mt-2 text-xs text-green-600">
+                        ✓ Mapeado para: {fieldMapping['cnpj']}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Campo Segmento */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      Segmento
+                    </label>
+                    <select
+                      value={fieldMapping['segmento'] || ''}
+                      onChange={(e) => handleFieldMappingChange('segmento', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione uma coluna</option>
+                      {fileHeaders.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {fieldMapping['segmento'] && (
+                      <div className="mt-2 text-xs text-green-600">
+                        ✓ Mapeado para: {fieldMapping['segmento']}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Campo ERP Atual */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      ERP Atual
+                    </label>
+                    <select
+                      value={fieldMapping['erp_atual'] || ''}
+                      onChange={(e) => handleFieldMappingChange('erp_atual', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione uma coluna</option>
+                      {fileHeaders.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {fieldMapping['erp_atual'] && (
+                      <div className="mt-2 text-xs text-green-600">
+                        ✓ Mapeado para: {fieldMapping['erp_atual']}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Campo Observação */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      Observação
+                    </label>
+                    <select
+                      value={fieldMapping['observacao'] || ''}
+                      onChange={(e) => handleFieldMappingChange('observacao', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione uma coluna</option>
+                      {fileHeaders.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {fieldMapping['observacao'] && (
+                      <div className="mt-2 text-xs text-green-600">
+                        ✓ Mapeado para: {fieldMapping['observacao']}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
-                
+
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center text-sm text-blue-800">
                     <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
@@ -1024,7 +1190,7 @@ const LeadsManager: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Preview dos Dados */}
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Preview dos Dados</h3>
@@ -1053,7 +1219,7 @@ const LeadsManager: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
               <div className="text-sm text-gray-600">
                 {Object.values(fieldMapping).filter(v => v).length} de {Object.keys(fieldMapping).length} campos mapeados
@@ -1095,13 +1261,13 @@ const LeadsManager: React.FC = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
               <p className="text-red-800 text-sm">
                 <strong>Atenção:</strong> Esta ação não pode ser desfeita. Os leads serão permanentemente removidos do sistema.
               </p>
             </div>
-            
+
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowBulkDeleteModal(false)}
@@ -1137,13 +1303,21 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
     telefone: lead.telefone || '',
     empresa: lead.empresa || '',
     cargo: lead.cargo || '',
-    agendado: lead.status_agendamento || ''
+    agendado: lead.status_agendamento || '',
+    contador: lead.contador || '',
+    escritorio: lead.escritorio || '',
+    responsavel: lead.responsavel || '',
+    cnpj: lead.cnpj || '',
+    observacao: lead.observacao || '',
+    segmento: lead.segmento || '',
+    erp_atual: lead.erp_atual || ''
   });
 
   const [errors, setErrors] = useState<{
     nome?: string;
     telefone?: string;
     email?: string;
+    cnpj?: string;
   }>({});
 
   console.log('lead.status_agendamento', lead.status_agendamento);
@@ -1161,20 +1335,20 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
     if (!phone.trim()) {
       return 'Telefone é obrigatório';
     }
-    
+
     // Remove todos os caracteres não numéricos
     const cleanPhone = phone.replace(/\D/g, '');
-    
+
     // Verifica se tem pelo menos 10 dígitos (DDD + número)
     if (cleanPhone.length < 10) {
       return 'Telefone deve ter pelo menos 10 dígitos';
     }
-    
+
     // Verifica se tem no máximo 11 dígitos (celular com 9)
     if (cleanPhone.length > 11) {
       return 'Telefone deve ter no máximo 11 dígitos';
     }
-    
+
     return null;
   };
 
@@ -1183,19 +1357,61 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
     if (!email.trim()) {
       return null; // Email não é obrigatório
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return 'Email deve ter um formato válido';
     }
-    
+
+    return null;
+  };
+
+  const validateCNPJ = (cnpj: string): string | null => {
+    if (!cnpj.trim()) {
+      return null; // CNPJ não é obrigatório
+    }
+
+    // Remove caracteres não numéricos
+    const cleanCNPJ = cnpj.replace(/\D/g, '');
+
+    // Verifica se tem 14 dígitos
+    if (cleanCNPJ.length !== 14) {
+      return 'CNPJ deve ter 14 dígitos';
+    }
+
+    // Verifica se não são todos os dígitos iguais
+    if (/^(\d)\1{13}$/.test(cleanCNPJ)) {
+      return 'CNPJ inválido';
+    }
+
+    // Validação dos dígitos verificadores
+    let soma = 0;
+    let peso = 2;
+    for (let i = 11; i >= 0; i--) {
+      soma += parseInt(cleanCNPJ.charAt(i)) * peso;
+      peso = peso === 9 ? 2 : peso + 1;
+    }
+    let digito1 = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+
+    soma = 0;
+    peso = 2;
+    for (let i = 12; i >= 0; i--) {
+      soma += parseInt(cleanCNPJ.charAt(i)) * peso;
+      peso = peso === 9 ? 2 : peso + 1;
+    }
+    let digito2 = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+
+    if (parseInt(cleanCNPJ.charAt(12)) !== digito1 || parseInt(cleanCNPJ.charAt(13)) !== digito2) {
+      return 'CNPJ inválido';
+    }
+
     return null;
   };
 
   React.useEffect(() => {
     // Verificar se estamos no lado do cliente
     if (typeof window === 'undefined') return;
-    
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onCancel();
@@ -1210,38 +1426,40 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validar campos
     const nameError = validateName(formData.nome || '');
     const phoneError = validatePhone(formData.telefone || '');
     const emailError = validateEmail(formData.email || '');
-    
-    const newErrors: { nome?: string; telefone?: string; email?: string } = {};
+    const cnpjError = validateCNPJ(formData.cnpj || '');
+
+    const newErrors: { nome?: string; telefone?: string; email?: string; cnpj?: string } = {};
     if (nameError) newErrors.nome = nameError;
     if (phoneError) newErrors.telefone = phoneError;
     if (emailError) newErrors.email = emailError;
-    
+    if (cnpjError) newErrors.cnpj = cnpjError;
+
     setErrors(newErrors);
-    
+
     // Se há erros, não enviar o formulário
     if (Object.keys(newErrors).length > 0) {
       return;
     }
-    
+
     // Converter status_agendamento de string para boolean
     const processedData = {
       ...formData,
-      status_agendamento: formData.status_agendamento === 'true' ? true : 
-                         formData.status_agendamento === 'false' ? false : 
-                         formData.status_agendamento
+      status_agendamento: formData.status_agendamento === 'true' ? true :
+        formData.status_agendamento === 'false' ? false :
+          formData.status_agendamento
     };
-    
+
     onSave(processedData);
   };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Limpar erro do campo quando o usuário começar a digitar
     if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -1255,11 +1473,11 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
           <label className="block text-xs font-medium text-gray-700 mb-1">Nome *</label>
           <input
             type="text"
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${
-              errors.nome ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.nome ? 'border-red-500' : 'border-gray-300'
+              }`}
             value={formData.nome || ''}
             onChange={(e) => handleChange('nome', e.target.value)}
+            placeholder="Digite o nome completo"
           />
           {errors.nome && (
             <p className="text-red-500 text-xs mt-1">{errors.nome}</p>
@@ -1270,11 +1488,11 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
           <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
           <input
             type="email"
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${
-              errors.email ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.email ? 'border-red-500' : 'border-gray-300'
+              }`}
             value={formData.email || ''}
             onChange={(e) => handleChange('email', e.target.value)}
+            placeholder="exemplo@email.com"
           />
           {errors.email && (
             <p className="text-red-500 text-xs mt-1">{errors.email}</p>
@@ -1285,11 +1503,11 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
           <label className="block text-xs font-medium text-gray-700 mb-1">Telefone *</label>
           <input
             type="tel"
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${
-              errors.telefone ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.telefone ? 'border-red-500' : 'border-gray-300'
+              }`}
             value={formData.telefone || ''}
             onChange={(e) => handleChange('telefone', e.target.value)}
+            placeholder="(11) 99999-9999"
           />
           {errors.telefone && (
             <p className="text-red-500 text-xs mt-1">{errors.telefone}</p>
@@ -1303,6 +1521,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
             value={formData.empresa || ''}
             onChange={(e) => handleChange('empresa', e.target.value)}
+            placeholder="Nome da empresa"
           />
         </div>
 
@@ -1313,6 +1532,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
             value={formData.cargo || ''}
             onChange={(e) => handleChange('cargo', e.target.value)}
+            placeholder="Cargo ou função"
           />
         </div>
 
@@ -1327,6 +1547,87 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
             <option value="true">Sim</option>
             <option value="false">Não</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Contador</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            value={formData.contador || ''}
+            onChange={(e) => handleChange('contador', e.target.value)}
+            placeholder="Nome do contador responsável"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Escritório</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            value={formData.escritorio || ''}
+            onChange={(e) => handleChange('escritorio', e.target.value)}
+            placeholder="Nome do escritório de contabilidade"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Responsável</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            value={formData.responsavel || ''}
+            onChange={(e) => handleChange('responsavel', e.target.value)}
+            placeholder="Responsável pelo lead"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">CNPJ</label>
+          <input
+            type="text"
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.cnpj ? 'border-red-500' : 'border-gray-300'
+              }`}
+            value={formData.cnpj || ''}
+            onChange={(e) => handleChange('cnpj', e.target.value)}
+            placeholder="00.000.000/0000-00"
+          />
+          {errors.cnpj && (
+            <p className="text-red-500 text-xs mt-1">{errors.cnpj}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Segmento</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            value={formData.segmento || ''}
+            onChange={(e) => handleChange('segmento', e.target.value)}
+            placeholder="Segmento de atuação da empresa"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">ERP Atual</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            value={formData.erp_atual || ''}
+            onChange={(e) => handleChange('erp_atual', e.target.value)}
+            placeholder="Sistema ERP utilizado atualmente"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Observação</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            rows={3}
+            value={formData.observacao || ''}
+            onChange={(e) => handleChange('observacao', e.target.value)}
+            placeholder="Observações sobre o lead..."
+          />
         </div>
       </div>
 

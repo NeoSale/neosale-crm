@@ -10,6 +10,13 @@ export interface Lead {
   empresa?: string;
   cargo?: string;
   status?: string;
+  contador?: string;
+  escritorio?: string;
+  responsavel?: string;
+  cnpj?: string;
+  observacao?: string;
+  segmento?: string;
+  erp_atual?: string;
   [key: string]: any;
 }
 
