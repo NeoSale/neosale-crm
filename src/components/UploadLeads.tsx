@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import toast from 'react-hot-toast';
 
 interface Lead {
   [key: string]: any;
@@ -36,6 +37,9 @@ const UploadLeads: React.FC<UploadLeadsProps> = ({ onImport, initialFile }) => {
 
   // Adicionar event listener para paste
   React.useEffect(() => {
+    // Verificar se estamos no lado do cliente
+    if (typeof window === 'undefined') return;
+    
     const handleGlobalPaste = (event: ClipboardEvent) => {
       if (dropZoneRef.current && document.activeElement === dropZoneRef.current) {
         handlePaste(event);
@@ -78,7 +82,18 @@ const UploadLeads: React.FC<UploadLeadsProps> = ({ onImport, initialFile }) => {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
       
-      setLeads(jsonData as Lead[]);
+      // Filtrar linhas vazias - remove objetos que não têm valores válidos
+      const filteredLeads = (jsonData as Lead[]).filter(lead => {
+        // Verifica se pelo menos um campo tem valor não vazio
+        return Object.values(lead).some(value => {
+          if (value === null || value === undefined) return false;
+          if (typeof value === 'string') return value.trim() !== '';
+          if (typeof value === 'number') return !isNaN(value);
+          return true;
+        });
+      });
+      
+      setLeads(filteredLeads);
     } catch (err) {
       setError('Erro ao processar o arquivo. Verifique se é um arquivo Excel válido.');
       console.error('Erro ao processar arquivo:', err);
@@ -110,7 +125,7 @@ const UploadLeads: React.FC<UploadLeadsProps> = ({ onImport, initialFile }) => {
       setLeads([]);
       setFileName('');
     } else {
-      alert(`Importando ${leads.length} leads para o sistema...`);
+      toast.loading(`Importando ${leads.length} leads para o sistema...`);
     }
   };
 

@@ -157,7 +157,7 @@ export const useLeads = (): UseLeadsReturn => {
         return true;
       } else {
         // Adicionar localmente se a API falhar
-        const newLead = { ...lead, id: Date.now().toString() };
+        const newLead = { ...lead, id: `temp_${Math.random().toString(36).substr(2, 9)}` };
         setLeads(prev => [...prev, newLead]);
         return true;
       }
@@ -180,7 +180,7 @@ export const useLeads = (): UseLeadsReturn => {
         // Adicionar localmente se a API falhar
         const leadsWithIds = newLeads.map((lead, index) => ({
           ...lead,
-          id: (Date.now() + index).toString()
+          id: `temp_${Math.random().toString(36).substr(2, 9)}_${index}`
         }));
         setLeads(prev => [...prev, ...leadsWithIds]);
         return true;

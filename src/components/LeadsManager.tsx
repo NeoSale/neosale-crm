@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Users, Database, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 import { useLeads } from '../hooks/useLeads';
 import { Lead } from '../services/leadsApi';
@@ -13,6 +14,7 @@ const LeadsManager: React.FC = () => {
     loading,
     error,
     refreshLeads,
+    addLead,
     addMultipleLeads,
     updateLead,
     deleteLead
@@ -27,19 +29,26 @@ const LeadsManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [isCreatingLead, setIsCreatingLead] = useState<boolean>(false);
   const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState<boolean>(false);
 
   // Fechar modais com ESC
   React.useEffect(() => {
+    // Verificar se estamos no lado do cliente
+    if (typeof window === 'undefined') return;
+    
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         if (showEditModal) {
           setShowEditModal(false);
           setEditingLead(null);
+          setIsCreatingLead(false);
         }
         if (showDeleteModal) {
           setShowDeleteModal(false);
@@ -48,6 +57,9 @@ const LeadsManager: React.FC = () => {
         if (showMappingModal) {
           handleCancelMapping();
         }
+        if (showBulkDeleteModal) {
+          setShowBulkDeleteModal(false);
+        }
       }
     };
 
@@ -55,7 +67,7 @@ const LeadsManager: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showEditModal, showDeleteModal, showMappingModal]);
+  }, [showEditModal, showDeleteModal, showMappingModal, showBulkDeleteModal]);
 
   const handleImportLeads = async (newLeads: Lead[]) => {
     try {
@@ -96,7 +108,7 @@ const LeadsManager: React.FC = () => {
       }
     } catch (error) {
       console.error('Erro ao processar mapeamento:', error);
-      alert('Erro ao processar mapeamento de campos.');
+      toast.error('Erro ao processar mapeamento de campos.');
     }
   };
 
@@ -149,7 +161,7 @@ const LeadsManager: React.FC = () => {
             const lines = csvText.split('\n').filter(line => line.trim());
             
             if (lines.length < 2) {
-              alert('Arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados.');
+              toast.error('Arquivo CSV deve conter pelo menos um cabeçalho e uma linha de dados.');
               return;
             }
             
@@ -162,7 +174,16 @@ const LeadsManager: React.FC = () => {
               headers.forEach((header, index) => {
                 row[header] = values[index] || '';
               });
-              jsonData.push(row);
+              
+              // Ignorar linhas vazias - verifica se pelo menos um campo tem valor
+              const hasValidData = Object.values(row).some(value => {
+                if (typeof value === 'string') return value.trim() !== '';
+                return value !== null && value !== undefined;
+              });
+              
+              if (hasValidData) {
+                jsonData.push(row);
+              }
             }
             
             // Mapeamento automático e abertura do modal
@@ -173,7 +194,7 @@ const LeadsManager: React.FC = () => {
             setShowMappingModal(true);
           } catch (error) {
             console.error('Erro ao processar arquivo CSV:', error);
-            alert('Erro ao processar arquivo CSV. Verifique se o formato está correto.');
+            toast.error('Erro ao processar arquivo CSV. Verifique se o formato está correto.');
           }
         };
         
@@ -192,7 +213,7 @@ const LeadsManager: React.FC = () => {
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             
             if (jsonData.length < 2) {
-              alert('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados.');
+              toast.error('Arquivo deve conter pelo menos um cabeçalho e uma linha de dados.');
               return;
             }
             
@@ -205,7 +226,16 @@ const LeadsManager: React.FC = () => {
               headers.forEach((header, index) => {
                 row[header] = String(values[index] || '').trim();
               });
-              dataRows.push(row);
+              
+              // Ignorar linhas vazias - verifica se pelo menos um campo tem valor
+              const hasValidData = Object.values(row).some(value => {
+                if (typeof value === 'string') return value.trim() !== '';
+                return value !== null && value !== undefined;
+              });
+              
+              if (hasValidData) {
+                dataRows.push(row);
+              }
             }
             
             // Mapeamento automático e abertura do modal
@@ -216,17 +246,17 @@ const LeadsManager: React.FC = () => {
             setShowMappingModal(true);
           } catch (error) {
             console.error('Erro ao processar arquivo Excel:', error);
-            alert('Erro ao processar arquivo Excel. Verifique se o formato está correto.');
+            toast.error('Erro ao processar arquivo Excel. Verifique se o formato está correto.');
           }
         };
         
         reader.readAsArrayBuffer(file);
       } else {
-        alert('Formato de arquivo não suportado. Use apenas .xlsx, .xls ou .csv');
+        toast.error('Formato de arquivo não suportado. Use apenas .xlsx, .xls ou .csv');
       }
     } catch (error) {
       console.error('Erro ao processar arquivo:', error);
-      alert('Erro ao processar arquivo.');
+      toast.error('Erro ao processar arquivo.');
     }
     
     // Limpar o input para permitir selecionar o mesmo arquivo novamente
@@ -239,20 +269,26 @@ const LeadsManager: React.FC = () => {
   };
 
   const handleUpdateLead = async (updatedData: Partial<Lead>) => {
-    if (!editingLead?.id) return;
-
     try {
-      const success = await updateLead(editingLead.id, updatedData);
+      let success;
+      
+      if (isCreatingLead) {
+        // Criar novo lead
+        success = await addLead(updatedData as Lead);
+      } else {
+        // Atualizar lead existente
+        if (!editingLead?.id) return;
+        success = await updateLead(editingLead.id, updatedData);
+      }
+      
       if (success) {
         setShowEditModal(false);
         setEditingLead(null);
+        setIsCreatingLead(false);
         await refreshLeads();
-      } else {
-        alert('Erro ao atualizar lead. Tente novamente.');
       }
     } catch (error) {
-      console.error('Erro ao atualizar lead:', error);
-      alert('Erro ao atualizar lead. Tente novamente.');
+      console.error('Erro ao salvar lead:', error);
     }
   };
 
@@ -270,16 +306,93 @@ const LeadsManager: React.FC = () => {
         setShowDeleteModal(false);
         setDeletingLead(null);
         await refreshLeads();
-      } else {
-        alert('Erro ao excluir lead. Tente novamente.');
       }
     } catch (error) {
       console.error('Erro ao excluir lead:', error);
-      alert('Erro ao excluir lead. Tente novamente.');
     }
   };
 
+  // Funções para seleção múltipla
+  const handleSelectLead = (leadId: string) => {
+    const newSelected = new Set(selectedLeads);
+    if (newSelected.has(leadId)) {
+      newSelected.delete(leadId);
+    } else {
+      newSelected.add(leadId);
+    }
+    setSelectedLeads(newSelected);
+  };
 
+  const handleSelectAll = () => {
+    if (selectedLeads.size === paginatedLeads.length) {
+      setSelectedLeads(new Set());
+    } else {
+      const allIds = new Set(paginatedLeads.map(lead => lead.id || '').filter(id => id));
+      setSelectedLeads(allIds);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLeads.size > 0) {
+      setShowBulkDeleteModal(true);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      const deletePromises = Array.from(selectedLeads).map(leadId => deleteLead(leadId));
+      const results = await Promise.all(deletePromises);
+      
+      const successCount = results.filter(result => result).length;
+      const failCount = results.length - successCount;
+      
+      if (successCount > 0) {
+        await refreshLeads();
+        setSelectedLeads(new Set());
+        
+        // Mostrar mensagem de sucesso em verde apenas se houve sucessos
+        if (failCount > 0) {
+          toast.error(`${successCount} leads excluídos com sucesso. ${failCount} falharam.`);
+        } else {
+          toast.success(`${successCount} leads excluídos com sucesso.`, {
+            style: {
+              background: '#10B981',
+              color: '#fff',
+              fontWeight: '500',
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#10B981',
+            },
+          });
+        }
+      }
+      
+      setShowBulkDeleteModal(false);
+    } catch (error) {
+      console.error('Erro ao excluir leads:', error);
+    }
+  };
+
+  // Limpar seleção quando mudar de página ou filtro
+  React.useEffect(() => {
+    setSelectedLeads(new Set());
+  }, [currentPage, searchTerm, itemsPerPage]);
+
+  // Função para criar novo lead
+  const handleCreateLead = () => {
+    const newLead: Lead = {
+      nome: '',
+      email: '',
+      telefone: '',
+      empresa: '',
+      cargo: '',
+      status_agendamento: false
+    };
+    setEditingLead(newLead);
+    setIsCreatingLead(true);
+    setShowEditModal(true);
+  };
 
   const handleRefresh = async () => {
     await refreshLeads();
@@ -384,12 +497,28 @@ const LeadsManager: React.FC = () => {
                 style={{ display: 'none' }}
               />
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={handleCreateLead}
                 className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
               >
                 <Plus size={14} />
+                Novo Lead
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+              >
+                <Database size={14} />
                 Importar Leads
               </button>
+              {selectedLeads.size > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
+                >
+                  <Trash2 size={14} />
+                  Excluir ({selectedLeads.size})
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -453,6 +582,14 @@ const LeadsManager: React.FC = () => {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                      <input
+                        type="checkbox"
+                        checked={paginatedLeads.length > 0 && selectedLeads.size === paginatedLeads.length}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                    </th>
                     {/* {['nome', 'email', 'telefone', 'origem', 'status_agendamento', 'status', 'status_negociacao', 'etapa_funil', 'empresa', 'cargo', 'created_at'].map((header, index) => ( */}
                     {['nome', 'email', 'telefone', 'empresa', 'cargo', 'origem', 'status_agendamento', 'created_at'].map((header, index) => (
                       <th
@@ -474,6 +611,14 @@ const LeadsManager: React.FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedLeads.map((lead, rowIndex) => (
                     <tr key={lead.id || rowIndex} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 whitespace-nowrap text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.has(lead.id || '')}
+                          onChange={() => handleSelectLead(lead.id || '')}
+                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                      </td>
                       {/* {['nome', 'email', 'telefone', 'origem', 'status_agendamento', 'status', 'status_negociacao', 'etapa_funil', 'empresa', 'cargo', 'created_at'].map((header, colIndex) => ( */}
                       {['nome', 'email', 'telefone', 'empresa', 'cargo', 'origem', 'status_agendamento', 'created_at'].map((header, colIndex) => (
                         <td
@@ -654,6 +799,7 @@ const LeadsManager: React.FC = () => {
           onClick={() => {
             setShowEditModal(false);
             setEditingLead(null);
+            setIsCreatingLead(false);
           }}
         >
           <div
@@ -661,7 +807,9 @@ const LeadsManager: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base text-gray-500 font-semibold mb-3">Editar Lead</h3>
+              <h3 className="text-base text-gray-500 font-semibold mb-3">
+                {isCreatingLead ? 'Criar Lead' : 'Editar Lead'}
+              </h3>
             </div>
             <EditLeadForm
               lead={editingLead}
@@ -669,6 +817,7 @@ const LeadsManager: React.FC = () => {
               onCancel={() => {
                 setShowEditModal(false);
                 setEditingLead(null);
+                setIsCreatingLead(false);
               }}
             />
           </div>
@@ -775,8 +924,8 @@ const LeadsManager: React.FC = () => {
                   {/* Campo Email */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
-                      <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
-                      Email *
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      Email
                     </label>
                     <select
                       value={fieldMapping['email'] || ''}
@@ -918,12 +1067,54 @@ const LeadsManager: React.FC = () => {
                 </button>
                 <button
                   onClick={handleConfirmMapping}
-                  disabled={!fieldMapping['nome'] || !fieldMapping['email']}
+                  disabled={!fieldMapping['nome'] || !fieldMapping['telefone']}
                   className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   Confirmar Importação
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Exclusão em Massa */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Confirmar Exclusão
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Tem certeza que deseja excluir {selectedLeads.size} lead(s) selecionado(s)?
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <p className="text-red-800 text-sm">
+                <strong>Atenção:</strong> Esta ação não pode ser desfeita. Os leads serão permanentemente removidos do sistema.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmBulkDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Excluir {selectedLeads.size} Lead(s)
+              </button>
             </div>
           </div>
         </div>
@@ -949,9 +1140,62 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
     agendado: lead.status_agendamento || ''
   });
 
+  const [errors, setErrors] = useState<{
+    nome?: string;
+    telefone?: string;
+    email?: string;
+  }>({});
+
   console.log('lead.status_agendamento', lead.status_agendamento);
 
+  // Função para validar nome
+  const validateName = (name: string): string | null => {
+    if (!name.trim()) {
+      return 'Nome é obrigatório';
+    }
+    return null;
+  };
+
+  // Função para validar telefone
+  const validatePhone = (phone: string): string | null => {
+    if (!phone.trim()) {
+      return 'Telefone é obrigatório';
+    }
+    
+    // Remove todos os caracteres não numéricos
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Verifica se tem pelo menos 10 dígitos (DDD + número)
+    if (cleanPhone.length < 10) {
+      return 'Telefone deve ter pelo menos 10 dígitos';
+    }
+    
+    // Verifica se tem no máximo 11 dígitos (celular com 9)
+    if (cleanPhone.length > 11) {
+      return 'Telefone deve ter no máximo 11 dígitos';
+    }
+    
+    return null;
+  };
+
+  // Função para validar email
+  const validateEmail = (email: string): string | null => {
+    if (!email.trim()) {
+      return null; // Email não é obrigatório
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'Email deve ter um formato válido';
+    }
+    
+    return null;
+  };
+
   React.useEffect(() => {
+    // Verificar se estamos no lado do cliente
+    if (typeof window === 'undefined') return;
+    
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onCancel();
@@ -967,6 +1211,23 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validar campos
+    const nameError = validateName(formData.nome || '');
+    const phoneError = validatePhone(formData.telefone || '');
+    const emailError = validateEmail(formData.email || '');
+    
+    const newErrors: { nome?: string; telefone?: string; email?: string } = {};
+    if (nameError) newErrors.nome = nameError;
+    if (phoneError) newErrors.telefone = phoneError;
+    if (emailError) newErrors.email = emailError;
+    
+    setErrors(newErrors);
+    
+    // Se há erros, não enviar o formulário
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+    
     // Converter status_agendamento de string para boolean
     const processedData = {
       ...formData,
@@ -980,40 +1241,59 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Limpar erro do campo quando o usuário começar a digitar
+    if (errors[field as keyof typeof errors]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid grid-cols-1 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Nome</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Nome *</label>
           <input
             type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${
+              errors.nome ? 'border-red-500' : 'border-gray-300'
+            }`}
             value={formData.nome || ''}
             onChange={(e) => handleChange('nome', e.target.value)}
-            required
           />
+          {errors.nome && (
+            <p className="text-red-500 text-xs mt-1">{errors.nome}</p>
+          )}
         </div>
 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
           <input
             type="email"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${
+              errors.email ? 'border-red-500' : 'border-gray-300'
+            }`}
             value={formData.email || ''}
             onChange={(e) => handleChange('email', e.target.value)}
           />
+          {errors.email && (
+            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+          )}
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Telefone</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Telefone *</label>
           <input
             type="tel"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${
+              errors.telefone ? 'border-red-500' : 'border-gray-300'
+            }`}
             value={formData.telefone || ''}
             onChange={(e) => handleChange('telefone', e.target.value)}
           />
+          {errors.telefone && (
+            <p className="text-red-500 text-xs mt-1">{errors.telefone}</p>
+          )}
         </div>
 
         <div>
