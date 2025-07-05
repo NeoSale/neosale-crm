@@ -46,3 +46,26 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Force 24-hour format for time inputs */
+input[type="time"]::-webkit-datetime-edit-ampm-field {
+  display: none !important;
+}
+
+/* Keep the time picker icon visible */
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+
+/* Additional CSS to force 24-hour format */
+input[type="time"] {
+  /* Removed font-family: monospace to match other input fields */
+}
+
+/* Hide AM/PM from any time picker */
+.time-picker-ampm,
+[data-testid="time-picker-ampm"],
+.MuiTimePicker-ampm,
+.ant-time-picker-panel-select:last-child {
+  display: none !important;
+}

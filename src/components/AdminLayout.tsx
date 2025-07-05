@@ -28,7 +28,7 @@ const navigation: MenuItem[] = [
   { name: 'Leads', href: '/leads', icon: UsersIcon },
   { name: 'Relatórios', href: '/reports', icon: ChartBarIcon },
   { name: 'Documentos', href: '/documents', icon: DocumentTextIcon },
-  { name: 'Configurações', href: '/settings', icon: CogIcon },
+  { name: 'Configurações', href: '/configuracoes', icon: CogIcon },
 ];
 
 function classNames(...classes: string[]) {
@@ -127,7 +127,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                  pathname === '/leads' ? 'Leads' :
                  pathname === '/reports' ? 'Relatórios' :
                  pathname === '/documents' ? 'Documentos' :
-                 pathname === '/settings' ? 'Configurações' : 'Dashboard'}
+                 pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
               </h2>
             </div>
             <div className="flex items-center gap-4">
