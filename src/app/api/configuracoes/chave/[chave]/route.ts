@@ -4,10 +4,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { chave: string } }
+  { params }: { params: Promise<{ chave: string }> }
 ) {
   try {
-    const { chave } = params;
+    const { chave } = await params;
     
     const response = await fetch(`${API_BASE_URL}/api/configuracoes/chave/${chave}`, {
       method: 'GET',
