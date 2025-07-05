@@ -93,25 +93,7 @@ export const useLeads = (): UseLeadsReturn => {
     }
   }, []);
 
-  // Função para buscar estatísticas
-  const fetchStats = useCallback(async () => {
-    try {
-      const response = await leadsApi.getLeadsStats();
 
-      if (response.success) {
-        setStats(response.data);
-      } else {
-        // Calcular estatísticas localmente se a API falhar
-        const localStats = calculateLocalStats(leads);
-        setStats(localStats);
-      }
-    } catch (err) {
-      console.error('Erro ao buscar estatísticas:', err);
-      // Calcular estatísticas localmente
-      const localStats = calculateLocalStats(leads);
-      setStats(localStats);
-    }
-  }, [leads]);
 
   // Função para calcular estatísticas localmente
   const calculateLocalStats = (leadsData: Lead[]): LeadsStats => {
@@ -282,8 +264,9 @@ export const useLeads = (): UseLeadsReturn => {
 
   // Atualizar estatísticas quando os leads mudarem
   useEffect(() => {
-    if (leads.length > 0) {
-      fetchStats();
+    if (leads.length >= 0) {
+      const localStats = calculateLocalStats(leads);
+      setStats(localStats);
     }
   }, [leads]);
 

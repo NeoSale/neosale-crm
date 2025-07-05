@@ -164,39 +164,7 @@ class LeadsApiService {
     });
   }
 
-  // Obter estatísticas dos leads
-  async getLeadsStats(): Promise<ApiResponse<{
-    total: number;
-    withEmail: number;
-    qualified: number;
-    new: number;
-    byStatus: Record<string, number>;
-  }>> {
-    try {
-      return await this.request<{
-        total: number;
-        withEmail: number;
-        qualified: number;
-        new: number;
-        byStatus: Record<string, number>;
-      }>('/leads/stats', {}, {
-        showSuccess: false, // Não mostrar toast para estatísticas
-        showError: true,
-      });
-    } catch (error) {
-      return {
-        data: {
-          total: 0,
-          withEmail: 0,
-          qualified: 0,
-          new: 0,
-          byStatus: {},
-        },
-        message: 'Erro ao buscar estatísticas',
-        success: false,
-      };
-    }
-  }
+
 }
 
 export const leadsApi = new LeadsApiService();
