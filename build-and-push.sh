@@ -316,7 +316,7 @@ if [ $? -eq 0 ]; then
     echo -e "${YELLOW}🚀 Iniciando deploy automático no EasyPanel...${NC}"
     
     # Configurações do EasyPanel (ajuste conforme necessário)
-    EASYPANEL_URL="https://evolution-api-neosale-api.mrzt3w.easypanel.host"
+    EASYPANEL_URL="https://evolution-api-neosale-crm.mrzt3w.easypanel.host"
     EASYPANEL_PROJECT="neosale-crm"
     EASYPANEL_TOKEN="seu_token_aqui"  # Token fixo no código
     

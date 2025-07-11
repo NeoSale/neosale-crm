@@ -9,7 +9,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://evolution-api-neosale-api.mrzt3w.easypanel.host/
+      - NEXT_PUBLIC_API_URL=https://evolution-api-neosale-api.mrzt3w.easypanel.host/api
       - PORT=3000
       - HOSTNAME=0.0.0.0
     restart: unless-stopped

@@ -85,7 +85,7 @@ A aplicação usa as seguintes variáveis de ambiente:
 O arquivo `.env.production` contém as configurações de produção:
 
 ```env
-NEXT_PUBLIC_API_URL=https://evolution-api-neosale-api.mrzt3w.easypanel.host/
+NEXT_PUBLIC_API_URL=https://evolution-api-neosale-api.mrzt3w.easypanel.host/api
 NODE_ENV=production
 NEXT_TELEMETRY_DISABLED=1
 PORT=3000
