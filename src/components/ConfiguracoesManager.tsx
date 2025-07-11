@@ -1,17 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-
-interface Configuracao {
-  id: string;
-  chave: string;
-  valor: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ConfiguracaoForm {
-  [key: string]: string | boolean;
-}
+import { configuracoesApi, Configuracao, ConfiguracaoForm } from '../services/configuracoesApi';
 
 const ConfiguracoesManager: React.FC = () => {
   const [configuracoes, setConfiguracoes] = useState<ConfiguracaoForm>({});
@@ -26,109 +15,36 @@ const ConfiguracoesManager: React.FC = () => {
   const loadConfiguracoes = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/configuracoes');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          const configMap: { [key: string]: string } = {};
-          data.data.forEach((config: Configuracao) => {
-            configMap[config.chave] = config.valor;
-          });
-
-          const newConfiguracoes: ConfiguracaoForm = {};
-          data.data.forEach((config: Configuracao) => {
-            if (config.chave === 'envia_somente_dias_uteis') {
-              newConfiguracoes[config.chave] = config.valor === 'true';
-            } else {
-              newConfiguracoes[config.chave] = config.valor;
-            }
-          });
-          setConfiguracoes(newConfiguracoes);
-        }
+      const response = await configuracoesApi.getConfiguracoes();
+      if (response.success && response.data) {
+        const newConfiguracoes: ConfiguracaoForm = {};
+        response.data.forEach((config: Configuracao) => {
+          if (config.chave === 'envia_somente_dias_uteis') {
+            newConfiguracoes[config.chave] = config.valor === 'true';
+          } else {
+            newConfiguracoes[config.chave] = config.valor;
+          }
+        });
+        setConfiguracoes(newConfiguracoes);
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
-      toast.error('Erro ao carregar configurações');
     } finally {
       setLoading(false);
     }
   };
 
-  const saveConfiguracao = async (chave: string, valor: string) => {
-    try {
-      // Primeiro, tentar buscar a configuração existente
-      const getResponse = await fetch(`/api/configuracoes/chave/${chave}`);
-      
-      if (getResponse.ok) {
-        // Configuração existe, fazer update
-        const existingConfig = await getResponse.json();
-        const updateResponse = await fetch(`/api/configuracoes/${existingConfig.data.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ valor }),
-        });
-        
-        if (!updateResponse.ok) {
-          throw new Error('Erro ao atualizar configuração');
-        }
-      } else if (getResponse.status === 404) {
-        // Configuração não existe, criar nova
-        const createResponse = await fetch('/api/configuracoes', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ chave, valor }),
-        });
-        
-        if (!createResponse.ok) {
-          throw new Error('Erro ao criar configuração');
-        }
-      } else {
-        throw new Error('Erro ao verificar configuração');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar configuração:', error);
-      throw error;
-    }
-  };
+
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const savePromises = Object.keys(configuracoes).map(chave => {
-        const valor = configuracoes[chave];
-        return saveConfiguracao(chave, typeof valor === 'boolean' ? valor.toString() : valor as string);
-      });
-      await Promise.all(savePromises);
-      
-      // Atualizar limite diário se a quantidade foi alterada
-      if (configuracoes.quantidade_diaria_maxima) {
-        try {
-          const response = await fetch('/api/controle-envios/limite-diario', {
-             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-              limite: parseInt(configuracoes.quantidade_diaria_maxima as string) 
-            }),
-          });
-          
-          if (!response.ok) {
-            console.warn('Erro ao atualizar limite diário:', response.statusText);
-          }
-        } catch (error) {
-          console.warn('Erro ao chamar endpoint de limite diário:', error);
-        }
+      const success = await configuracoesApi.saveMultipleConfiguracoes(configuracoes);
+      if (!success) {
+        throw new Error('Falha ao salvar configurações');
       }
-      
-      toast.success('Configurações salvas com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
-      toast.error('Erro ao salvar configurações');
     } finally {
       setSaving(false);
     }
