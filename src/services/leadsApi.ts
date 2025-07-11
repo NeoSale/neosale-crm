@@ -26,7 +26,7 @@ export interface ApiResponse<T> {
   success: boolean;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://evolution-api-neosale-api.mrzt3w.easypanel.host/api';
 
 class LeadsApiService {
   private async request<T>(
