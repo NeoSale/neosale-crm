@@ -22,6 +22,8 @@ export interface ApiResponse<T> {
   success: boolean;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
 class ConfiguracoesApiService {
   private async request<T>(
     endpoint: string,
@@ -29,7 +31,7 @@ class ConfiguracoesApiService {
     toastConfig?: ToastConfig
   ): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(`/api${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
