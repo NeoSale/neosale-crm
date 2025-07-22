@@ -38,10 +38,17 @@ const LeadsManager: React.FC = () => {
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState<boolean>(false);
 
+  // Estado para controlar se estamos no cliente
+  const [isClient, setIsClient] = React.useState(false);
+
+  // Verificar se estamos no lado do cliente
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Fechar modais com ESC
   React.useEffect(() => {
-    // Verificar se estamos no lado do cliente
-    if (typeof window === 'undefined') return;
+    if (!isClient) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -67,7 +74,7 @@ const LeadsManager: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showEditModal, showDeleteModal, showMappingModal, showBulkDeleteModal]);
+  }, [isClient, showEditModal, showDeleteModal, showMappingModal, showBulkDeleteModal]);
 
   const handleImportLeads = async (newLeads: Lead[]) => {
     try {
@@ -648,7 +655,12 @@ const LeadsManager: React.FC = () => {
                             // Tratar datas
                             if (header === 'created_at' && typeof value === 'string') {
                               try {
-                                return new Date(value).toLocaleDateString('pt-BR');
+                                const date = new Date(value);
+                                // Formatação consistente entre servidor e cliente
+                                const day = date.getDate().toString().padStart(2, '0');
+                                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                                const year = date.getFullYear();
+                                return `${day}/${month}/${year}`;
                               } catch {
                                 return value;
                               }

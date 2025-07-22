@@ -139,7 +139,9 @@ export const useLeads = (): UseLeadsReturn => {
         return true;
       } else {
         // Adicionar localmente se a API falhar
-        const newLead = { ...lead, id: `temp_${Math.random().toString(36).substr(2, 9)}` };
+        // Gerar ID temporário único sem usar Date.now() para evitar problemas de hidratação
+        const tempId = crypto.randomUUID ? crypto.randomUUID() : `temp_${Math.floor(Math.random() * 1000000)}`;
+        const newLead = { ...lead, id: `temp_${tempId}` };
         setLeads(prev => [...prev, newLead]);
         return true;
       }
@@ -162,7 +164,8 @@ export const useLeads = (): UseLeadsReturn => {
         // Adicionar localmente se a API falhar
         const leadsWithIds = newLeads.map((lead, index) => ({
           ...lead,
-          id: `temp_${Math.random().toString(36).substr(2, 9)}_${index}`
+          // Gerar ID temporário único sem usar Date.now() para evitar problemas de hidratação
+          id: `temp_${crypto.randomUUID ? crypto.randomUUID() : `${Math.floor(Math.random() * 1000000)}_${index}`}`
         }));
         setLeads(prev => [...prev, ...leadsWithIds]);
         return true;

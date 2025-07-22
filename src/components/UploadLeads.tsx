@@ -35,10 +35,17 @@ const UploadLeads: React.FC<UploadLeadsProps> = ({ onImport, initialFile }) => {
     }
   }, [initialFile]);
 
+  // Estado para controlar se estamos no cliente
+  const [isClient, setIsClient] = React.useState(false);
+
+  // Verificar se estamos no lado do cliente
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Adicionar event listener para paste
   React.useEffect(() => {
-    // Verificar se estamos no lado do cliente
-    if (typeof window === 'undefined') return;
+    if (!isClient) return;
     
     const handleGlobalPaste = (event: ClipboardEvent) => {
       if (dropZoneRef.current && document.activeElement === dropZoneRef.current) {
@@ -50,7 +57,7 @@ const UploadLeads: React.FC<UploadLeadsProps> = ({ onImport, initialFile }) => {
     return () => {
       document.removeEventListener('paste', handleGlobalPaste);
     };
-  }, []);
+  }, [isClient]);
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
