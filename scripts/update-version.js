@@ -48,7 +48,7 @@ export function getAppInfo() {
   return {
     name: APP_NAME,
     version: APP_VERSION,
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV
   };
 }
 `;

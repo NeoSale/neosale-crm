@@ -9,7 +9,7 @@ echo "Iniciando aplicação NeoSale CRM v$VERSION..."
 echo "Configurando variáveis de ambiente dinâmicas..."
 
 # Definir variáveis de ambiente com valores padrão
-export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://evolution-api-neosale-api.mrzt3w.easypanel.host/api}"
+export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}"
 export NODE_ENV="${NODE_ENV:-production}"
 export PORT="${PORT:-3000}"
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
@@ -27,7 +27,7 @@ echo "Criando configuração runtime..."
 cat > public/runtime-config.js << 'EOF'
 // Configuração de runtime para variáveis de ambiente
 window.__RUNTIME_CONFIG__ = {
-  NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://evolution-api-neosale-api.mrzt3w.easypanel.host/api'
+  NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL
 };
 EOF
 

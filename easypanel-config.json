@@ -1,16 +1,8 @@
 {
   "name": "neosale-crm",
-  "description": "NeoSale CRM - Sistema de Gestão de Leads",
+  "description": "NeoSale CRM Admin",
   "type": "docker",
   "image": "brunobspaiva/neosale-crm:latest",
-  "port": 3000,
-  "environment": {
-    "NODE_ENV": "production",
-    "PORT": "3000",
-    "HOSTNAME": "0.0.0.0",
-    "NEXT_TELEMETRY_DISABLED": "1",
-    "NEXT_PUBLIC_API_URL": "https://evolution-api-neosale-api.mrzt3w.easypanel.host/api"
-  },
   "domains": [
     {
       "host": "neosale-crm.seu-dominio.easypanel.host",
@@ -38,7 +30,6 @@
   },
   "labels": {
     "app": "neosale-crm",
-    "version": "latest",
-    "environment": "production"
+    "version": "latest"
   }
 }

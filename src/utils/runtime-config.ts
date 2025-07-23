@@ -20,7 +20,7 @@ export function getApiUrl(): string {
   }
   
   // Fallback para variável de ambiente (para desenvolvimento)
-  return process.env.NEXT_PUBLIC_API_URL || 'https://evolution-api-neosale-api.mrzt3w.easypanel.host/api';
+  return process.env.NEXT_PUBLIC_API_URL || '';
 }
 
 /**
