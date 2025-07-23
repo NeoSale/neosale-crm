@@ -17,6 +17,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Garantir que o diretório public existe
+RUN mkdir -p public
+
 # Build args para variáveis de ambiente
 ARG NEXT_PUBLIC_API_URL
 ARG NODE_ENV=production
