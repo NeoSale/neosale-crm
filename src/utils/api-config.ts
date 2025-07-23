@@ -2,13 +2,15 @@
  * Utilitário para configuração e validação da API
  */
 
+import { getApiUrl } from "./runtime-config";
+
 /**
  * Obtém e valida a URL da API
  * @returns URL válida da API
  * @throws Error se a URL não estiver configurada adequadamente
  */
 export function getValidatedApiUrl(): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = getApiUrl();
   
   // Verificar se a variável está definida
   if (!apiUrl) {

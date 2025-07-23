@@ -1,4 +1,5 @@
 import { APP_NAME, APP_VERSION } from './app-version';
+import { getApiUrl } from './runtime-config';
 
 /**
  * Utilitário para exibir informações de versão da aplicação
@@ -15,7 +16,7 @@ export class VersionLogger {
             console.log('─'.repeat(50));
             console.log(`📦 Versão: ${this.VERSION}`);
             console.log(`🌐 Ambiente: ${process.env.NODE_ENV}`);
-            console.log(`🔌 API Url: ${process.env.NEXT_PUBLIC_API_URL}`);
+            console.log(`🔌 API Url: ${getApiUrl()}`);
             console.log('─'.repeat(50));
         }
     }
