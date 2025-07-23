@@ -2,14 +2,23 @@
 
 echo "🔧 Gerando arquivo de config runtime..."
 
-cat <<EOF > ./public/env.js
-window.env = {
+# Define o caminho completo da pasta pública
+RUNTIME_DIR="./public"
+RUNTIME_FILE="$RUNTIME_DIR/runtime-config.js"
+
+# Garante que a pasta existe
+mkdir -p "$RUNTIME_DIR"
+
+# Cria o arquivo runtime-config.js
+cat <<EOF > "$RUNTIME_FILE"
+window.__RUNTIME_CONFIG__ = {
   NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL}"
 };
 EOF
 
-echo "✅ Configuração gerada: ./public/env.js"
+echo "✅ Arquivo gerado: $RUNTIME_FILE"
+ls -la "$RUNTIME_FILE"
+cat "$RUNTIME_FILE"
 
-# Inicia o Next.js
-echo "🚀 Iniciando aplicação..."
-node server.js
+echo "🚀 Iniciando servidor Next.js..."
+exec node server.js
