@@ -10,6 +10,9 @@ RUN npm ci
 # Copia o restante do projeto
 COPY . .
 
+# Garante que o diretório public existe
+RUN mkdir -p public
+
 # Variáveis padrão para build (EasyPanel injeta o resto)
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV ESLINT_NO_DEV_ERRORS=true

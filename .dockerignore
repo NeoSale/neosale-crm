@@ -73,7 +73,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public - removido para permitir cópia no Docker
 
 # Storybook build outputs
 .out
