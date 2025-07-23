@@ -1,6 +1,7 @@
 // Serviço para integração com a API de Leads
 
 import ToastInterceptor, { ToastConfig } from './toastInterceptor';
+import { getApiUrl } from '../utils/runtime-config';
 
 export interface Lead {
   id?: string;
@@ -26,7 +27,8 @@ export interface ApiResponse<T> {
   success: boolean;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://evolution-api-neosale-api.mrzt3w.easypanel.host/api';
+// Função para obter a URL da API dinamicamente
+const getApiBaseUrl = () => getApiUrl();
 
 class LeadsApiService {
   private async request<T>(
@@ -35,7 +37,9 @@ class LeadsApiService {
     toastConfig?: ToastConfig
   ): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const apiBaseUrl = getApiBaseUrl();
+      console.log('Using API URL:', apiBaseUrl); // Debug log
+      const response = await fetch(`${apiBaseUrl}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,

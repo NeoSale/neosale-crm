@@ -2,6 +2,7 @@
 
 import { Toaster } from "react-hot-toast";
 import AdminLayout from "./AdminLayout";
+import RuntimeConfigDebug from "./RuntimeConfigDebug";
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -37,6 +38,8 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
           },
         }}
       />
+      {/* Debug component - remover em produção */}
+      <RuntimeConfigDebug show={process.env.NODE_ENV === 'development'} />
     </>
   );
 }

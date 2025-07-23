@@ -12,11 +12,12 @@
 - Variáveis `NEXT_PUBLIC_*` agora são aplicadas durante o build
 - Suporte a build args para configuração flexível
 
-### 2. **Script Entrypoint Corrigido**
-- **CORREÇÃO**: Removido criação de arquivo `.env.local` (problema de permissão)
-- Usa `export` direto para definir variáveis de ambiente
-- Aplica variáveis de ambiente do EasyPanel automaticamente
+### 2. **Script Entrypoint com Runtime Config**
+- **NOVA SOLUÇÃO**: Cria arquivo `runtime-config.js` no diretório `public`
+- Injeta variáveis de ambiente diretamente no JavaScript do cliente
+- Usa `export` para definir variáveis de ambiente do servidor
 - Logs detalhados para debug e verificação
+- Compatível com Next.js standalone mode
 
 ### 3. **Build Script Atualizado**
 - Suporte a build args no script `build-and-push.sh`
@@ -96,11 +97,20 @@ export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-default}"
 2. Verifique se não há caracteres especiais nas variáveis
 3. Use aspas duplas para valores com espaços
 
-## 📝 Arquivos Modificados
-- `Dockerfile` - Adicionados ARG e ENV para build
-- `entrypoint.sh` - Script para criar .env.local dinâmico
+## 📝 Arquivos Modificados/Criados
+
+### Modificados:
+- `Dockerfile` - Adicionados ARG, ENV e cópia do diretório public
+- `entrypoint.sh` - Script para criar runtime-config.js dinâmico
 - `build-and-push.sh` - Suporte a build args
-- `EASYPANEL-DEPLOY.md` - Documentação atualizada
+- `src/app/layout.tsx` - Inclusão do script runtime-config.js
+- `src/services/leadsApi.ts` - Uso do utilitário de configuração runtime
+- `src/components/ClientLayout.tsx` - Componente de debug adicionado
+
+### Criados:
+- `src/utils/runtime-config.ts` - Utilitário para acessar configurações runtime
+- `src/components/RuntimeConfigDebug.tsx` - Componente de debug
+- `test-env.sh` - Script para testar configurações localmente
 
 ## ✨ Benefícios
 1. **Flexibilidade**: Variáveis podem ser alteradas sem rebuild
