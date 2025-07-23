@@ -58,10 +58,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copiar diretório public para permitir criação de arquivos runtime
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-
+# Copiar script de geração de configuração de runtime
+COPY --chown=nextjs:nodejs generate-runtime-config.sh ./
+RUN chmod +x generate-runtime-config.sh
 
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Usar script que gera configuração de runtime e inicia o servidor
+CMD ["./generate-runtime-config.sh"]

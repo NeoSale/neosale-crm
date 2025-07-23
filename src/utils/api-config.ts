@@ -26,13 +26,7 @@ export function getValidatedApiUrl(): string {
   
   // Verificar se é uma URL válida
   try {
-    const url = new URL(apiUrl);
-    
-    // Verificar se não é localhost (evitar chamadas para o próprio frontend)
-    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-      console.warn('⚠️ AVISO: API configurada para localhost. Certifique-se de que não está chamando o próprio frontend.');
-    }
-    
+    new URL(apiUrl);
     return apiUrl;
   } catch (error) {
     const errorMsg = `❌ NEXT_PUBLIC_API_URL inválida: ${apiUrl}. Configure uma URL válida (ex: https://api.exemplo.com)`;
@@ -84,12 +78,3 @@ export function logApiConfig(): void {
     console.error('❌ Erro na configuração da API:', error instanceof Error ? error.message : 'Erro desconhecido');
   }
 }
-
-/**
- * Constantes para URLs de fallback comuns
- */
-export const API_FALLBACKS = {
-  DEVELOPMENT: 'http://localhost:8000/api',
-  PRODUCTION: 'https://api.exemplo.com/api',
-  STAGING: 'https://api-staging.exemplo.com/api'
-} as const;
