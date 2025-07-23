@@ -10,7 +10,7 @@ echo "Configurando variáveis de ambiente dinâmicas..."
 
 # Definir variáveis de ambiente com valores padrão
 export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}"
-export NODE_ENV="${NODE_ENV:-production}"
+export NODE_ENV="${NODE_ENV}"
 export PORT="${PORT:-3000}"
 export HOSTNAME="${HOSTNAME:-0.0.0.0}"
 export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"

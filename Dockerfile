@@ -22,7 +22,7 @@ RUN mkdir -p public
 
 # Build args para variáveis de ambiente
 ARG NEXT_PUBLIC_API_URL
-ARG NODE_ENV=production
+ARG NODE_ENV=$NODE_ENV
 ARG NEXT_TELEMETRY_DISABLED=1
 
 # Definir variáveis de ambiente para o build
@@ -38,7 +38,7 @@ FROM base AS runner
 WORKDIR /app
 
 # Variáveis de ambiente padrão (podem ser sobrescritas pelo EasyPanel)
-ENV NODE_ENV=production
+ENV NODE_ENV=$NODE_ENV
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1

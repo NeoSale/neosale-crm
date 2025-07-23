@@ -270,14 +270,14 @@ if [ "$EASYPANEL_SUPPORT" = "true" ]; then
         --cache-from $IMAGE_NAME:latest \
         --build-arg BUILDKIT_INLINE_CACHE=1 \
         --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}" \
-        --build-arg NODE_ENV="${NODE_ENV:-production}" \
+        --build-arg NODE_ENV="${NODE_ENV}" \
         --build-arg NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}" \
         -t $IMAGE_NAME:$VERSION \
         .
 else
     docker build \
         --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}" \
-        --build-arg NODE_ENV="${NODE_ENV:-production}" \
+        --build-arg NODE_ENV="${NODE_ENV}" \
         --build-arg NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}" \
         -t $IMAGE_NAME:$VERSION \
         .
