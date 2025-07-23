@@ -1,17 +1,16 @@
 # Dockerfile para NeoSale CRM
+
+# Etapa base com Node Alpine
 FROM node:18-alpine AS base
 
-# Instalar dependências apenas quando necessário
+# Etapa para instalar dependências
 FROM base AS deps
-# Verificar https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine para entender por que libc6-compat pode ser necessário.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-
-# Instalar dependências baseado no gerenciador de pacotes preferido
 COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Rebuild o código fonte apenas quando necessário
+# Etapa de build
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -20,46 +19,42 @@ COPY . .
 # Garantir que o diretório public existe
 RUN mkdir -p public
 
-# Definir variáveis de ambiente para o build
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NODE_ENV=$NODE_ENV
-ENV NEXT_TELEMETRY_DISABLED=$NEXT_TELEMETRY_DISABLED
+# Definir variáveis fixas para o build
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV ESLINT_NO_DEV_ERRORS=true
 
+# 🔥 Nesse ponto o EasyPanel já injetou ENV como NEXT_PUBLIC_API_URL, NODE_ENV, etc.
 RUN npm run build
 
-# Imagem de produção, copiar todos os arquivos e executar next
+# Etapa final de produção
 FROM base AS runner
 WORKDIR /app
 
-# Variáveis de ambiente padrão (podem ser sobrescritas pelo EasyPanel)
-ENV NODE_ENV=$NODE_ENV
+# Variáveis runtime (sobrescrevíveis pelo EasyPanel)
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
 
-
-# Criar usuário e grupo
+# Criar usuário e grupo para rodar a app com segurança
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Definir as permissões corretas para prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+# Permissões para cache de build
+RUN mkdir .next && chown nextjs:nodejs .next
 
-# Copiar automaticamente os arquivos de saída com base no trace de saída
+# Copiar arquivos necessários
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Copiar diretório public para permitir criação de arquivos runtime
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Copiar scripts de configuração e teste
 COPY --chown=nextjs:nodejs generate-runtime-config.sh ./
 COPY --chown=nextjs:nodejs test-easypanel-env.sh ./
-RUN chmod +x generate-runtime-config.sh
-RUN chmod +x test-easypanel-env.sh
+
+# Garantir permissão de execução dos scripts
+RUN chmod +x generate-runtime-config.sh test-easypanel-env.sh
 
 USER nextjs
-
 EXPOSE 3000
 
-# Usar script que gera configuração de runtime e inicia o servidor
+# Iniciar com script de runtime
 CMD ["./generate-runtime-config.sh"]
