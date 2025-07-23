@@ -31,31 +31,32 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-# Descomente a linha seguinte caso queira desabilitar a telemetria durante o runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Variáveis de ambiente padrão (podem ser sobrescritas pelo EasyPanel)
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
 
+# Criar usuário e grupo
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-
-# Nota: pasta public será servida pelo Next.js se necessário
 
 # Definir as permissões corretas para prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
 # Copiar automaticamente os arquivos de saída com base no trace de saída
-# https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copiar script de inicialização
+COPY --chown=nextjs:nodejs entrypoint.sh ./
+RUN chmod +x entrypoint.sh
 
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-# definir hostname para 0.0.0.0
-ENV HOSTNAME "0.0.0.0"
-
-# servidor.js é criado pelo next build a partir do output standalone
+# Usar script de inicialização que permite variáveis de ambiente dinâmicas
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["node", "server.js"]

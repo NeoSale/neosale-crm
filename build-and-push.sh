@@ -13,6 +13,8 @@ NC='\033[0m' # No Color
 # Configurações
 IMAGE_NAME="neosale-crm"
 DOCKER_USERNAME="brunobspaiva"  # Substitua pelo seu usuário do Docker Hub
+REGISTRY_URL=""  # Deixe vazio para Docker Hub ou configure seu registry privado
+EASYPANEL_SUPPORT=true  # Habilita otimizações específicas para EasyPanel
 
 # Função para incrementar versão
 increment_version() {
