@@ -3,6 +3,7 @@
 import { Toaster } from "react-hot-toast";
 import AdminLayout from "./AdminLayout";
 import VersionLoggerComponent from "./VersionLogger";
+import ApiConfigChecker from "./ApiConfigChecker";
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -40,6 +41,8 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       />
       {/* Version logger - exibe versão no console */}
       <VersionLoggerComponent />
+      {/* API config checker - verifica configuração da API */}
+      <ApiConfigChecker />
     </>
   );
 }

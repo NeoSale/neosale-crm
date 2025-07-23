@@ -1,6 +1,15 @@
 import { toast } from 'react-hot-toast';
+import { getValidatedApiUrl } from '../utils/api-config';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+// Validar e obter URL da API de forma segura
+let API_BASE_URL: string;
+try {
+  API_BASE_URL = getValidatedApiUrl();
+} catch (error) {
+  console.error('Erro na configuração da API de Mensagens:', error);
+  // Em caso de erro, usar uma URL que causará erro explícito
+  API_BASE_URL = '';
+}
 
 export interface Mensagem {
   id: string;
@@ -35,7 +44,18 @@ class MensagensApiService {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      // Validar se a API está configurada antes de fazer a requisição
+      if (!API_BASE_URL) {
+        const errorMessage = 'API não configurada. Verifique a variável NEXT_PUBLIC_API_URL.';
+        console.error(errorMessage);
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const fullUrl = `${API_BASE_URL}${endpoint}`;
+      console.log(`🌐 Fazendo requisição para: ${fullUrl}`);
+      
+      const response = await fetch(fullUrl, {
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,

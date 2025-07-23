@@ -1,10 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getValidatedApiUrl } from '../../../utils/api-config';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+// Validar e obter URL da API de forma segura
+let API_BASE_URL: string;
+try {
+  API_BASE_URL = getValidatedApiUrl();
+} catch (error) {
+  console.error('Erro na configuração da API de Configurações:', error);
+  API_BASE_URL = '';
+}
 
 export async function GET() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/configuracoes`, {
+    // Validar se a API está configurada
+    if (!API_BASE_URL) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'API não configurada. Verifique a variável NEXT_PUBLIC_API_URL.',
+          error: 'Configuração inválida'
+        },
+        { status: 500 }
+      );
+    }
+
+    const fullUrl = `${API_BASE_URL}/api/configuracoes`;
+    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
+    
+    const response = await fetch(fullUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -32,9 +55,24 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Validar se a API está configurada
+    if (!API_BASE_URL) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'API não configurada. Verifique a variável NEXT_PUBLIC_API_URL.',
+          error: 'Configuração inválida'
+        },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     
-    const response = await fetch(`${API_BASE_URL}/api/configuracoes`, {
+    const fullUrl = `${API_BASE_URL}/api/configuracoes`;
+    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
+    
+    const response = await fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

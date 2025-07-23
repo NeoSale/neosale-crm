@@ -12,9 +12,10 @@ export class VersionLogger {
    */
   static logServerVersion(): void {
     if (typeof window === 'undefined') {
-      console.log(`🚀 ${this.APP_NAME} v${this.VERSION} - Servidor iniciado`);
+        console.log('─'.repeat(50));
       console.log(`📦 Versão: ${this.VERSION}`);
       console.log(`🌐 Ambiente: ${process.env.NODE_ENV}`);
+      console.log(`🔌 API Url: ${process.env.NEXT_PUBLIC_API_URL}`);
       console.log('─'.repeat(50));
     }
   }

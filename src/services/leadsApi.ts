@@ -1,7 +1,7 @@
 // Serviço para integração com a API de Leads
 
 import ToastInterceptor, { ToastConfig } from './toastInterceptor';
-import { getApiUrl } from '../utils/runtime-config';
+import { getValidatedApiUrl } from '../utils/api-config';
 
 export interface Lead {
   id?: string;
@@ -27,8 +27,15 @@ export interface ApiResponse<T> {
   success: boolean;
 }
 
-// Função para obter a URL da API dinamicamente
-const getApiBaseUrl = () => getApiUrl();
+// Validar e obter URL da API de forma segura
+let API_BASE_URL: string;
+try {
+  API_BASE_URL = getValidatedApiUrl();
+} catch (error) {
+  console.error('Erro na configuração da API de Leads:', error);
+  // Em caso de erro, usar uma URL que causará erro explícito
+  API_BASE_URL = '';
+}
 
 class LeadsApiService {
   private async request<T>(
@@ -37,9 +44,20 @@ class LeadsApiService {
     toastConfig?: ToastConfig
   ): Promise<ApiResponse<T>> {
     try {
-      const apiBaseUrl = getApiBaseUrl();
-      console.log('Using API URL:', apiBaseUrl); // Debug log
-      const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+      // Validar se a API está configurada antes de fazer a requisição
+      if (!API_BASE_URL) {
+        const errorMessage = 'API não configurada. Verifique a variável NEXT_PUBLIC_API_URL.';
+        console.error(errorMessage);
+        if (toastConfig?.showError !== false) {
+          ToastInterceptor.handleError(errorMessage, toastConfig);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const fullUrl = `${API_BASE_URL}${endpoint}`;
+      console.log(`🌐 Fazendo requisição para: ${fullUrl}`);
+      
+      const response = await fetch(fullUrl, {
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
