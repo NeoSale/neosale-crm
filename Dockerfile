@@ -58,14 +58,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copiar diretório public para permitir criação de arquivos runtime
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copiar script de inicialização
-COPY --chown=nextjs:nodejs entrypoint.sh ./
-RUN chmod +x entrypoint.sh
+
 
 USER nextjs
 
 EXPOSE 3000
 
-# Usar script de inicialização que permite variáveis de ambiente dinâmicas
-ENTRYPOINT ["./entrypoint.sh"]
 CMD ["node", "server.js"]
