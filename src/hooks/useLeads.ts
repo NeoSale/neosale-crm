@@ -39,55 +39,11 @@ export const useLeads = (): UseLeadsReturn => {
         setLeads(response.data);
       } else {
         console.log('API failed, using mock data');
-        // Dados mockados para teste
-        const mockLeads = [
-          {
-            id: '1',
-            nome: 'João Silva',
-            email: 'joao@email.com',
-            telefone: '(11) 99999-9999',
-            empresa: 'Empresa ABC',
-            cargo: 'Gerente',
-            status: 'Novo'
-          },
-          {
-            id: '2',
-            nome: 'Maria Santos',
-            email: 'maria@email.com',
-            telefone: '(11) 88888-8888',
-            empresa: 'Empresa XYZ',
-            cargo: 'Diretora',
-            status: 'Qualificado'
-          }
-        ];
-        setLeads(mockLeads);
         setError('Usando dados de exemplo - API não disponível');
       }
     } catch (err) {
       console.error('Erro ao buscar leads:', err);
       setError('Erro ao carregar leads');
-      // Dados mockados em caso de erro
-      const mockLeads = [
-        {
-          id: '1',
-          nome: 'João Silva',
-          email: 'joao@email.com',
-          telefone: '(11) 99999-9999',
-          empresa: 'Empresa ABC',
-          cargo: 'Gerente',
-          status: 'Novo'
-        },
-        {
-          id: '2',
-          nome: 'Maria Santos',
-          email: 'maria@email.com',
-          telefone: '(11) 88888-8888',
-          empresa: 'Empresa XYZ',
-          cargo: 'Diretora',
-          status: 'Qualificado'
-        }
-      ];
-      setLeads(mockLeads);
     } finally {
       setLoading(false);
     }

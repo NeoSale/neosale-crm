@@ -54,10 +54,7 @@ export function getAppInfo() {
 `;
 
   // Escrever o arquivo
-  fs.writeFileSync(versionFilePath, versionFileContent, 'utf8');
-  
-  console.log(`✅ Versão atualizada para v${version} em app-version.ts`);
-  
+  fs.writeFileSync(versionFilePath, versionFileContent, 'utf8');  
 } catch (error) {
   console.error('❌ Erro ao atualizar versão:', error.message);
   process.exit(1);
