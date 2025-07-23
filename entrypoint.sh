@@ -5,18 +5,19 @@
 echo "Iniciando aplicação NeoSale CRM..."
 echo "Configurando variáveis de ambiente dinâmicas..."
 
-# Criar arquivo .env.local dinâmico com variáveis do EasyPanel
-cat > .env.local << EOF
-# Variáveis de ambiente geradas dinamicamente pelo EasyPanel
-NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://evolution-api-neosale-api.mrzt3w.easypanel.host/api}
-NODE_ENV=${NODE_ENV:-production}
-PORT=${PORT:-3000}
-HOSTNAME=${HOSTNAME:-0.0.0.0}
-NEXT_TELEMETRY_DISABLED=${NEXT_TELEMETRY_DISABLED:-1}
-EOF
+# Definir variáveis de ambiente com valores padrão
+export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://evolution-api-neosale-api.mrzt3w.easypanel.host/api}"
+export NODE_ENV="${NODE_ENV:-production}"
+export PORT="${PORT:-3000}"
+export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
 
-echo "Arquivo .env.local criado com as seguintes variáveis:"
-cat .env.local
+echo "Variáveis de ambiente configuradas:"
+echo "NEXT_PUBLIC_API_URL: $NEXT_PUBLIC_API_URL"
+echo "NODE_ENV: $NODE_ENV"
+echo "PORT: $PORT"
+echo "HOSTNAME: $HOSTNAME"
+echo "NEXT_TELEMETRY_DISABLED: $NEXT_TELEMETRY_DISABLED"
 
 # Verificar variáveis críticas
 if [ -n "$NEXT_PUBLIC_API_URL" ]; then

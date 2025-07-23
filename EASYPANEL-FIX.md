@@ -1,7 +1,9 @@
 # 🔧 Correção: Variáveis de Ambiente EasyPanel
 
-## ❌ Problema
-As variáveis de ambiente definidas no EasyPanel não estavam sendo aplicadas corretamente na aplicação Next.js.
+## ❌ Problemas Identificados
+1. **Variáveis de ambiente** não eram aplicadas corretamente na aplicação Next.js
+2. **Erro de permissão** ao tentar criar arquivo `.env.local` no container
+3. **Build args** não eram passados durante o build da imagem
 
 ## ✅ Solução Implementada
 
@@ -10,10 +12,11 @@ As variáveis de ambiente definidas no EasyPanel não estavam sendo aplicadas co
 - Variáveis `NEXT_PUBLIC_*` agora são aplicadas durante o build
 - Suporte a build args para configuração flexível
 
-### 2. **Script Entrypoint Melhorado**
-- Cria arquivo `.env.local` dinâmico no runtime
+### 2. **Script Entrypoint Corrigido**
+- **CORREÇÃO**: Removido criação de arquivo `.env.local` (problema de permissão)
+- Usa `export` direto para definir variáveis de ambiente
 - Aplica variáveis de ambiente do EasyPanel automaticamente
-- Logs detalhados para debug
+- Logs detalhados para debug e verificação
 
 ### 3. **Build Script Atualizado**
 - Suporte a build args no script `build-and-push.sh`
@@ -65,11 +68,25 @@ Iniciando servidor Next.js...
 
 ## 🐛 Troubleshooting
 
+### ❌ Erro: "Permission denied" ao criar .env.local
+**Solução**: Atualizado para usar `export` direto (versão corrigida)
+```bash
+# ANTES (com erro)
+cat > .env.local << EOF
+
+# DEPOIS (corrigido)
+export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-default}"
+```
+
 ### Problema: Variáveis ainda não funcionam
 1. Verifique se as variáveis estão definidas no EasyPanel
 2. Confirme que a imagem está atualizada
 3. Verifique os logs do container
-4. Teste localmente com Docker:
+4. Use o script de teste:
+   ```bash
+   chmod +x test-env.sh && ./test-env.sh
+   ```
+5. Teste localmente com Docker:
    ```bash
    docker run -e NEXT_PUBLIC_API_URL=https://test.com/api -p 3000:3000 brunobspaiva/neosale-crm:latest
    ```
