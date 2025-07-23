@@ -17,12 +17,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Next.js coleta dados de telemetria completamente anônimos sobre uso geral.
-# Saiba mais aqui: https://nextjs.org/telemetry
-# Descomente a linha seguinte caso queira desabilitar a telemetria durante o build.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Build args para variáveis de ambiente
+ARG NEXT_PUBLIC_API_URL
+ARG NODE_ENV=production
+ARG NEXT_TELEMETRY_DISABLED=1
 
-# Desabilitar erros de ESLint durante o build
+# Definir variáveis de ambiente para o build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NODE_ENV=$NODE_ENV
+ENV NEXT_TELEMETRY_DISABLED=$NEXT_TELEMETRY_DISABLED
 ENV ESLINT_NO_DEV_ERRORS=true
 
 RUN npm run build

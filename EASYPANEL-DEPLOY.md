@@ -51,6 +51,26 @@ docker build -t neosale-crm .
 ./build-and-push.sh
 ```
 
+## 🔧 Configuração no EasyPanel
+
+### 1. Criar Nova Aplicação
+1. Acesse seu painel do EasyPanel
+2. Clique em "Create" > "App"
+3. Escolha "Docker Image"
+4. Configure:
+   - **Name**: `neosale-crm`
+   - **Image**: `brunobspaiva/neosale-crm:latest`
+   - **Port**: `3000`
+
+### 1.1. Build Args (Opcional)
+Se você quiser fazer build da imagem com variáveis específicas:
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_API_URL=https://sua-api.easypanel.host/api \
+  --build-arg NODE_ENV=production \
+  -t brunobspaiva/neosale-crm:latest .
+```
+
 ### 2. Configurar no EasyPanel
 
 1. **Criar novo serviço**:

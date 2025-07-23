@@ -263,7 +263,25 @@ fi
 
 # Build da imagem
 echo -e "${YELLOW}📦 Fazendo build da imagem...${NC}"
-docker build -t $IMAGE_NAME:$VERSION .
+if [ "$EASYPANEL_SUPPORT" = "true" ]; then
+    echo -e "${YELLOW}📦 Build otimizado para EasyPanel${NC}"
+    docker build \
+        --platform linux/amd64 \
+        --cache-from $IMAGE_NAME:latest \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}" \
+        --build-arg NODE_ENV="${NODE_ENV:-production}" \
+        --build-arg NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}" \
+        -t $IMAGE_NAME:$VERSION \
+        .
+else
+    docker build \
+        --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}" \
+        --build-arg NODE_ENV="${NODE_ENV:-production}" \
+        --build-arg NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}" \
+        -t $IMAGE_NAME:$VERSION \
+        .
+fi
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Build concluído com sucesso!${NC}"
