@@ -3,6 +3,7 @@
 import { Toaster } from "react-hot-toast";
 import AdminLayout from "./AdminLayout";
 import RuntimeConfigDebug from "./RuntimeConfigDebug";
+import VersionLoggerComponent from "./VersionLogger";
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -40,6 +41,8 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       />
       {/* Debug component - remover em produção */}
       <RuntimeConfigDebug show={process.env.NODE_ENV === 'development'} />
+      {/* Version logger - exibe versão no console */}
+      <VersionLoggerComponent />
     </>
   );
 }

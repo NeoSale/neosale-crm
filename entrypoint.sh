@@ -2,7 +2,10 @@
 
 # Script de inicialização para aplicar variáveis de ambiente do EasyPanel
 
-echo "Iniciando aplicação NeoSale CRM..."
+# Obter versão do package.json
+VERSION=$(grep '"version":' package.json | sed 's/.*"version": "\([^"]*\)".*/\1/')
+
+echo "Iniciando aplicação NeoSale CRM v$VERSION..."
 echo "Configurando variáveis de ambiente dinâmicas..."
 
 # Definir variáveis de ambiente com valores padrão

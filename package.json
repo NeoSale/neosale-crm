@@ -1,16 +1,17 @@
 {
   "name": "neosale-crm",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
+    "dev": "node scripts/update-version.js && next dev --turbopack",
+    "build": "node scripts/update-version.js && next build",
     "start": "next start",
     "lint": "next lint",
     "deploy": "bash build-and-push.sh",
-    "version:patch": "npm version patch --no-git-tag-version",
-    "version:minor": "npm version minor --no-git-tag-version",
-    "version:major": "npm version major --no-git-tag-version",
+    "version:patch": "npm version patch --no-git-tag-version && node scripts/update-version.js",
+    "version:minor": "npm version minor --no-git-tag-version && node scripts/update-version.js",
+    "version:major": "npm version major --no-git-tag-version && node scripts/update-version.js",
+    "update-version": "node scripts/update-version.js",
     "docker:build": "docker build -t neosale-crm .",
     "docker:run": "docker run -p 3000:3000 neosale-crm",
     "docker:pull": "docker pull brunobspaiva/neosale-crm:latest"
