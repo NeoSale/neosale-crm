@@ -166,6 +166,36 @@ Componente para exibição dos dados importados:
 - [ ] Exportação de dados
 - [ ] Autenticação de usuários
 
+## 🚀 Deploy
+
+### Deploy Automatizado
+
+Para fazer o deploy da aplicação:
+
+```bash
+npm run deploy
+```
+
+Este comando irá:
+- Fazer build da aplicação
+- Criar e enviar a imagem Docker
+- Preparar para deploy em produção
+
+### Deploy no EasyPanel
+
+Para deploy no EasyPanel, consulte o guia específico: [EASYPANEL-SETUP.md](./EASYPANEL-SETUP.md)
+
+**Configuração rápida:**
+1. Use a imagem: `brunobspaiva/neosale-crm:latest`
+2. Configure a variável: `NEXT_PUBLIC_API_URL=<sua-url-da-api>`
+3. Mapeie a porta: `3000:80`
+
+### Documentação Adicional
+
+- [DEPLOY.md](./DEPLOY.md) - Deploy geral e Docker Hub
+- [README-Docker.md](./README-Docker.md) - Configuração Docker detalhada
+- [EASYPANEL-SETUP.md](./EASYPANEL-SETUP.md) - Configuração específica para EasyPanel
+
 ## 🤝 Contribuição
 
 Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.

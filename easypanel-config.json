@@ -1,0 +1,57 @@
+{
+  "name": "neosale-crm",
+  "description": "NeoSale CRM - Sistema de gerenciamento de leads e mensagens",
+  "image": "brunobspaiva/neosale-crm:latest",
+  "ports": {
+    "3000": {
+      "public": true,
+      "protocol": "http"
+    }
+  },
+  "environment": {
+    "NEXT_PUBLIC_API_URL": "https://sua-api.easypanel.host/api",
+    "NODE_ENV": "production",
+    "PORT": "3000",
+    "HOSTNAME": "0.0.0.0",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "volumes": [],
+  "restart": "unless-stopped",
+  "healthcheck": {
+    "enabled": true,
+    "path": "/",
+    "interval": 30,
+    "timeout": 10,
+    "retries": 3
+  },
+  "resources": {
+    "memory": "512Mi",
+    "cpu": "0.5"
+  },
+  "domains": [
+    {
+      "domain": "neosale-crm.seu-dominio.com",
+      "ssl": true
+    }
+  ],
+  "notes": {
+    "setup": [
+      "1. Configure a variável NEXT_PUBLIC_API_URL com a URL da sua API",
+      "2. Certifique-se de que a API está rodando e acessível",
+      "3. Configure o domínio personalizado se necessário",
+      "4. Verifique os logs após o deploy para confirmar que as variáveis foram carregadas"
+    ],
+    "troubleshooting": [
+      "Se as variáveis não estiverem sendo carregadas:",
+      "1. Execute o script de teste: docker exec -it <container> sh /app/test-easypanel-env.sh",
+      "2. Verifique os logs do container no EasyPanel",
+      "3. Confirme que NEXT_PUBLIC_API_URL está definida nas configurações",
+      "4. Tente usar API_URL como alternativa se NEXT_PUBLIC_API_URL não funcionar"
+    ],
+    "urls": {
+      "runtime_config": "https://seu-dominio.com/runtime-config.js",
+      "api_endpoint": "https://sua-api.easypanel.host/api",
+      "documentation": "https://github.com/seu-usuario/neosale-crm/blob/main/EASYPANEL-SETUP.md"
+    }
+  }
+}

@@ -58,9 +58,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copiar diretório public para permitir criação de arquivos runtime
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copiar script de geração de configuração de runtime
+# Copiar scripts de configuração e teste
 COPY --chown=nextjs:nodejs generate-runtime-config.sh ./
+COPY --chown=nextjs:nodejs test-easypanel-env.sh ./
 RUN chmod +x generate-runtime-config.sh
+RUN chmod +x test-easypanel-env.sh
 
 USER nextjs
 
