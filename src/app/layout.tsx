@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script src={`/runtime-config.js?v=${Date.now()}`} />
+        <script src="/runtime-config.js" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

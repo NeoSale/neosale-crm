@@ -1,6 +1,6 @@
 'use client';
 
-import ConfiguracoesManager from '../../components/ConfiguracoesManager';
+import ConfiguracoesManager from '../../../components/ConfiguracoesManager';
 
 export default function FollowupPage() {
   return (

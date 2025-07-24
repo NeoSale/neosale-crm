@@ -224,7 +224,7 @@ const ConfiguracoesManager: React.FC = () => {
               {saving && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               )}
-              <span>{saving ? 'Salvando...' : 'Salvar Configurações'}</span>
+              <span>{saving ? 'Salvando...' : 'Salvar'}</span>
             </button>
           </div>
         </div>

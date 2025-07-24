@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import {
@@ -12,7 +12,10 @@ import {
   BellIcon,
   PaperAirplaneIcon,
   SpeakerWaveIcon,
+  ChatBubbleLeftRightIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline';
+import { APP_VERSION } from '../utils/app-version';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -29,14 +32,22 @@ interface MenuItem {
 const navigation: MenuItem[] = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
   { name: 'Leads', href: '/leads', icon: UsersIcon },
-  { name: 'Relatórios', href: '/reports', icon: ChartBarIcon },
+  { name: 'Chat', href: '/chat', icon: ChatBubbleLeftRightIcon },
   { name: 'Documentos', href: '/documents', icon: DocumentTextIcon },
+  { name: 'Integração', href: '/integracao', icon: LinkIcon },
+  { 
+    name: 'Relatórios', 
+    icon: ChartBarIcon,
+    children: [
+      { name: 'Follow Up', href: '/relatorios/followup', icon: SpeakerWaveIcon },
+    ]
+  },
   { 
     name: 'Configurações', 
     icon: CogIcon,
     children: [
-      { name: 'Follow Up', href: '/followup', icon: SpeakerWaveIcon },
-      { name: 'Mensagens', href: '/mensagens', icon: PaperAirplaneIcon },
+      { name: 'Mensagens', href: '/configuracoes/mensagens', icon: PaperAirplaneIcon },
+      { name: 'Follow Up', href: '/configuracoes/followup', icon: SpeakerWaveIcon },
     ]
   },
 ];
@@ -47,15 +58,35 @@ function classNames(...classes: string[]) {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['Configurações']);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const [manuallyClosedMenus, setManuallyClosedMenus] = useState<string[]>([]);
   const pathname = usePathname();
 
-  const toggleMenu = (menuName: string) => {
-    setExpandedMenus(prev => 
-      prev.includes(menuName) 
-        ? prev.filter(name => name !== menuName)
-        : [...prev, menuName]
+  // Automaticamente expandir o menu que contém a página atual
+  useEffect(() => {
+    const menuWithActivePage = navigation.find(item => 
+      item.children?.some(child => pathname === child.href)
     );
+    
+    if (menuWithActivePage && !expandedMenus.includes(menuWithActivePage.name)) {
+      setExpandedMenus(prev => [...prev, menuWithActivePage.name]);
+      // Remove da lista de menus fechados manualmente quando a página muda
+      setManuallyClosedMenus(prev => prev.filter(name => name !== menuWithActivePage.name));
+    }
+  }, [pathname, expandedMenus]);
+
+  const toggleMenu = (menuName: string) => {
+    const isCurrentlyExpanded = expandedMenus.includes(menuName);
+    
+    if (isCurrentlyExpanded) {
+      // Se está expandido, fechar e marcar como fechado manualmente
+      setExpandedMenus(prev => prev.filter(name => name !== menuName));
+      setManuallyClosedMenus(prev => [...prev, menuName]);
+    } else {
+      // Se está fechado, abrir e remover da lista de fechados manualmente
+      setExpandedMenus(prev => [...prev, menuName]);
+      setManuallyClosedMenus(prev => prev.filter(name => name !== menuName));
+    }
   };
 
   return (
@@ -76,7 +107,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             {sidebarOpen && (
               <div className="flex flex-col">
                 <h1 className="text-xl font-bold text-primary">NeoSale</h1>
-                <span className="text-xs text-gray-500">CRM Admin</span>
               </div>
             )}
           </div>
@@ -95,8 +125,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            const isExpanded = expandedMenus.includes(item.name);
             const hasActiveChild = item.children?.some(child => pathname === child.href);
+            const isManuallyClosed = manuallyClosedMenus.includes(item.name);
+            const isExpanded = expandedMenus.includes(item.name) || (hasActiveChild && !isManuallyClosed);
             
             if (item.children) {
               return (
@@ -128,7 +159,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       </>
                     )}
                   </button>
-                  {sidebarOpen && isExpanded && (
+                  {sidebarOpen && (isExpanded || (hasActiveChild && !isManuallyClosed)) && (
                     <div className="ml-6 mt-1 space-y-1">
                       {item.children.map((child) => {
                         const ChildIcon = child.icon;
@@ -185,16 +216,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           })}
         </nav>
 
-        {/* User Profile */}
+        {/* App Version */}
         {sidebarOpen && (
           <div className="border-t border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-600">U</span>
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-white">v</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">Usuário Admin</p>
-                <p className="text-xs text-gray-500 truncate">admin@neosale.com</p>
+                <p className="text-sm font-medium text-gray-900 truncate">NeoSale CRM Admin</p>
+                <p className="text-xs text-gray-500 truncate">{APP_VERSION}</p>
               </div>
             </div>
           </div>
@@ -210,7 +241,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <h2 className="text-2xl font-semibold text-gray-900">
                 {pathname === '/' ? 'Dashboard' : 
                  pathname === '/leads' ? 'Leads' :
+                 pathname === '/chat' ? 'Chat' :
                  pathname === '/mensagens' ? 'Mensagens' :
+                 pathname === '/configuracoes/mensagens' ? 'Mensagens' :
+                 pathname === '/followup' ? 'Follow Up' :
+                 pathname === '/configuracoes/followup' ? 'Follow Up' :
+                 pathname === '/relatorios/followup' ? 'Follow Up' :
+                 pathname === '/integracao' ? 'Integração' :
                  pathname === '/reports' ? 'Relatórios' :
                  pathname === '/documents' ? 'Documentos' :
                  pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}

@@ -408,7 +408,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
         {/* Estatísticas */}
         {mensagens.length > 0 && (
           <div className="bg-secondary px-4 py-3 border-b">
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-center">
               <div>
                 <div className="text-2xl font-bold text-primary">
                   {mensagens.length}
@@ -426,24 +426,6 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
                   {mensagens.filter(m => !m.ativo).length}
                 </div>
                 <div className="text-sm text-gray-600">Inativas</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {mensagens.filter(m => m.intervalo_tipo === 'minutos').length}
-                </div>
-                <div className="text-sm text-gray-600">Minutos</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-indigo-600">
-                  {mensagens.filter(m => m.intervalo_tipo === 'horas').length}
-                </div>
-                <div className="text-sm text-gray-600">Horas</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-orange-600">
-                  {mensagens.filter(m => m.intervalo_tipo === 'dias').length}
-                </div>
-                <div className="text-sm text-gray-600">Dias</div>
               </div>
             </div>
           </div>
