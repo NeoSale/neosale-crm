@@ -16,6 +16,7 @@ import {
   LinkIcon,
 } from '@heroicons/react/24/outline';
 import { APP_VERSION } from '../utils/app-version';
+import ThemeToggle from './ThemeToggle';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -101,8 +102,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Logo */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-lg">N</span>
+            <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+              <img 
+                src="/neosale-logo.svg" 
+                alt="NeoSale Logo" 
+                className="w-8 h-8"
+              />
             </div>
             {sidebarOpen && (
               <div className="flex flex-col">
@@ -133,7 +138,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               return (
                 <div key={item.name}>
                   <button
-                    onClick={() => toggleMenu(item.name)}
+                    onClick={() => {
+                      if (!sidebarOpen) {
+                        setSidebarOpen(true);
+                      }
+                      toggleMenu(item.name);
+                    }}
                     className={classNames(
                       hasActiveChild
                         ? 'bg-primary/10 text-primary'
@@ -218,15 +228,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* App Version */}
         {sidebarOpen && (
-          <div className="border-t border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-white">v</span>
+          <div className="border-t border-gray-200 px-2 py-4">
+            <div className="flex items-center px-3 py-2 text-sm font-medium">
+              <div className="w-5 h-5 mr-3 flex-shrink-0 flex items-center justify-center">
+                <img 
+                  src="/version-icon.svg" 
+                  alt="Versão" 
+                  className="w-4 h-4"
+                />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">NeoSale CRM Admin</p>
-                <p className="text-xs text-gray-500 truncate">{APP_VERSION}</p>
-              </div>
+              <span className="text-gray-600">Versão {APP_VERSION}</span>
             </div>
           </div>
         )}
@@ -238,6 +249,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
+              {!sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  <ChevronRightIcon className="h-5 w-5" />
+                </button>
+              )}
               <h2 className="text-2xl font-semibold text-gray-900">
                 {pathname === '/' ? 'Dashboard' : 
                  pathname === '/leads' ? 'Leads' :
@@ -254,11 +273,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </h2>
             </div>
             <div className="flex items-center gap-4">
+              <ThemeToggle />
               <button className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md transition-colors">
                 <BellIcon className="h-5 w-5" />
               </button>
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-white">U</span>
+              <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-gray-100">
+                <img 
+                  src="/user-icon.svg" 
+                  alt="Usuário" 
+                  className="w-full h-full object-contain"
+                />
               </div>
             </div>
           </div>

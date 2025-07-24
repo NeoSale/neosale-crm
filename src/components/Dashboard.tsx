@@ -28,7 +28,7 @@ function StatCard({ title, value, icon: Icon, color, trend }: StatCardProps) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+        <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
           {trend && (
             <p className="text-sm text-green-600 mt-1 flex items-center">
               <ArrowTrendingUpIcon className="h-4 w-4 mr-1" />
@@ -77,7 +77,7 @@ function ActivityItem({ title, description, time, type }: ActivityItemProps) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900">{title}</p>
-        <p className="text-sm text-gray-500">{description}</p>
+          <p className="text-sm text-gray-500">{description}</p>
       </div>
       <div className="flex-shrink-0">
         <p className="text-xs text-gray-400">{time}</p>
@@ -137,10 +137,15 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard CRM</h1>
-        <p className="text-gray-600">
-          Visão geral do seu pipeline de vendas e atividades recentes.
-        </p>
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard CRM</h1>
+      <p className="text-gray-600">
+            Visão geral do seu pipeline de vendas e atividades recentes.
+          </p>
+          
+
+
+
+
       </div>
 
       {/* Stats Grid */}
@@ -228,7 +233,7 @@ export default function Dashboard() {
           <div className="mt-4 pt-4 border-t border-gray-200">
             <a
               href="/leads"
-              className="text-sm text-primary hover:text-primary-dark font-medium"
+              className="text-sm text-primary hover:text-blue-700 font-medium"
             >
               Ver todas as atividades →
             </a>
@@ -238,7 +243,7 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <a
             href="/leads"

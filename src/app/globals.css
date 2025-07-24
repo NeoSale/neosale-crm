@@ -1,11 +1,6 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary: #403CCF;
-  --secondary: #FBFAFF;
-}
+
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
@@ -25,26 +20,65 @@
   background: #a8a8a8;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-secondary: var(--secondary);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* Tailwind configuration moved to tailwind.config.js */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+
+
+/* Removed dark theme styles to maintain only light theme */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  color: #1f2937; /* Default text color - gray-800 */
+  background-color: #ffffff; /* Default background color - white */
+}
+
+/* Ensure default text colors for common elements */
+h1, h2, h3, h4, h5, h6 {
+  color: #1f2937; /* gray-800 */
+}
+
+p, span, div {
+  color: inherit; /* Inherit from parent or body */
+}
+
+/* Override any potential white text issues - but preserve Tailwind colors */
+*:not([class*="bg-"]):not([class*="text-"]):not([class*="border-"]) {
+  color: inherit;
+}
+
+/* Specific overrides for text elements */
+.text-default {
+  color: #1f2937 !important;
+}
+
+/* Ensure Tailwind primary colors are applied correctly */
+.bg-primary {
+  background-color: #403CCF !important;
+}
+
+.text-primary {
+  color: #403CCF !important;
+}
+
+.border-primary {
+  border-color: #403CCF !important;
+}
+
+.hover\:bg-primary\/5:hover {
+  background-color: rgba(64, 60, 207, 0.05) !important;
+}
+
+.hover\:border-primary:hover {
+  border-color: #403CCF !important;
+}
+
+.group:hover .group-hover\:text-primary {
+  color: #403CCF !important;
+}
+
+.focus\:ring-primary:focus {
+  --tw-ring-color: #403CCF !important;
 }
 
 /* Force 24-hour format for time inputs */

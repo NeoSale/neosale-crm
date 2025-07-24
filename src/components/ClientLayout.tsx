@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import AdminLayout from "./AdminLayout";
 import VersionLoggerComponent from "./VersionLogger";
 import ApiConfigChecker from "./ApiConfigChecker";
+import { ThemeProvider } from "../contexts/ThemeContext";
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -11,7 +12,7 @@ interface ClientLayoutProps {
 
 export default function ClientLayout({ children }: ClientLayoutProps) {
   return (
-    <>
+    <ThemeProvider>
       <AdminLayout>
         {children}
       </AdminLayout>
@@ -43,6 +44,6 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       <VersionLoggerComponent />
       {/* API config checker - verifica configuração da API */}
       <ApiConfigChecker />
-    </>
+    </ThemeProvider>
   );
 }

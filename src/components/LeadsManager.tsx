@@ -778,7 +778,7 @@ const LeadsManager: React.FC = () => {
             </p>
             {!searchTerm && (
               <button
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                 onClick={() => fileInputRef.current?.click()}
               >
                 Importar Leads
@@ -1653,7 +1653,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
         >
           Salvar
         </button>
