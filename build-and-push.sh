@@ -255,10 +255,17 @@ echo -e "${GREEN}🚀 Usando versão: $VERSION${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}🐳 Iniciando build da imagem Docker do NeoSale CRM${NC}"
 
-# Verificar se o Docker está rodando
+# Verificar e iniciar o Docker se necessário
+echo -e "${YELLOW}🐳 Verificando Docker...${NC}"
 if ! docker info > /dev/null 2>&1; then
-    echo -e "${RED}❌ Docker não está rodando. Por favor, inicie o Docker e tente novamente.${NC}"
-    exit 1
+    echo -e "${YELLOW}🔄 Docker não está rodando. Tentando iniciar...${NC}"
+    node scripts/start-docker.js
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Falha ao iniciar Docker. Por favor, inicie manualmente e tente novamente.${NC}"
+        exit 1
+    fi
+else
+    echo -e "${GREEN}✅ Docker já está rodando${NC}"
 fi
 
 # Build da imagem
