@@ -22,6 +22,8 @@ export interface Mensagem {
   embedding?: string;
   created_at: string;
   updated_at?: string;
+  ordem?: number; // Campo para ordenação drag and drop
+  ativo: boolean; // Flag para controlar se a mensagem está ativa
 }
 
 export interface MensagemForm {
@@ -29,6 +31,8 @@ export interface MensagemForm {
   intervalo_numero: number;
   intervalo_tipo: string;
   texto_mensagem: string;
+  ordem?: number; // Campo para ordenação
+  ativo?: boolean; // Flag para controlar se a mensagem está ativa
 }
 
 export interface ApiResponse<T> {
@@ -174,6 +178,37 @@ class MensagensApiService {
     }
 
     return response;
+  }
+
+  // Atualizar ordem das mensagens (drag and drop)
+  // Referência: http://localhost:3000/api-docs/#/ - endpoint PUT /mensagens/{id}
+  async reorderMensagens(mensagensOrdenadas: { id: string; ordem: number }[]): Promise<ApiResponse<any>> {
+    try {
+      // Atualizar cada mensagem individualmente usando PUT /mensagens/{id}
+      const updatePromises = mensagensOrdenadas.map(mensagem => 
+        this.request<Mensagem>(`/mensagens/${mensagem.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ ordem: mensagem.ordem }),
+        })
+      );
+
+      const responses = await Promise.all(updatePromises);
+      
+      // Verificar se todas as atualizações foram bem-sucedidas
+      const allSuccessful = responses.every(response => response.success);
+      
+      if (allSuccessful) {
+        toast.success('Ordem das mensagens atualizada com sucesso!');
+        return { success: true, data: responses };
+      } else {
+        toast.error('Erro ao atualizar algumas mensagens');
+        return { success: false, error: 'Erro parcial ao reordenar mensagens' };
+      }
+    } catch (error) {
+      console.error('Erro ao reordenar mensagens:', error);
+      toast.error('Erro ao atualizar ordem das mensagens');
+      return { success: false, error: 'Erro ao reordenar mensagens' };
+    }
   }
 }
 

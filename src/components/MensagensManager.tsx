@@ -9,11 +9,31 @@ import {
   PaperAirplaneIcon,
   DocumentDuplicateIcon,
   ArrowPathIcon,
+  Bars3Icon,
 } from '@heroicons/react/24/outline';
 import { Search } from 'lucide-react';
 import { mensagensApi, Mensagem, MensagemForm } from '../services/mensagensApi';
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface MensagensManagerProps {}
 
@@ -30,7 +50,8 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
     nome: '',
     intervalo_numero: 1,
     intervalo_tipo: 'minutos',
-    texto_mensagem: ''
+    texto_mensagem: '',
+    ativo: true
   });
   
   // Estados para paginação
@@ -51,7 +72,14 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
     try {
       const response = await mensagensApi.getMensagens();
       if (response.success && response.data) {
-        setMensagens(response.data);
+        // Ordenar mensagens por ordem se disponível, senão por created_at
+        const mensagensOrdenadas = response.data.sort((a, b) => {
+          if (a.ordem !== undefined && b.ordem !== undefined) {
+            return a.ordem - b.ordem;
+          }
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+        setMensagens(mensagensOrdenadas);
       }
     } catch (error) {
       console.error('Erro ao carregar mensagens:', error);
@@ -89,7 +117,8 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
       nome: mensagem.nome || '',
       intervalo_numero: mensagem.intervalo_numero,
       intervalo_tipo: mensagem.intervalo_tipo,
-      texto_mensagem: mensagem.texto_mensagem
+      texto_mensagem: mensagem.texto_mensagem,
+      ativo: mensagem.ativo
     });
     setEditingMensagem(mensagem);
     setShowModal(true);
@@ -120,15 +149,83 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
     loadMensagens();
   };
 
+  // Configuração dos sensores para drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Função para lidar com o fim do drag
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = currentMensagens.findIndex((item) => item.id === active.id);
+      const newIndex = currentMensagens.findIndex((item) => item.id === over?.id);
+
+      const newOrder = arrayMove(currentMensagens, oldIndex, newIndex);
+      
+      // Atualizar estado local imediatamente para feedback visual
+      setMensagens(prevMensagens => {
+        const allMensagens = [...prevMensagens];
+        const reorderedCurrent = arrayMove(currentMensagens, oldIndex, newIndex);
+        
+        // Atualizar as mensagens da página atual com a nova ordem
+        reorderedCurrent.forEach((msg, index) => {
+          const globalIndex = allMensagens.findIndex(m => m.id === msg.id);
+          if (globalIndex !== -1) {
+            // Calcular a ordem global baseada na página atual e posição
+            const globalOrder = startIndex + index + 1;
+            allMensagens[globalIndex] = { ...msg, ordem: globalOrder };
+          }
+        });
+        
+        return allMensagens;
+      });
+
+      // Preparar dados para enviar à API com ordem global correta
+      const mensagensOrdenadas = newOrder.map((msg, index) => ({
+        id: msg.id,
+        ordem: startIndex + index + 1 // Ordem global considerando paginação
+      }));
+
+      try {
+        // Enviar nova ordem para a API
+        // Referência: http://localhost:3000/api-docs/#/ - endpoint PUT /mensagens/{id}
+        await mensagensApi.reorderMensagens(mensagensOrdenadas);
+        
+        // Recarregar mensagens para refletir a ordem atualizada da base de dados
+        await loadMensagens();
+      } catch (error) {
+        console.error('Erro ao atualizar ordem das mensagens:', error);
+        // Recarregar mensagens em caso de erro
+        loadMensagens();
+      }
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       nome: '',
       intervalo_numero: 1,
       intervalo_tipo: 'minutos',
-      texto_mensagem: ''
+      texto_mensagem: '',
+      ativo: true
     });
     setEditingMensagem(null);
     setShowModal(false);
+  };
+
+  const handleToggleAtivo = async (mensagem: Mensagem) => {
+    try {
+      const updatedMensagem = { ...mensagem, ativo: !mensagem.ativo };
+      await mensagensApi.updateMensagem(mensagem.id, updatedMensagem);
+      await loadMensagens();
+    } catch (error) {
+      console.error('Erro ao alterar status da mensagem:', error);
+    }
   };
 
 
@@ -154,6 +251,127 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentMensagens = filteredMensagens.slice(startIndex, endIndex);
+
+  // Componente para linha arrastável
+  const SortableRow: React.FC<{ mensagem: Mensagem; index: number }> = ({ mensagem, index }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: mensagem.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <tr
+        ref={setNodeRef}
+        style={style}
+        className={`hover:bg-gray-50 ${isDragging ? 'bg-blue-50' : ''}`}
+      >
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
+          <div className="flex items-center gap-2">
+            <button
+              {...attributes}
+              {...listeners}
+              className="p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
+              title="Arrastar para reordenar"
+            >
+              <Bars3Icon className="h-4 w-4" />
+            </button>
+            <span className="text-xs text-gray-500 font-mono">#{index + 1}</span>
+          </div>
+        </td>
+        {['nome', 'intervalo_tipo', 'intervalo_numero', 'texto_mensagem', 'ativo'].map((header, colIndex) => (
+          <td
+            key={colIndex}
+            className="px-3 py-2 whitespace-nowrap text-sm text-gray-700"
+          >
+            {(() => {
+              const value = mensagem[header as keyof Mensagem];
+              if (value === null || value === undefined) return '-';
+
+              // Tratar campo nome
+              if (header === 'nome') {
+                return value || 'Sem nome';
+              }
+
+              // Tratar tipo de intervalo
+              if (header === 'intervalo_tipo') {
+                return typeof value === 'string' ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+              }
+
+              // Tratar mensagem (truncar se muito longa)
+              if (header === 'texto_mensagem') {
+                return typeof value === 'string' && value.length > 50 
+                  ? value.substring(0, 50) + '...' 
+                  : value;
+              }
+
+              // Tratar campo ativo (toggle switch)
+              if (header === 'ativo') {
+                return (
+                  <button
+                    onClick={() => handleToggleAtivo(mensagem)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      value ? 'bg-green-600' : 'bg-gray-200'
+                    }`}
+                    title={value ? 'Clique para desativar' : 'Clique para ativar'}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        value ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                );
+              }
+
+              return value;
+            })()}
+          </td>
+        ))}
+        <td className="px-3 py-2 whitespace-nowrap text-sm">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setViewingMensagem(mensagem)}
+              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+              title="Visualizar mensagem"
+            >
+              <EyeIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleEdit(mensagem)}
+              className="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded transition-colors"
+              title="Editar mensagem"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleDuplicar(mensagem.id)}
+              className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+              title="Duplicar mensagem"
+            >
+              <DocumentDuplicateIcon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleDelete(mensagem.id)}
+              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors"
+              title="Excluir mensagem"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
@@ -190,30 +408,42 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
         {/* Estatísticas */}
         {mensagens.length > 0 && (
           <div className="bg-secondary px-4 py-3 border-b">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
               <div>
                 <div className="text-2xl font-bold text-primary">
                   {mensagens.length}
                 </div>
-                <div className="text-sm text-gray-600">Total de Mensagens</div>
+                <div className="text-sm text-gray-600">Total</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-green-600">
-                  {mensagens.filter(m => m.intervalo_tipo === 'minutos').length}
+                  {mensagens.filter(m => m.ativo).length}
                 </div>
-                <div className="text-sm text-gray-600">Em Minutos</div>
+                <div className="text-sm text-gray-600">Ativas</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-red-600">
+                  {mensagens.filter(m => !m.ativo).length}
+                </div>
+                <div className="text-sm text-gray-600">Inativas</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-blue-600">
+                  {mensagens.filter(m => m.intervalo_tipo === 'minutos').length}
+                </div>
+                <div className="text-sm text-gray-600">Minutos</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-indigo-600">
                   {mensagens.filter(m => m.intervalo_tipo === 'horas').length}
                 </div>
-                <div className="text-sm text-gray-600">Em Horas</div>
+                <div className="text-sm text-gray-600">Horas</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-orange-600">
                   {mensagens.filter(m => m.intervalo_tipo === 'dias').length}
                 </div>
-                <div className="text-sm text-gray-600">Em Dias</div>
+                <div className="text-sm text-gray-600">Dias</div>
               </div>
             </div>
           </div>
@@ -235,95 +465,51 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
         {currentMensagens.length > 0 ? (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {['nome', 'intervalo_tipo', 'intervalo_numero', 'texto_mensagem'].map((header, index) => (
-                      <th
-                        key={index}
-                        className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        {header === 'nome' ? 'Nome' :
-                          header === 'intervalo_tipo' ? 'Tipo Intervalo' :
-                            header === 'intervalo_numero' ? 'Intervalo' :
-                              header === 'texto_mensagem' ? 'Mensagem' :
-                                header.charAt(0).toUpperCase() + header.slice(1)}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ordem
                       </th>
-                    ))}
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {currentMensagens.map((mensagem, rowIndex) => (
-                    <tr key={mensagem.id || rowIndex} className="hover:bg-gray-50">
-                      {['nome', 'intervalo_tipo', 'intervalo_numero', 'texto_mensagem'].map((header, colIndex) => (
-                        <td
-                          key={colIndex}
-                          className="px-3 py-2 whitespace-nowrap text-sm text-gray-700"
+                      {['nome', 'intervalo_tipo', 'intervalo_numero', 'texto_mensagem', 'ativo'].map((header, index) => (
+                        <th
+                          key={index}
+                          className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
-                          {(() => {
-                            const value = mensagem[header as keyof Mensagem];
-                            if (value === null || value === undefined) return '-';
-
-                            // Tratar campo nome
-                            if (header === 'nome') {
-                              return value || 'Sem nome';
-                            }
-
-                            // Tratar tipo de intervalo
-                            if (header === 'intervalo_tipo') {
-                              return typeof value === 'string' ? value.charAt(0).toUpperCase() + value.slice(1) : value;
-                            }
-
-                            // Tratar mensagem (truncar se muito longa)
-                            if (header === 'texto_mensagem') {
-                              return typeof value === 'string' && value.length > 50 
-                                ? value.substring(0, 50) + '...' 
-                                : value;
-                            }
-
-                            return value;
-                          })()}
-                        </td>
+                          {header === 'nome' ? 'Nome' :
+                            header === 'intervalo_tipo' ? 'Tipo Intervalo' :
+                              header === 'intervalo_numero' ? 'Intervalo' :
+                                header === 'texto_mensagem' ? 'Mensagem' :
+                                  header === 'ativo' ? 'Ativo' :
+                                    header.charAt(0).toUpperCase() + header.slice(1)}
+                        </th>
                       ))}
-                      <td className="px-3 py-2 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setViewingMensagem(mensagem)}
-                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
-                            title="Visualizar mensagem"
-                          >
-                            <EyeIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleEdit(mensagem)}
-                            className="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded transition-colors"
-                            title="Editar mensagem"
-                          >
-                            <PencilIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDuplicar(mensagem.id)}
-                            className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
-                            title="Duplicar mensagem"
-                          >
-                            <DocumentDuplicateIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(mensagem.id)}
-                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors"
-                            title="Excluir mensagem"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ações
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <SortableContext
+                    items={currentMensagens.map(m => m.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {currentMensagens.map((mensagem, rowIndex) => (
+                        <SortableRow
+                          key={mensagem.id}
+                          mensagem={mensagem}
+                          index={startIndex + rowIndex}
+                        />
+                      ))}
+                    </tbody>
+                  </SortableContext>
+                </table>
+              </DndContext>
             </div>
 
             {/* Controles de Paginação */}
@@ -509,6 +695,23 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
             />
           </div>
           
+          <div>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.ativo || false}
+                onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Mensagem ativa
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              Mensagens inativas não serão enviadas automaticamente
+            </p>
+          </div>
+          
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
@@ -568,6 +771,17 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
               <div className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-md">
                 {viewingMensagem.texto_mensagem}
               </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                viewingMensagem.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {viewingMensagem.ativo ? 'Ativa' : 'Inativa'}
+              </span>
             </div>
             
             {viewingMensagem.enviada && (
