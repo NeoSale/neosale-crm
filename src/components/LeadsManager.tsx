@@ -471,22 +471,22 @@ const LeadsManager: React.FC = () => {
       )}
 
       {/* Seção de Leads Existentes */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="mt-6 bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-primary text-white p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Users size={24} />
+              <Users size={24} className="text-white" />
               <div>
-                <h2 className="text-lg font-bold">Leads Cadastrados</h2>
+                <h2 className="text-lg font-bold text-white !text-white">Leads Cadastrados</h2>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                <RefreshCw size={14} className={`text-white ${loading ? 'animate-spin' : ''}`} />
                 Atualizar
               </button>
               <input
@@ -510,16 +510,16 @@ const LeadsManager: React.FC = () => {
               />
               <button
                 onClick={handleCreateLead}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <Plus size={14} />
+                <Plus size={14} className="text-white" />
                 Novo Lead
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <Database size={14} />
+                <Database size={14} className="text-white" />
                 Importar Leads
               </button>
               {selectedLeads.size > 0 && (
@@ -527,7 +527,7 @@ const LeadsManager: React.FC = () => {
                   onClick={handleBulkDelete}
                   className="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={14} className="text-white" />
                   Excluir ({selectedLeads.size})
                 </button>
               )}

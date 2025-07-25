@@ -47,7 +47,6 @@ const navigation: MenuItem[] = [
     name: 'Configurações', 
     icon: CogIcon,
     children: [
-      { name: 'Mensagens', href: '/configuracoes/mensagens', icon: PaperAirplaneIcon },
       { name: 'Follow Up', href: '/configuracoes/followup', icon: SpeakerWaveIcon },
     ]
   },
@@ -104,7 +103,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
               <img 
-                src="/neosale-logo.svg" 
+                src="/icone-azul.png" 
                 alt="NeoSale Logo" 
                 className="w-8 h-8"
               />
