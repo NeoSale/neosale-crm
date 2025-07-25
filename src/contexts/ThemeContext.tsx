@@ -38,11 +38,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     // Do nothing - kept for compatibility
   };
 
-  // Evitar hidration mismatch
-  if (!mounted) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>;
-  }
-
   return (
     <ThemeContext.Provider value={{ theme: 'light', toggleTheme }}>
       {children}

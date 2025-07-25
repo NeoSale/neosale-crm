@@ -8,10 +8,13 @@ import { isApiConfigured, logApiConfig } from '../utils/api-config';
  * e exibe avisos se necessário
  */
 export default function ApiConfigChecker() {
+  const [mounted, setMounted] = useState(false);
   const [isConfigured, setIsConfigured] = useState<boolean | null>(null);
   const [showWarning, setShowWarning] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    
     // Verificar configuração da API
     const checkApiConfig = () => {
       const configured = isApiConfigured();
@@ -29,6 +32,11 @@ export default function ApiConfigChecker() {
 
     checkApiConfig();
   }, []);
+
+  // Evitar hidratação mismatch
+  if (!mounted) {
+    return null;
+  }
 
   // Não renderizar nada se a API estiver configurada corretamente
   if (isConfigured === true) {

@@ -300,7 +300,7 @@ const ConfiguracoesManager: React.FC = () => {
         ref={setNodeRef}
         style={style}
         {...attributes}
-        className={`border-b border-gray-200 hover:bg-gray-50 ${isDragging ? 'bg-blue-50' : ''}`}
+        className={`border-b border-gray-200 hover:bg-gray-50 ${isDragging ? 'bg-primary/10' : ''}`}
       >
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
           <div className="flex items-center gap-2">
@@ -325,8 +325,8 @@ const ConfiguracoesManager: React.FC = () => {
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
           <button
             onClick={() => handleToggleAtivo(mensagem)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-              mensagem.ativo ? 'bg-green-600' : 'bg-gray-200'
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+              mensagem.ativo ? 'bg-primary' : 'bg-gray-200'
             }`}
             title={mensagem.ativo ? 'Clique para desativar' : 'Clique para ativar'}
           >
@@ -341,28 +341,28 @@ const ConfiguracoesManager: React.FC = () => {
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setViewingMensagem(mensagem)}
-              className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+              className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
               title="Visualizar"
             >
               <EyeIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleEdit(mensagem)}
-              className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
+              className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
               title="Editar"
             >
               <PencilIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleDuplicar(mensagem.id)}
-              className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
+              className="text-primary hover:text-blue-700 p-1 rounded hover:bg-primary/10"
               title="Duplicar"
             >
               <DocumentDuplicateIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleDelete(mensagem.id)}
-              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+              className="text-primary hover:text-blue-700 p-1 rounded hover:bg-primary/10"
               title="Deletar"
             >
               <TrashIcon className="h-4 w-4" />
@@ -376,7 +376,7 @@ const ConfiguracoesManager: React.FC = () => {
   if (loading && mensagens.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -397,7 +397,7 @@ const ConfiguracoesManager: React.FC = () => {
               <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                 Horário de Início
                 <div className="group relative ml-2">
-                  <svg className="h-4 w-4 text-blue-500 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-4 w-4 text-primary cursor-help" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                   </svg>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
@@ -426,7 +426,7 @@ const ConfiguracoesManager: React.FC = () => {
                   handleInputChange('horario_inicio', value);
                 }}
                 maxLength={5}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900"
               />
 
             </div>
@@ -435,7 +435,7 @@ const ConfiguracoesManager: React.FC = () => {
               <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                 Horário de Fim
                 <div className="group relative ml-2">
-                  <svg className="h-4 w-4 text-blue-500 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-4 w-4 text-primary cursor-help" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                   </svg>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
@@ -464,7 +464,7 @@ const ConfiguracoesManager: React.FC = () => {
                   handleInputChange('horario_fim', value);
                 }}
                 maxLength={5}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900"
               />
 
             </div>
@@ -490,7 +490,7 @@ const ConfiguracoesManager: React.FC = () => {
               max="1000"
               value={configuracoes.quantidade_diaria_maxima as string || ''}
               onChange={(e) => handleInputChange('quantidade_diaria_maxima', e.target.value)}
-              className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-gray-900"
               placeholder="Ex: 30"
             />
 
@@ -503,7 +503,7 @@ const ConfiguracoesManager: React.FC = () => {
                 type="checkbox"
                 checked={configuracoes.envia_somente_dias_uteis as boolean || false}
                 onChange={(e) => handleInputChange('envia_somente_dias_uteis', e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
               />
               <div className="flex items-center">
                 <span className="text-sm font-medium text-gray-700">
@@ -536,7 +536,7 @@ const ConfiguracoesManager: React.FC = () => {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {saving && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -590,13 +590,13 @@ const ConfiguracoesManager: React.FC = () => {
                 <div className="text-sm text-gray-600">Total</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-primary">
                   {mensagens.filter(m => m.ativo).length}
                 </div>
                 <div className="text-sm text-gray-600">Ativas</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-2xl font-bold text-primary">
                   {mensagens.filter(m => !m.ativo).length}
                 </div>
                 <div className="text-sm text-gray-600">Inativas</div>
@@ -755,7 +755,7 @@ const ConfiguracoesManager: React.FC = () => {
             </p>
             {!searchTerm && (
               <button
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                 onClick={() => setShowModal(true)}
               >
                 Nova Mensagem
@@ -800,7 +800,7 @@ const ConfiguracoesManager: React.FC = () => {
               type="text"
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="Nome da mensagem (opcional)"
             />
           </div>
@@ -812,7 +812,7 @@ const ConfiguracoesManager: React.FC = () => {
             <select
               value={formData.intervalo_tipo}
               onChange={(e) => setFormData({ ...formData, intervalo_tipo: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               required
             >
               <option value="minutos">Minutos</option>
@@ -856,7 +856,7 @@ const ConfiguracoesManager: React.FC = () => {
                 type="checkbox"
                 checked={formData.ativo || false}
                 onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
               />
               <span className="text-sm font-medium text-gray-700">
                 Mensagem ativa
@@ -877,7 +877,7 @@ const ConfiguracoesManager: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
             >
               {editingMensagem ? 'Atualizar' : 'Criar'}
             </button>

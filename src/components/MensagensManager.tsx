@@ -233,7 +233,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
   if (loading && mensagens.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -273,7 +273,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
       <tr
         ref={setNodeRef}
         style={style}
-        className={`hover:bg-gray-50 ${isDragging ? 'bg-blue-50' : ''}`}
+        className={`hover:bg-gray-50 ${isDragging ? 'bg-primary/10' : ''}`}
       >
         <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
           <div className="flex items-center gap-2">
@@ -319,8 +319,8 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
                 return (
                   <button
                     onClick={() => handleToggleAtivo(mensagem)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      value ? 'bg-green-600' : 'bg-gray-200'
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      value ? 'bg-primary' : 'bg-gray-200'
                     }`}
                     title={value ? 'Clique para desativar' : 'Clique para ativar'}
                   >
@@ -341,28 +341,28 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
           <div className="flex items-center gap-1">
             <button
               onClick={() => setViewingMensagem(mensagem)}
-              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+              className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
               title="Visualizar mensagem"
             >
               <EyeIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleEdit(mensagem)}
-              className="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded transition-colors"
+              className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
               title="Editar mensagem"
             >
               <PencilIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleDuplicar(mensagem.id)}
-              className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+              className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
               title="Duplicar mensagem"
             >
               <DocumentDuplicateIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleDelete(mensagem.id)}
-              className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors"
+              className="p-1 text-primary hover:text-blue-700 hover:bg-primary/10 rounded transition-colors"
               title="Excluir mensagem"
             >
               <TrashIcon className="h-4 w-4" />
@@ -416,13 +416,13 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
                 <div className="text-sm text-gray-600">Total</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-primary">
                   {mensagens.filter(m => m.ativo).length}
                 </div>
                 <div className="text-sm text-gray-600">Ativas</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-2xl font-bold text-primary">
                   {mensagens.filter(m => !m.ativo).length}
                 </div>
                 <div className="text-sm text-gray-600">Inativas</div>
@@ -582,7 +582,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
             </p>
             {!searchTerm && (
               <button
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                 onClick={() => setShowModal(true)}
               >
                 Nova Mensagem
@@ -590,7 +590,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
             )}
             {searchTerm && (
               <button
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                 onClick={() => setSearchTerm('')}
               >
                 Limpar Filtro
@@ -627,7 +627,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
               type="text"
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="Nome da mensagem (opcional)"
             />
           </div>
@@ -639,7 +639,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
             <select
               value={formData.intervalo_tipo}
               onChange={(e) => setFormData({ ...formData, intervalo_tipo: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               required
             >
               <option value="minutos">Minutos</option>
@@ -657,7 +657,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
               min="1"
               value={formData.intervalo_numero}
               onChange={(e) => setFormData({ ...formData, intervalo_numero: parseInt(e.target.value) || 1 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="Número do intervalo"
               required
             />
@@ -671,7 +671,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
               value={formData.texto_mensagem}
               onChange={(e) => setFormData({ ...formData, texto_mensagem: e.target.value })}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="Digite o texto da mensagem..."
               required
             />
@@ -683,7 +683,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
                 type="checkbox"
                 checked={formData.ativo || false}
                 onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
               />
               <span className="text-sm font-medium text-gray-700">
                 Mensagem ativa
@@ -704,7 +704,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
             >
               {editingMensagem ? 'Atualizar' : 'Criar'}
             </button>
@@ -799,7 +799,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
             <div className="flex justify-end pt-4">
               <button
                 onClick={() => setViewingMensagem(null)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
               >
                 Fechar
               </button>

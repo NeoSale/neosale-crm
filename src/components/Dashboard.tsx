@@ -58,13 +58,13 @@ function ActivityItem({ title, description, time, type }: ActivityItemProps) {
   const getIcon = () => {
     switch (type) {
       case 'lead':
-        return <UsersIcon className="h-5 w-5 text-blue-500" />;
+        return <UsersIcon className="h-5 w-5 text-primary" />;
       case 'call':
-        return <PhoneIcon className="h-5 w-5 text-green-500" />;
+        return <PhoneIcon className="h-5 w-5 text-primary" />;
       case 'meeting':
-        return <CalendarIcon className="h-5 w-5 text-purple-500" />;
+        return <CalendarIcon className="h-5 w-5 text-primary" />;
       case 'deal':
-        return <CurrencyDollarIcon className="h-5 w-5 text-yellow-500" />;
+        return <CurrencyDollarIcon className="h-5 w-5 text-primary" />;
       default:
         return <UsersIcon className="h-5 w-5 text-gray-500" />;
     }
@@ -154,27 +154,27 @@ export default function Dashboard() {
           title="Total de Leads"
           value={totalLeads}
           icon={UsersIcon}
-          color="bg-blue-500"
+          color="bg-primary"
           trend="+12% este mês"
         />
         <StatCard
           title="Leads Convertidos"
           value={convertedLeads}
           icon={CheckCircleIcon}
-          color="bg-green-500"
+          color="bg-primary"
           trend={`${conversionRate}% taxa de conversão`}
         />
         <StatCard
           title="Em Andamento"
           value={pendingLeads}
           icon={ClockIcon}
-          color="bg-yellow-500"
+          color="bg-primary"
         />
         <StatCard
           title="Reuniões Agendadas"
           value={scheduledMeetings}
           icon={CalendarIcon}
-          color="bg-purple-500"
+          color="bg-primary"
           trend="+3 esta semana"
         />
       </div>
@@ -185,33 +185,33 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Status do Pipeline</h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
                 <span className="font-medium text-gray-900">Novos Leads</span>
               </div>
-              <span className="text-2xl font-bold text-blue-600">{pendingLeads}</span>
+              <span className="text-2xl font-bold text-primary">{pendingLeads}</span>
             </div>
-            <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
                 <span className="font-medium text-gray-900">Em Contato</span>
               </div>
-              <span className="text-2xl font-bold text-yellow-600">{scheduledMeetings}</span>
+              <span className="text-2xl font-bold text-primary">{scheduledMeetings}</span>
             </div>
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
                 <span className="font-medium text-gray-900">Convertidos</span>
               </div>
-              <span className="text-2xl font-bold text-green-600">{convertedLeads}</span>
+              <span className="text-2xl font-bold text-primary">{convertedLeads}</span>
             </div>
-            <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
                 <span className="font-medium text-gray-900">Perdidos</span>
               </div>
-              <span className="text-2xl font-bold text-red-600">{rejectedLeads}</span>
+              <span className="text-2xl font-bold text-primary">{rejectedLeads}</span>
             </div>
           </div>
         </div>
@@ -233,7 +233,7 @@ export default function Dashboard() {
           <div className="mt-4 pt-4 border-t border-gray-200">
             <a
               href="/leads"
-              className="text-sm text-primary hover:text-blue-700 font-medium"
+              className="text-sm text-primary hover:text-primary/70 font-medium"
             >
               Ver todas as atividades →
             </a>

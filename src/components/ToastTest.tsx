@@ -49,21 +49,21 @@ const ToastTest: React.FC = () => {
       <div className="space-y-4">
         <button
           onClick={testSuccess}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
         >
           Testar Sucesso (2 leads)
         </button>
         
         <button
           onClick={testError}
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
         >
           Testar Erro (6 leads - erro 500)
         </button>
         
         <button
           onClick={testInvalidData}
-          className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+          className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
         >
           Testar Dados Inválidos (erro 400)
         </button>

@@ -32,28 +32,28 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       iconBg: 'bg-red-100',
       iconColor: 'text-red-600',
       titleColor: 'text-red-600',
-      confirmBg: 'bg-red-600 hover:bg-red-700',
+      confirmBg: 'bg-primary hover:bg-primary/90',
       defaultIcon: <TrashIcon className="w-5 h-5" />
     },
     warning: {
       iconBg: 'bg-yellow-100',
       iconColor: 'text-yellow-600',
       titleColor: 'text-yellow-600',
-      confirmBg: 'bg-yellow-600 hover:bg-yellow-700',
+      confirmBg: 'bg-primary hover:bg-primary/90',
       defaultIcon: <ExclamationTriangleIcon className="w-5 h-5" />
     },
     success: {
       iconBg: 'bg-green-100',
       iconColor: 'text-green-600',
       titleColor: 'text-green-600',
-      confirmBg: 'bg-green-600 hover:bg-green-700',
+      confirmBg: 'bg-primary hover:bg-primary/90',
       defaultIcon: <CheckCircleIcon className="w-5 h-5" />
     },
     info: {
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      titleColor: 'text-blue-600',
-      confirmBg: 'bg-blue-600 hover:bg-blue-700',
+      iconBg: 'bg-primary/10',
+      iconColor: 'text-primary',
+      titleColor: 'text-primary',
+        confirmBg: 'bg-primary hover:bg-primary/90',
       defaultIcon: <InformationCircleIcon className="w-5 h-5" />
     }
   };

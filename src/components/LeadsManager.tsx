@@ -525,7 +525,7 @@ const LeadsManager: React.FC = () => {
               {selectedLeads.size > 0 && (
                 <button
                   onClick={handleBulkDelete}
-                  className="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
+                  className="px-3 py-1.5 bg-primary hover:bg-primary/90 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
                 >
                   <Trash2 size={14} className="text-white" />
                   Excluir ({selectedLeads.size})
@@ -546,7 +546,7 @@ const LeadsManager: React.FC = () => {
                 <div className="text-sm text-gray-600">Total de Leads</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold text-primary">
                   {stats?.withEmail || leads.filter(lead =>
                     lead.email && lead.email.trim() !== ''
                   ).length}
@@ -554,7 +554,7 @@ const LeadsManager: React.FC = () => {
                 <div className="text-sm text-gray-600">Com Email</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-primary">
                   {stats?.qualified || leads.filter(lead =>
                     lead.status === 'qualificado'
                   ).length}
@@ -562,7 +562,7 @@ const LeadsManager: React.FC = () => {
                 <div className="text-sm text-gray-600">Qualificados</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-orange-600">
+                <div className="text-2xl font-bold text-primary">
                   {stats?.new || leads.filter(lead =>
                     lead.status === 'novo'
                   ).length}
@@ -674,14 +674,14 @@ const LeadsManager: React.FC = () => {
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => handleEditLead(lead)}
-                            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
                             title="Editar lead"
                           >
                             <Edit size={14} />
                           </button>
                           <button
                             onClick={() => handleDeleteLead(lead)}
-                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors"
+                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
                             title="Excluir lead"
                           >
                             <Trash2 size={14} />
@@ -778,7 +778,7 @@ const LeadsManager: React.FC = () => {
             </p>
             {!searchTerm && (
               <button
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                 onClick={() => fileInputRef.current?.click()}
               >
                 Importar Leads
@@ -786,7 +786,7 @@ const LeadsManager: React.FC = () => {
             )}
             {searchTerm && (
               <button
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                 onClick={() => setSearchTerm('')}
               >
                 Limpar Filtro
@@ -855,7 +855,7 @@ const LeadsManager: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-center">
-              <h3 className="text-base font-semibold mb-3 text-red-600">Confirmar Exclusão</h3>
+              <h3 className="text-base font-semibold mb-3 text-primary">Confirmar Exclusão</h3>
               <p className="text-gray-700 mb-4 text-sm">
                 Tem certeza que deseja excluir o lead <strong>{deletingLead.nome}</strong>?<br />
                 <span className="text-xs text-gray-500">Esta ação não pode ser desfeita.</span>
@@ -871,7 +871,7 @@ const LeadsManager: React.FC = () => {
                   Cancelar
                 </button>
                 <button
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                   onClick={confirmDeleteLead}
                 >
                   Excluir
@@ -906,7 +906,7 @@ const LeadsManager: React.FC = () => {
                   <h3 className="text-lg font-semibold mb-2 text-gray-800">Colunas da Planilha</h3>
                   <div className="flex flex-wrap gap-2">
                     {fileHeaders.map(header => (
-                      <span key={header} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                      <span key={header} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                         {header}
                       </span>
                     ))}
@@ -924,7 +924,7 @@ const LeadsManager: React.FC = () => {
                     <select
                       value={fieldMapping['nome'] || ''}
                       onChange={(e) => handleFieldMappingChange('nome', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
                       <option value="">Selecione uma coluna</option>
                       {fileHeaders.map(header => (
@@ -947,7 +947,7 @@ const LeadsManager: React.FC = () => {
                     <select
                       value={fieldMapping['email'] || ''}
                       onChange={(e) => handleFieldMappingChange('email', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
                       <option value="">Selecione uma coluna</option>
                       {fileHeaders.map(header => (
@@ -970,7 +970,7 @@ const LeadsManager: React.FC = () => {
                     <select
                       value={fieldMapping['telefone'] || ''}
                       onChange={(e) => handleFieldMappingChange('telefone', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
                       <option value="">Selecione uma coluna</option>
                       {fileHeaders.map(header => (
@@ -993,7 +993,7 @@ const LeadsManager: React.FC = () => {
                     <select
                       value={fieldMapping['empresa'] || ''}
                       onChange={(e) => handleFieldMappingChange('empresa', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
                       <option value="">Selecione uma coluna</option>
                       {fileHeaders.map(header => (
@@ -1016,7 +1016,7 @@ const LeadsManager: React.FC = () => {
                     <select
                       value={fieldMapping['cargo'] || ''}
                       onChange={(e) => handleFieldMappingChange('cargo', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
                       <option value="">Selecione uma coluna</option>
                       {fileHeaders.map(header => (
@@ -1039,7 +1039,7 @@ const LeadsManager: React.FC = () => {
                     <select
                       value={fieldMapping['contador'] || ''}
                       onChange={(e) => handleFieldMappingChange('contador', e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     >
                       <option value="">Selecione uma coluna</option>
                       {fileHeaders.map(header => (
@@ -1193,8 +1193,8 @@ const LeadsManager: React.FC = () => {
 
                 </div>
 
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center text-sm text-blue-800">
+                <div className="mt-4 p-3 bg-primary/10 rounded-lg">
+                  <div className="flex items-center text-sm text-primary">
                     <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
                     Campos obrigatórios
                     <span className="w-2 h-2 bg-yellow-500 rounded-full ml-4 mr-2"></span>
@@ -1246,7 +1246,7 @@ const LeadsManager: React.FC = () => {
                 <button
                   onClick={handleConfirmMapping}
                   disabled={!fieldMapping['nome'] || !fieldMapping['telefone']}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   Confirmar Importação
                 </button>
@@ -1653,7 +1653,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
         >
           Salvar
         </button>
