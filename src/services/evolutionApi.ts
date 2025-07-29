@@ -1,6 +1,7 @@
 import { toast } from 'react-hot-toast';
 import { getRuntimeConfig } from '../utils/runtime-config';
 import { getValidatedApiUrl } from '@/utils/api-config';
+import { getCurrentClienteId } from '@/utils/cliente-utils';
 
 export interface EvolutionInstanceData {
   instanceName: string;
@@ -24,27 +25,19 @@ export interface EvolutionInstance {
 }
 
 export interface CreateInstanceRequest {
-  instanceName: string;
-  token?: string;
-  qrcode?: boolean;
-  number?: string;
-  integration?: 'WHATSAPP-BAILEYS' | 'WHATSAPP-BUSINESS';
-  rejectCall?: boolean;
-  msgCall?: string;
-  groupsIgnore?: boolean;
-  alwaysOnline?: boolean;
-  readMessages?: boolean;
-  readStatus?: boolean;
-  syncFullHistory?: boolean;
-  webhook?: {
-    url?: string;
-    byEvents?: boolean;
-    base64?: boolean;
-    headers?: {
-      authorization?: string;
-      'Content-Type'?: string;
-    };
-    events?: string[];
+  instance_name: string;
+  webhook_url: string;
+  webhook_events: string[];
+  integration: 'WHATSAPP-BAILEYS' | 'WHATSAPP-BUSINESS';
+  qrcode: boolean;
+  settings: {
+    reject_call: boolean;
+    msg_call: string;
+    groups_ignore: boolean;
+    always_online: boolean;
+    read_messages: boolean;
+    read_status: boolean;
+    sync_full_history: boolean;
   };
 }
 
@@ -70,6 +63,7 @@ export interface QRCodeResponse {
   count?: number;
   qrcode?: string;
   base64?: string;
+  qr_code?: string;
 }
 
 export interface ApiResponse<T = any> {
@@ -96,11 +90,20 @@ class EvolutionApiService {
   ): Promise<ApiResponse<T>> {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
+      const cliente_id = getCurrentClienteId();
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string>),
+      };
+      
+      // Adicionar cliente_id ao header se disponível
+      if (cliente_id) {
+        headers['cliente_id'] = cliente_id;
+      }
+      
       const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers,
         ...options,
       });
 
@@ -124,17 +127,38 @@ class EvolutionApiService {
 
   // Listar instâncias
   async getInstances(): Promise<ApiResponse<EvolutionInstance[]>> {
-    return this.makeRequest<EvolutionInstance[]>('/evolution-instances/instances');
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    return this.makeRequest<EvolutionInstance[]>(`/evolution-api`);
   }
 
   // Obter instância específica
-  async getInstance(instanceName: string): Promise<ApiResponse<EvolutionInstance>> {
-    return this.makeRequest<EvolutionInstance>(`/evolution-instances/instances/${instanceName}`);
+  async getInstance(instanceId: string): Promise<ApiResponse<EvolutionInstance>> {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    return this.makeRequest<EvolutionInstance>(`/evolution-api/${instanceId}`);
   }
 
   // Criar nova instância
   async createInstance(data: CreateInstanceRequest): Promise<ApiResponse<any>> {
-    const response = await this.makeRequest<any>('/evolution-instances/instances', {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    const response = await this.makeRequest<any>(`/evolution-api`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -147,9 +171,17 @@ class EvolutionApiService {
   }
 
   // Conectar instância e obter QR Code
-  async connectInstance(instanceName: string, number?: string): Promise<ApiResponse<QRCodeResponse>> {
-    const response = await this.makeRequest<QRCodeResponse>(`/evolution-instances/instances/${instanceName}/connect`, {
-      method: 'GET',
+  async connectInstance(instanceId: string, number?: string): Promise<ApiResponse<QRCodeResponse>> {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    const response = await this.makeRequest<QRCodeResponse>(`/evolution-api/connect/${instanceId}`, {
+      method: 'POST',
+      body: JSON.stringify({ number }),
     });
 
     if (response.success) {
@@ -160,13 +192,27 @@ class EvolutionApiService {
   }
 
   // Obter status de conexão
-  async getConnectionStatus(instanceName: string): Promise<ApiResponse<any>> {
-    return this.makeRequest<any>(`/evolution-instances/instances/${instanceName}`);
+  async getConnectionStatus(instanceId: string): Promise<ApiResponse<any>> {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    return this.makeRequest<any>(`/evolution-api/${instanceId}`);
   }
 
   // Desconectar instância
-  async disconnectInstance(instanceName: string): Promise<ApiResponse<any>> {
-    const response = await this.makeRequest<any>(`/evolution-instances/instances/${instanceName}/disconnect`, {
+  async disconnectInstance(instanceId: string): Promise<ApiResponse<any>> {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    const response = await this.makeRequest<any>(`/evolution-api/disconnect/${instanceId}`, {
       method: 'POST',
     });
 
@@ -178,8 +224,15 @@ class EvolutionApiService {
   }
 
   // Reiniciar instância
-  async restartInstance(instanceName: string): Promise<ApiResponse<any>> {
-    const response = await this.makeRequest<any>(`/evolution-instances/instances/${instanceName}/restart`, {
+  async restartInstance(instanceId: string): Promise<ApiResponse<any>> {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    const response = await this.makeRequest<any>(`/evolution-api/restart/${instanceId}`, {
       method: 'POST',
     });
 
@@ -192,10 +245,17 @@ class EvolutionApiService {
 
   // Atualizar instância
   async updateInstance(
-    instanceName: string,
+    instanceId: string,
     data: UpdateInstanceRequest
   ): Promise<ApiResponse<EvolutionInstanceData>> {
-    const response = await this.makeRequest<EvolutionInstanceData>(`/evolution-instances/instances/${instanceName}`, {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    const response = await this.makeRequest<EvolutionInstanceData>(`/evolution-api/${instanceId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -208,8 +268,15 @@ class EvolutionApiService {
   }
 
   // Deletar instância
-  async deleteInstance(instanceName: string): Promise<ApiResponse<any>> {
-    const response = await this.makeRequest<any>(`/evolution-instances/instances/${instanceName}`, {
+  async deleteInstance(instanceId: string): Promise<ApiResponse<any>> {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    const response = await this.makeRequest<any>(`/evolution-api/${instanceId}`, {
       method: 'DELETE',
     });
 
@@ -222,7 +289,17 @@ class EvolutionApiService {
 
   // Obter QR Code para conexão
   async getQRCode(instanceName: string): Promise<ApiResponse<QRCodeResponse>> {
-    const response = await this.makeRequest<QRCodeResponse>(`/evolution-instances/instances/${instanceName}/qrcode`, {
+    const cliente_id = getCurrentClienteId();
+    if (!cliente_id) {
+      return {
+        success: false,
+        message: 'Cliente ID não encontrado. Faça login novamente.',
+      };
+    }
+    
+    const endpoint = `/evolution-api/qrcode/${instanceName}`;
+    
+    const response = await this.makeRequest<QRCodeResponse>(endpoint, {
       method: 'GET',
     });
 
@@ -230,8 +307,8 @@ class EvolutionApiService {
   }
 
   // Verificar saúde da API
-  async checkApiHealth(): Promise<ApiResponse<any>> {
-    return this.makeRequest<any>('/evolution-instances/health');
+  async checkHealth(): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>('/evolution-api/status');
   }
 }
 

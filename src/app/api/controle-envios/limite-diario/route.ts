@@ -25,14 +25,23 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
+    const clienteId = request.headers.get('cliente_id');
     
     const fullUrl = `${API_BASE_URL}/controle-envios/limite-diario`;
     
+    // Preparar headers para a requisição externa
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Adicionar o cliente_id ao header se estiver presente
+    if (clienteId) {
+      headers['cliente_id'] = clienteId;
+    }
+    
     const response = await fetch(fullUrl, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     });
 

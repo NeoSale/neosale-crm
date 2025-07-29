@@ -30,18 +30,44 @@ import ConfirmModal from './ConfirmModal';
 const WhatsAppIntegration: React.FC = () => {
   const [instances, setInstances] = useState<EvolutionInstance[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshingQR, setRefreshingQR] = useState(false);
+  const [loadingInstances, setLoadingInstances] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingInstance, setEditingInstance] = useState<EvolutionInstanceData | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null }>({ show: false, id: null });
-  const [qrCodeModal, setQrCodeModal] = useState<{ show: boolean; data: QRCodeResponse | null; instanceName: string | null }>({ show: false, data: null, instanceName: null });
+  const [qrCodeModal, setQrCodeModal] = useState<{
+    show: boolean;
+    data: QRCodeResponse | null;
+    instanceName: string | null;
+    instanceId: string | null;
+  }>({ show: false, data: null, instanceName: null, instanceId: null });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const [formData, setFormData] = useState<CreateInstanceRequest>({
+    instance_name: '',
+    webhook_url: '',
+    webhook_events: ['MESSAGES_UPSERT'],
+    integration: 'WHATSAPP-BAILEYS',
+    qrcode: true,
+    settings: {
+      reject_call: false,
+      msg_call: '',
+      groups_ignore: false,
+      always_online: false,
+      read_messages: false,
+      read_status: false,
+      sync_full_history: false,
+    },
+  });
+  
+  // Estado local para manter compatibilidade com o formulário
+  const [localFormData, setLocalFormData] = useState({
     instanceName: '',
     qrcode: true,
-    integration: 'WHATSAPP-BAILEYS',
+    integration: 'WHATSAPP-BAILEYS' as const,
     rejectCall: false,
     msgCall: '',
     groupsIgnore: false,
@@ -62,50 +88,86 @@ const WhatsAppIntegration: React.FC = () => {
     loadInstances();
   }, []);
 
-  const loadInstances = async () => {
-    setLoading(true);
+  const loadInstances = async (showLoadingState = true) => {
+    if (showLoadingState) {
+      setLoading(true);
+    } else {
+      setLoadingInstances(true);
+    }
     try {
       const response = await evolutionApi.getInstances();
       if (response.success && response.data) {
-        setInstances(response.data);
+        // Mapear os dados da API para o formato esperado pelo componente
+        const mappedInstances: EvolutionInstance[] = response.data.map((item: any) => ({
+          instance: {
+            instanceId: item.id,
+            instanceName: item.instance_name,
+            owner: item.connection_data?.owner || '',
+            profileName: item.connection_data?.profileName || '',
+            profilePictureUrl: item.connection_data?.profilePictureUrl || '',
+            profileStatus: item.connection_data?.profileStatus || '',
+            status: item.status === 'connected' ? 'open' : (item.status === 'disconnected' ? 'disconnected' : 'close') as 'open' | 'close' | 'connecting' | 'disconnected',
+            serverUrl: item.base_url || '',
+            apikey: item.api_key || '',
+            integration: {
+              integration: 'WHATSAPP-BAILEYS' as const,
+              webhook_wa_business: item.webhook_url || '',
+              token: item.api_key || ''
+            }
+          }
+        }));
+        setInstances(mappedInstances);
       }
     } catch (error) {
       console.error('Erro ao carregar instâncias:', error);
     } finally {
-      setLoading(false);
+      if (showLoadingState) {
+        setLoading(false);
+      } else {
+        setLoadingInstances(false);
+      }
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     
     try {
       let response;
       if (editingInstance) {
         const updateData: UpdateInstanceRequest = {
-          instanceName: formData.instanceName,
-          rejectCall: formData.rejectCall,
-          msgCall: formData.msgCall,
-          groupsIgnore: formData.groupsIgnore,
-          alwaysOnline: formData.alwaysOnline,
-          readMessages: formData.readMessages,
-          readStatus: formData.readStatus,
+          instanceName: localFormData.instanceName,
+          rejectCall: localFormData.rejectCall,
+          msgCall: localFormData.msgCall,
+          groupsIgnore: localFormData.groupsIgnore,
+          alwaysOnline: localFormData.alwaysOnline,
+          readMessages: localFormData.readMessages,
+          readStatus: localFormData.readStatus,
           webhook: webhookEnabled ? {
-            ...formData.webhook,
+            ...localFormData.webhook,
             base64: true,
             events: ['MESSAGES_UPSERT']
           } : undefined,
         };
-        response = await evolutionApi.updateInstance(editingInstance.instanceName, updateData);
+        response = await evolutionApi.updateInstance(editingInstance.instanceId, updateData);
       } else {
+        // Mapear dados do formulário para a nova estrutura da API
         const createData: CreateInstanceRequest = {
-          ...formData,
-          integration: 'WHATSAPP-BAILEYS' as const,
-          webhook: webhookEnabled ? {
-            ...formData.webhook,
-            base64: true,
-            events: ['MESSAGES_UPSERT']
-          } : undefined,
+          instance_name: localFormData.instanceName,
+          webhook_url: webhookEnabled ? localFormData.webhook.url || '' : '',
+          webhook_events: webhookEnabled ? localFormData.webhook.events || ['MESSAGES_UPSERT'] : [],
+          integration: localFormData.integration,
+          qrcode: localFormData.qrcode,
+          settings: {
+            reject_call: localFormData.rejectCall,
+            msg_call: localFormData.msgCall,
+            groups_ignore: localFormData.groupsIgnore,
+            always_online: localFormData.alwaysOnline,
+            read_messages: localFormData.readMessages,
+            read_status: localFormData.readStatus,
+            sync_full_history: localFormData.syncFullHistory,
+          },
         };
         response = await evolutionApi.createInstance(createData);
       }
@@ -116,6 +178,8 @@ const WhatsAppIntegration: React.FC = () => {
       }
     } catch (error) {
       console.error('Erro ao salvar instância:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -123,8 +187,8 @@ const WhatsAppIntegration: React.FC = () => {
     const instance = item.instance;
     const hasWebhook = instance.integration?.webhook_wa_business;
     setWebhookEnabled(!!hasWebhook);
-    setFormData({
-      instanceName: instance.instanceName,
+    setLocalFormData({
+      instanceName: instance.instanceName || '',
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS',
       rejectCall: false,
@@ -135,7 +199,7 @@ const WhatsAppIntegration: React.FC = () => {
       readStatus: false,
       syncFullHistory: false,
       webhook: {
-        url: instance.integration?.webhook_wa_business || '',
+        url: hasWebhook || '',
         byEvents: false,
         base64: true,
         events: ['MESSAGES_UPSERT'],
@@ -154,48 +218,46 @@ const WhatsAppIntegration: React.FC = () => {
       try {
         const response = await evolutionApi.deleteInstance(deleteConfirm.id);
         if (response.success) {
-          toast.success('Instância deletada com sucesso!');
           loadInstances();
+          setDeleteConfirm({ show: false, id: null });
         }
       } catch (error) {
         console.error('Erro ao deletar instância:', error);
-        toast.error('Erro ao deletar instância');
       }
     }
-    setDeleteConfirm({ show: false, id: null });
   };
 
   const cancelDelete = () => {
     setDeleteConfirm({ show: false, id: null });
   };
 
-  const handleConnect = async (instanceName: string) => {
+  const handleConnect = async (instanceId: string, instanceName: string) => {
     try {
-      console.log('Conectando instância:', instanceName);
+      setQrCodeModal({
+        show: true,
+        data: null,
+        instanceName: instanceName,
+        instanceId: instanceId
+      });
+      
       const response = await evolutionApi.getQRCode(instanceName);
-      
-      console.log('Resposta da API:', response);
-      console.log('Response data:', response.data);
-      
       if (response.success && response.data) {
-        console.log('Abrindo modal com dados:', response.data);
-        setQrCodeModal({ show: true, data: response.data, instanceName: instanceName });
+        setQrCodeModal(prev => ({ ...prev, data: response.data || null }));
       } else {
-        console.error('Erro na resposta:', response.message);
         toast.error(response.message || 'Erro ao obter QR Code');
       }
     } catch (error) {
-      console.error('Erro ao obter QR Code:', error);
-      toast.error('Erro ao obter QR Code');
+      console.error('Erro ao conectar instância:', error);
+      toast.error('Erro ao conectar instância');
     }
   };
 
-  const handleDisconnect = async (instanceName: string) => {
+  const handleDisconnect = async (instanceId: string) => {
     try {
-      const response = await evolutionApi.disconnectInstance(instanceName);
+      const response = await evolutionApi.disconnectInstance(instanceId);
       if (response.success) {
-        toast.success('Instância desconectada com sucesso!');
         loadInstances();
+        toast.success('Instância desconectada com sucesso!');
       }
     } catch (error) {
       console.error('Erro ao desconectar instância:', error);
@@ -203,12 +265,12 @@ const WhatsAppIntegration: React.FC = () => {
     }
   };
 
-  const handleRestart = async (instanceName: string) => {
+  const handleRestart = async (instanceId: string) => {
     try {
-      const response = await evolutionApi.restartInstance(instanceName);
+      const response = await evolutionApi.restartInstance(instanceId);
       if (response.success) {
-        toast.success('Instância reiniciada com sucesso!');
         loadInstances();
+        toast.success('Instância reiniciada com sucesso!');
       }
     } catch (error) {
       console.error('Erro ao reiniciar instância:', error);
@@ -216,8 +278,29 @@ const WhatsAppIntegration: React.FC = () => {
     }
   };
 
+  const handleRefreshQRCode = async () => {
+    if (!qrCodeModal.instanceName) return;
+    
+    setRefreshingQR(true);
+    try {
+      const response = await evolutionApi.getQRCode(qrCodeModal.instanceName || '');
+      
+      if (response.success && response.data) {
+        setQrCodeModal(prev => ({ ...prev, data: response.data || null }));
+        toast.success('QR Code atualizado com sucesso!');
+      } else {
+        toast.error(response.message || 'Erro ao atualizar QR Code');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar QR Code:', error);
+      toast.error('Erro ao atualizar QR Code');
+    } finally {
+      setRefreshingQR(false);
+    }
+  };
+
   const resetForm = () => {
-    setFormData({
+    setLocalFormData({
       instanceName: '',
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS',
@@ -251,12 +334,15 @@ const WhatsAppIntegration: React.FC = () => {
   };
 
   const getStatusText = (status: string) => {
-    if (status === 'open') {
-      return 'Conectado';
-     } else if (status === 'connecting') {
-      return 'Desconectado';
-    } else {
-      return 'Desconectado';
+    switch (status) {
+      case 'open':
+        return 'Conectado';
+      case 'connecting':
+        return 'Conectando';
+      case 'disconnected':
+      case 'close':
+      default:
+        return 'Desconectado';
     }
   };
 
@@ -299,18 +385,18 @@ const WhatsAppIntegration: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={loadInstances}
-                disabled={loading}
+                onClick={() => loadInstances(false)}
+                disabled={loading || loadingInstances}
                 className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <ArrowPathIcon className={`h-3.5 w-3.5 text-white ${loading ? 'animate-spin' : ''}`} />
+                <ArrowPathIcon className={`h-4 w-4 ${(loading || loadingInstances) ? 'animate-spin' : ''}`} />
                 Atualizar
               </button>
               <button
                 onClick={() => setShowModal(true)}
                 className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <PlusIcon className="h-3.5 w-3.5 text-white" />
+                <PlusIcon className="h-4 w-4" />
                 Nova Instância
               </button>
             </div>
@@ -333,12 +419,6 @@ const WhatsAppIntegration: React.FC = () => {
                 </div>
                 <div className="text-sm text-gray-600">Conectadas</div>
               </div>
-              {/* <div className="bg-yellow-50 p-4 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {instances.filter(i => i.instance && i.instance.status === 'connecting').length}
-                </div>
-                <div className="text-sm text-gray-600">Conectando</div>
-              </div> */}
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
                   {instances.filter(i => i.instance && i.instance.status !== 'open').length}
@@ -364,7 +444,15 @@ const WhatsAppIntegration: React.FC = () => {
         </div>
 
         {/* Tabela de Instâncias */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto relative">
+          {loadingInstances && (
+            <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                <span className="text-sm text-gray-600">Atualizando instâncias...</span>
+              </div>
+            </div>
+          )}
           {currentInstances.length === 0 ? (
             <div className="text-center py-12">
               <LinkIcon className="mx-auto h-12 w-12 text-gray-400" />
@@ -423,9 +511,6 @@ const WhatsAppIntegration: React.FC = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {instance.profileName || 'Não conectado'}
                           </div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {instance.owner && instance.owner.replace(/@s\.whatsapp\.net/g, '')}
-                          </div>
                         </div>
                       </div>
                     </td>
@@ -452,41 +537,36 @@ const WhatsAppIntegration: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         {(instance.status || 'close') !== 'open' ? (
                           <button
-                            onClick={() => handleConnect(instance.instanceName)}
-                            className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
-                            title="Conectar"
+                            onClick={() => handleConnect(instance.instanceId, instance.instanceName)}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                           >
-                            <QrCodeIcon className="h-4 w-4" />
+                            <QrCodeIcon className="h-4 w-4 mr-1" />
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleDisconnect(instance.instanceName)}
-                            className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
-                            title="Desconectar"
+                            onClick={() => handleDisconnect(instance.instanceId)}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                           >
-                            <PowerIcon className="h-4 w-4" />
+                            <PowerIcon className="h-4 w-4 mr-1" />
                           </button>
                         )}
                         <button
-                          onClick={() => handleRestart(instance.instanceName)}
-                          className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
-                          title="Reiniciar"
+                          onClick={() => handleRestart(instance.instanceId)}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                         >
-                          <ArrowPathIcon className="h-4 w-4" />
+                          <ArrowPathIcon className="h-4 w-4 mr-1" />
                         </button>
                         <button
                           onClick={() => handleEdit(item)}
-                          className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
-                          title="Editar"
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                         >
-                          <PencilIcon className="h-4 w-4" />
+                          <PencilIcon className="h-4 w-4 mr-1" />
                         </button>
                         <button
-                          onClick={() => handleDelete(instance.instanceName)}
-                          className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
-                          title="Deletar"
+                          onClick={() => handleDelete(instance.instanceId)}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                         >
-                          <TrashIcon className="h-4 w-4" />
+                          <TrashIcon className="h-4 w-4 mr-1" />
                         </button>
                       </div>
                     </td>
@@ -498,40 +578,31 @@ const WhatsAppIntegration: React.FC = () => {
           )}
         </div>
 
-        {/* Controles de Paginação */}
+        {/* Pagination */}
         {filteredInstances.length > 0 && (
           <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">
-                  Mostrando {startIndex + 1} a {Math.min(endIndex, filteredInstances.length)} de {filteredInstances.length} resultados
-                </span>
-                <div className="flex items-center space-x-2 ml-4">
-                  <span className="text-sm text-gray-700">Itens por página:</span>
-                  <select
-                    className="border border-gray-300 rounded px-2 py-1 text-sm"
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                      setItemsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              <div className="flex items-center">
+                <p className="text-sm text-gray-700">
+                  Mostrando <span className="font-medium">{startIndex + 1}</span> a{' '}
+                  <span className="font-medium">{Math.min(endIndex, filteredInstances.length)}</span> de{' '}
+                  <span className="font-medium">{filteredInstances.length}</span> resultados
+                </p>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="ml-4 text-sm border border-gray-300 rounded px-2 py-1"
                 >
-                  Anterior
-                </button>
-
+                  <option value={5}>5 por página</option>
+                  <option value={10}>10 por página</option>
+                  <option value={20}>20 por página</option>
+                  <option value={50}>50 por página</option>
+                </select>
+              </div>
+              <div className="flex space-x-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNumber;
                   if (totalPages <= 5) {
@@ -543,7 +614,7 @@ const WhatsAppIntegration: React.FC = () => {
                   } else {
                     pageNumber = currentPage - 2 + i;
                   }
-
+                  
                   return (
                     <button
                       key={pageNumber}
@@ -551,28 +622,20 @@ const WhatsAppIntegration: React.FC = () => {
                       className={`px-3 py-1 text-sm border rounded-md ${
                         currentPage === pageNumber
                           ? 'bg-primary text-white border-primary'
-                          : 'border-gray-300 hover:bg-gray-50'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                       }`}
                     >
                       {pageNumber}
                     </button>
                   );
                 })}
-
-                <button
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Próximo
-                </button>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Modal de Criação/Edição */}
+      {/* Modal para criar/editar instância */}
       <Modal
         isOpen={showModal}
         onClose={resetForm}
@@ -582,218 +645,178 @@ const WhatsAppIntegration: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nome da Instância *
+              Nome da Instância
             </label>
             <input
               type="text"
+              value={localFormData.instanceName}
+              onChange={(e) => setLocalFormData({ ...localFormData, instanceName: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              placeholder="Digite o nome da instância"
               required
-              value={formData.instanceName}
-              onChange={(e) => setFormData({ ...formData, instanceName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Ex: minha-empresa-whatsapp"
             />
           </div>
 
-          <div>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={webhookEnabled}
-                onChange={(e) => setWebhookEnabled(e.target.checked)}
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-700">Habilitar Webhook</span>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="webhookEnabled"
+              checked={webhookEnabled}
+              onChange={(e) => setWebhookEnabled(e.target.checked)}
+              className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+            />
+            <label htmlFor="webhookEnabled" className="ml-2 block text-sm text-gray-900">
+              Habilitar Webhook
             </label>
           </div>
 
           {webhookEnabled && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL do Webhook *
+                URL do Webhook
               </label>
               <input
                 type="url"
-                required={webhookEnabled}
-                value={formData.webhook?.url || ''}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  webhook: { ...formData.webhook!, url: e.target.value }
+                value={localFormData.webhook.url}
+                onChange={(e) => setLocalFormData({
+                  ...localFormData,
+                  webhook: { ...localFormData.webhook, url: e.target.value }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="https://seu-webhook.com/whatsapp"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                placeholder="https://seu-webhook.com/endpoint"
               />
             </div>
           )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mensagem para Chamadas Rejeitadas
-            </label>
-            <textarea
-              value={formData.msgCall || ''}
-              onChange={(e) => setFormData({ ...formData, msgCall: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              rows={3}
-              placeholder="Mensagem enviada quando uma chamada for rejeitada automaticamente"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.rejectCall || false}
-                  onChange={(e) => setFormData({ ...formData, rejectCall: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Rejeitar chamadas automaticamente</span>
-              </label>
-
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.groupsIgnore || false}
-                  onChange={(e) => setFormData({ ...formData, groupsIgnore: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Ignorar mensagens de grupos</span>
-              </label>
-
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.alwaysOnline || false}
-                  onChange={(e) => setFormData({ ...formData, alwaysOnline: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Manter sempre online</span>
-              </label>
-            </div>
-
-            <div className="space-y-3">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.readMessages || false}
-                  onChange={(e) => setFormData({ ...formData, readMessages: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Marcar mensagens como lidas</span>
-              </label>
-
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.readStatus || false}
-                  onChange={(e) => setFormData({ ...formData, readStatus: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Mostrar status de leitura</span>
-              </label>
-
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.syncFullHistory || false}
-                  onChange={(e) => setFormData({ ...formData, syncFullHistory: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Sincronizar histórico completo</span>
-              </label>
-            </div>
-          </div>
 
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
               onClick={resetForm}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-primary border border-transparent rounded-md hover:bg-primary/90"
+              disabled={submitting}
+              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md flex items-center justify-center space-x-2 ${
+                submitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+              }`}
             >
-              {editingInstance ? 'Atualizar' : 'Criar'} Instância
+              {submitting && (
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              <span>
+                {submitting
+                  ? (editingInstance ? 'Atualizando...' : 'Criando...')
+                  : (editingInstance ? 'Atualizar' : 'Criar Instância')
+                }
+              </span>
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Modal de QR Code */}
+      {/* Modal QR Code */}
       <Modal
         isOpen={qrCodeModal.show}
-        onClose={() => setQrCodeModal({ show: false, data: null, instanceName: null })}
-        title="Conectar WhatsApp"
+        onClose={() => {
+          setQrCodeModal({ show: false, data: null, instanceName: null, instanceId: null });
+          loadInstances(false); // Recarrega as instâncias ao fechar o modal com loading específico
+        }}
+        title={`QR Code - ${qrCodeModal.instanceName}`}
         size="md"
       >
         <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <QrCodeIcon className="h-16 w-16 text-primary" />
+          {refreshingQR ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <>
+              {qrCodeModal.data?.qr_code && (
+                <div className="flex justify-center">
+                  <img
+                    src={qrCodeModal.data.qr_code}
+                    alt="QR Code"
+                    className="max-w-xs"
+                  />
+                </div>
+              )}
+              
+              {qrCodeModal.data?.base64 && !qrCodeModal.data?.qr_code && (
+                <div className="flex justify-center">
+                  <img
+                    src={`data:image/png;base64,${qrCodeModal.data.base64}`}
+                    alt="QR Code"
+                    className="max-w-xs"
+                  />
+                </div>
+              )}
+              
+              {qrCodeModal.data?.qrcode && !qrCodeModal.data?.qr_code && !qrCodeModal.data?.base64 && (
+                <div className="bg-gray-100 p-4 rounded-lg">
+                  <code className="text-sm break-all">{qrCodeModal.data.qrcode}</code>
+                </div>
+              )}
+              
+              {qrCodeModal.data?.pairingCode && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-blue-800 mb-2">Código de Pareamento:</p>
+                  <code className="text-lg font-mono font-bold text-blue-900">{qrCodeModal.data.pairingCode}</code>
+                </div>
+              )}
+              
+              {!qrCodeModal.data?.qr_code && !qrCodeModal.data?.base64 && !qrCodeModal.data?.qrcode && !qrCodeModal.data?.pairingCode && (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              )}
+            </>
+          )}
+          
+          <p className="text-sm text-gray-600">
+            Escaneie o QR Code com seu WhatsApp para conectar a instância.
+          </p>
+          
+          <div className="flex space-x-3 pt-4">
+            <button
+              onClick={handleRefreshQRCode}
+              disabled={refreshingQR}
+              className={`flex-1 px-4 py-2 text-sm font-medium border border-gray-300 rounded-md flex items-center justify-center space-x-2 ${
+                refreshingQR ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {refreshingQR && (
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              <span>{refreshingQR ? 'Atualizando...' : 'Atualizar QR'}</span>
+            </button>
+            <button
+              onClick={() => {
+                setQrCodeModal({ show: false, data: null, instanceName: null, instanceId: null });
+                loadInstances(false); // Recarrega as instâncias ao fechar o modal com loading específico
+              }}
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-md"
+            >
+              Fechar
+            </button>
           </div>
-                    
-          {qrCodeModal.data?.base64 && (
-            <div className="flex justify-center">
-              <img
-                src={`data:image/png;base64,${qrCodeModal.data.base64}`}
-                alt="QR Code"
-                className="max-w-xs border rounded-lg"
-              />
-            </div>
-          )}
-          
-          {qrCodeModal.data?.qrcode && !qrCodeModal.data?.base64 && (
-            <div className="flex justify-center">
-              <img
-                src={`data:image/png;base64,${qrCodeModal.data.qrcode}`}
-                alt="QR Code"
-                className="max-w-xs border rounded-lg"
-              />
-            </div>
-          )}
-          
-          {qrCodeModal.data?.pairingCode && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">Código de Pareamento:</p>
-              <p className="text-2xl font-mono font-bold text-gray-900">
-                {qrCodeModal.data.pairingCode}
-              </p>
-            </div>
-          )}
-          
-          {!qrCodeModal.data?.base64 && !qrCodeModal.data?.qrcode && !qrCodeModal.data?.pairingCode && (
-            <div className="bg-red-50 p-4 rounded-lg">
-              <p className="text-sm text-red-600">Nenhum QR Code ou código de pareamento disponível</p>
-            </div>
-          )}
-          
-          <div className="text-sm text-gray-600">
-            <p>1. Abra o WhatsApp no seu celular</p>
-            <p>2. Vá em Configurações → Aparelhos conectados</p>
-            <p>3. Toque em "Conectar um aparelho"</p>
-            <p>4. {qrCodeModal.data?.base64 || qrCodeModal.data?.qrcode ? 'Escaneie o QR Code acima' : 'Digite o código de pareamento'}</p>
-          </div>
-          
-          <button
-            onClick={() => {
-              setQrCodeModal({ show: false, data: null, instanceName: null });
-              loadInstances();
-            }}
-            className="w-full px-4 py-2 text-sm font-medium text-white bg-primary border border-transparent rounded-md hover:bg-primary/90"
-          >
-            Fechar
-          </button>
         </div>
       </Modal>
 
-      {/* Modal de Confirmação de Exclusão */}
+      {/* Modal de confirmação de exclusão */}
       <ConfirmModal
         isOpen={deleteConfirm.show}
-        onClose={cancelDelete}
         onConfirm={confirmDelete}
-        title="Confirmar Exclusão"
+        onClose={cancelDelete}
+        title="Excluir Instância"
         message="Tem certeza que deseja excluir esta instância? Esta ação não pode ser desfeita."
         confirmText="Excluir"
         cancelText="Cancelar"

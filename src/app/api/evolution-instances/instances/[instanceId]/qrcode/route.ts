@@ -27,14 +27,29 @@ export async function GET(
       );
     }
 
+    // Obter cliente_id do header
+    const cliente_id = request.headers.get('cliente_id');
+    
+    if (!cliente_id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'cliente_id é obrigatório no header',
+          error: 'Header cliente_id não encontrado'
+        },
+        { status: 400 }
+      );
+    }
+
     const { instanceId: instanceName } = await params;
     
-    const fullUrl = `${API_BASE_URL}/api/evolution-instances/instances/${instanceName}/qrcode`;
+    const fullUrl = `${API_BASE_URL}/evolution-api/qrcode/${instanceName}`;
     
     const response = await fetch(fullUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'cliente_id': cliente_id,
       },
     });
 

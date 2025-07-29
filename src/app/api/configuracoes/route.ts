@@ -10,7 +10,7 @@ try {
   API_BASE_URL = '';
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Validar se a API está configurada
     if (!API_BASE_URL) {
@@ -24,13 +24,24 @@ export async function GET() {
       );
     }
 
+    // Obter o cliente_id do header
+    const clienteId = request.headers.get('cliente_id');
+    
     const fullUrl = `${API_BASE_URL}/configuracoes`;
+    
+    // Preparar headers para a requisição externa
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Adicionar o cliente_id ao header se estiver presente
+    if (clienteId) {
+      headers['cliente_id'] = clienteId;
+    }
     
     const response = await fetch(fullUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -67,14 +78,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    const clienteId = request.headers.get('cliente_id');
     
     const fullUrl = `${API_BASE_URL}/configuracoes`;
     
+    // Preparar headers para a requisição externa
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Adicionar o cliente_id ao header se estiver presente
+    if (clienteId) {
+      headers['cliente_id'] = clienteId;
+    }
+    
     const response = await fetch(fullUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     });
 

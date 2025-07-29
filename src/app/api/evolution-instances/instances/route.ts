@@ -10,7 +10,7 @@ try {
   API_BASE_URL = '';
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Validar se a API está configurada
     if (!API_BASE_URL) {
@@ -24,12 +24,27 @@ export async function GET() {
       );
     }
 
-    const fullUrl = `${API_BASE_URL}/instance/fetchInstances`;
+    // Obter cliente_id do header
+    const cliente_id = request.headers.get('cliente_id');
+    
+    if (!cliente_id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'cliente_id é obrigatório no header',
+          error: 'Header cliente_id não encontrado'
+        },
+        { status: 400 }
+      );
+    }
+
+    const fullUrl = `${API_BASE_URL}/evolution-api`;
     
     const response = await fetch(fullUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'cliente_id': cliente_id,
       },
     });
 
@@ -74,14 +89,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Obter cliente_id do header
+    const cliente_id = request.headers.get('cliente_id');
+    
+    if (!cliente_id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'cliente_id é obrigatório no header',
+          error: 'Header cliente_id não encontrado'
+        },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     
-    const fullUrl = `${API_BASE_URL}/instance/create`;
+    const fullUrl = `${API_BASE_URL}/evolution-api`;
     
     const response = await fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'cliente_id': cliente_id,
       },
       body: JSON.stringify(body),
     });

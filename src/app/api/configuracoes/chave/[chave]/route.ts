@@ -28,14 +28,23 @@ export async function GET(
     }
 
     const { chave } = await params;
+    const clienteId = request.headers.get('cliente_id');
     
     const fullUrl = `${API_BASE_URL}/configuracoes/chave/${chave}`;
     
+    // Preparar headers para a requisição externa
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Adicionar o cliente_id ao header se estiver presente
+    if (clienteId) {
+      headers['cliente_id'] = clienteId;
+    }
+    
     const response = await fetch(fullUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {

@@ -24,7 +24,7 @@ export async function GET() {
       );
     }
 
-    const fullUrl = `${API_BASE_URL}/api/evolution-instances/health`;
+    const fullUrl = `${API_BASE_URL}/evolution-api/status`;
     
     const response = await fetch(fullUrl, {
       method: 'GET',

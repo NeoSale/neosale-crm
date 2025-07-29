@@ -28,14 +28,23 @@ export async function GET(
     }
 
     const { id } = await params;
+    const clienteId = request.headers.get('cliente_id');
     
     const fullUrl = `${API_BASE_URL}/configuracoes/${id}`;
     
+    // Preparar headers para a requisição externa
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Adicionar o cliente_id ao header se estiver presente
+    if (clienteId) {
+      headers['cliente_id'] = clienteId;
+    }
+    
     const response = await fetch(fullUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -71,14 +80,37 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Validar se a API está configurada
+    if (!API_BASE_URL) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'API não configurada. Verifique a variável NEXT_PUBLIC_API_URL.',
+          error: 'Configuração inválida'
+        },
+        { status: 500 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
+    const clienteId = request.headers.get('cliente_id');
     
-    const response = await fetch(`${API_BASE_URL}/api/configuracoes/${id}`, {
+    const fullUrl = `${API_BASE_URL}/configuracoes/${id}`;
+    
+    // Preparar headers para a requisição externa
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Adicionar o cliente_id ao header se estiver presente
+    if (clienteId) {
+      headers['cliente_id'] = clienteId;
+    }
+    
+    const response = await fetch(fullUrl, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     });
 
@@ -107,13 +139,36 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Validar se a API está configurada
+    if (!API_BASE_URL) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'API não configurada. Verifique a variável NEXT_PUBLIC_API_URL.',
+          error: 'Configuração inválida'
+        },
+        { status: 500 }
+      );
+    }
+
     const { id } = await params;
+    const clienteId = request.headers.get('cliente_id');
     
-    const response = await fetch(`${API_BASE_URL}/api/configuracoes/${id}`, {
+    const fullUrl = `${API_BASE_URL}/configuracoes/${id}`;
+    
+    // Preparar headers para a requisição externa
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Adicionar o cliente_id ao header se estiver presente
+    if (clienteId) {
+      headers['cliente_id'] = clienteId;
+    }
+    
+    const response = await fetch(fullUrl, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
