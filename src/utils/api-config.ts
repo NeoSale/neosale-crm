@@ -69,14 +69,3 @@ export function isApiConfigured(): boolean {
   }
 }
 
-/**
- * Log de informações da configuração da API
- */
-export function logApiConfig(): void {
-  try {
-    const apiUrl = getValidatedApiUrl();
-    console.log('✅ API configurada:', apiUrl);
-  } catch (error) {
-    console.error('❌ Erro na configuração da API:', error instanceof Error ? error.message : 'Erro desconhecido');
-  }
-}

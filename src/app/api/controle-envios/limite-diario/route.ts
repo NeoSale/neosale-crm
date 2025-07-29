@@ -26,8 +26,7 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
     
-    const fullUrl = `${API_BASE_URL}/api/controle-envios/limite-diario`;
-    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
+    const fullUrl = `${API_BASE_URL}/controle-envios/limite-diario`;
     
     const response = await fetch(fullUrl, {
       method: 'PUT',

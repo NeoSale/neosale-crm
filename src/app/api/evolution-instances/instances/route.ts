@@ -24,8 +24,7 @@ export async function GET() {
       );
     }
 
-    const fullUrl = `${API_BASE_URL}/api/evolution-instances/instances`;
-    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
+    const fullUrl = `${API_BASE_URL}/instance/fetchInstances`;
     
     const response = await fetch(fullUrl, {
       method: 'GET',
@@ -77,8 +76,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
-    const fullUrl = `${API_BASE_URL}/api/evolution-instances/instances`;
-    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
+    const fullUrl = `${API_BASE_URL}/instance/create`;
     
     const response = await fetch(fullUrl, {
       method: 'POST',

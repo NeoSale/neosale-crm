@@ -24,8 +24,7 @@ export async function GET() {
       );
     }
 
-    const fullUrl = `${API_BASE_URL}/api/configuracoes`;
-    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
+    const fullUrl = `${API_BASE_URL}/configuracoes`;
     
     const response = await fetch(fullUrl, {
       method: 'GET',
@@ -69,8 +68,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
-    const fullUrl = `${API_BASE_URL}/api/configuracoes`;
-    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
+    const fullUrl = `${API_BASE_URL}/configuracoes`;
     
     const response = await fetch(fullUrl, {
       method: 'POST',

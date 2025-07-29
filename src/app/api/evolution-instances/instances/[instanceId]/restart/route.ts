@@ -31,7 +31,6 @@ export async function POST(
     const body = await request.json().catch(() => ({}));
     
     const fullUrl = `${API_BASE_URL}/api/evolution-instances/instances/${instanceName}/restart`;
-    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
     
     const response = await fetch(fullUrl, {
       method: 'POST',

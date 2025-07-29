@@ -457,18 +457,7 @@ const LeadsManager: React.FC = () => {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8">
-      {/* Alerta de Erro */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
-          <AlertCircle className="text-red-500" size={16} />
-          <div>
-            <p className="text-red-800 font-medium text-sm">Erro de Conexão</p>
-            <p className="text-red-600 text-xs">
-              Não foi possível conectar com a API. Verifique sua conexão.
-            </p>
-          </div>
-        </div>
-      )}
+
 
       {/* Seção de Leads Existentes */}
       <div className="mt-6 bg-white rounded-xl shadow-lg overflow-hidden">

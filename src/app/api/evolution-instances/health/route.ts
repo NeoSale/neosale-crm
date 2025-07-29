@@ -25,7 +25,6 @@ export async function GET() {
     }
 
     const fullUrl = `${API_BASE_URL}/api/evolution-instances/health`;
-    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
     
     const response = await fetch(fullUrl, {
       method: 'GET',

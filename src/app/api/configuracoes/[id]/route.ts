@@ -29,8 +29,7 @@ export async function GET(
 
     const { id } = await params;
     
-    const fullUrl = `${API_BASE_URL}/api/configuracoes/${id}`;
-    console.log(`🌐 API Route fazendo requisição para: ${fullUrl}`);
+    const fullUrl = `${API_BASE_URL}/configuracoes/${id}`;
     
     const response = await fetch(fullUrl, {
       method: 'GET',

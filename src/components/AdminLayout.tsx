@@ -35,7 +35,13 @@ const navigation: MenuItem[] = [
   { name: 'Chat', icon: ChatBubbleLeftRightIcon },
   { name: 'Leads', href: '/leads', icon: UsersIcon },
   { name: 'Documentos', icon: DocumentTextIcon },
-  { name: 'Integração', href: '/integracao', icon: LinkIcon },
+  { 
+    name: 'Integrações', 
+    icon: LinkIcon,
+    children: [
+      { name: 'WhatsApp', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
+    ]
+  },
   { 
     name: 'Relatórios', 
     icon: ChartBarIcon,
@@ -300,7 +306,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                  pathname === '/followup' ? 'Follow Up' :
                  pathname === '/configuracoes/followup' ? 'Follow Up' :
                  pathname === '/relatorios/followup' ? 'Follow Up' :
-                 pathname === '/integracao' ? 'Integração' :
+                 pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
+                 pathname.startsWith('/integracoes') ? 'Integrações' :
                  pathname === '/reports' ? 'Relatórios' :
                  pathname === '/documents' ? 'Documentos' :
                  pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}

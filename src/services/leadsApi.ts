@@ -55,13 +55,14 @@ class LeadsApiService {
       }
 
       const fullUrl = `${API_BASE_URL}${endpoint}`;
-      console.log(`🌐 Fazendo requisição para: ${fullUrl}`);
+      
+      const finalHeaders = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      };
       
       const response = await fetch(fullUrl, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers: finalHeaders,
         ...options,
       });
 
@@ -100,8 +101,19 @@ class LeadsApiService {
   }
 
   // Buscar todos os leads
-  async getLeads(): Promise<ApiResponse<Lead[]>> {
-    return this.request<Lead[]>('/leads', {}, {
+  async getLeads(cliente_id?: string): Promise<ApiResponse<Lead[]>> {
+    const headers: Record<string, string> = {};
+
+    if (cliente_id) {
+      headers['cliente_id'] = cliente_id;
+    }
+    
+    const requestOptions: RequestInit = {
+      method: 'GET',
+      headers
+    };
+    
+    return this.request<Lead[]>('/leads', requestOptions, {
       showSuccess: false, // Não mostrar toast para busca
       showError: true,
     });

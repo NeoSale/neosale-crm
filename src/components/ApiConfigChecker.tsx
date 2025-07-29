@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { isApiConfigured, logApiConfig } from '../utils/api-config';
+import { isApiConfigured } from '../utils/api-config';
 
 /**
  * Componente que verifica a configuração da API no startup
@@ -19,9 +19,6 @@ export default function ApiConfigChecker() {
     const checkApiConfig = () => {
       const configured = isApiConfigured();
       setIsConfigured(configured);
-      
-      // Log da configuração
-      logApiConfig();
       
       // Mostrar aviso se não configurada
       if (!configured) {

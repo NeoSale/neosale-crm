@@ -1,5 +1,6 @@
 import { toast } from 'react-hot-toast';
 import { getRuntimeConfig } from '../utils/runtime-config';
+import { getValidatedApiUrl } from '@/utils/api-config';
 
 export interface EvolutionInstanceData {
   instanceName: string;
@@ -78,21 +79,23 @@ export interface ApiResponse<T = any> {
   total?: number;
 }
 
+// Validar e obter URL da API de forma segura
+let API_BASE_URL: string;
+try {
+  API_BASE_URL = getValidatedApiUrl();
+} catch (error) {
+  console.error('Erro na configuração da API de Leads:', error);
+  // Em caso de erro, usar uma URL que causará erro explícito
+  API_BASE_URL = '';
+}
+
 class EvolutionApiService {
-  private baseUrl: string;
-  private clienteId: string;
-
-  constructor() {
-    this.baseUrl = getRuntimeConfig('NEXT_PUBLIC_API_URL', 'http://localhost:3000/api') || 'http://localhost:3000/api';
-    this.clienteId = getRuntimeConfig('CLIENTE_ID', '00000000-0000-0000-0000-000000000000') || '00000000-0000-0000-0000-000000000000';
-  }
-
   private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
-      const url = `${this.baseUrl}${endpoint}`;
+      const url = `${API_BASE_URL}${endpoint}`;
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',

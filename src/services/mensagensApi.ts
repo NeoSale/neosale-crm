@@ -57,7 +57,6 @@ class MensagensApiService {
       }
 
       const fullUrl = `${API_BASE_URL}${endpoint}`;
-      console.log(`🌐 Fazendo requisição para: ${fullUrl}`);
       
       const response = await fetch(fullUrl, {
         headers: {

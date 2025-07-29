@@ -12,6 +12,8 @@ import {
   CalendarIcon,
   ArrowTrendingUpIcon,
   CurrencyDollarIcon,
+  PlusIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 
 interface StatCardProps {
@@ -98,10 +100,10 @@ export default function Dashboard() {
   }
 
   const totalLeads = Array.isArray(leads) ? leads.length : 0;
-  const convertedLeads = stats?.byStatus?.converted || 0;
-  const pendingLeads = stats?.byStatus?.pending || 0;
-  const rejectedLeads = stats?.byStatus?.rejected || 0;
-  const scheduledMeetings = stats?.byStatus?.contacted || 0;
+  const convertedLeads = stats?.byStatus?.['Convertido'] || stats?.byStatus?.['Qualificado'] || stats?.byStatus?.['qualificado'] || 0;
+  const pendingLeads = stats?.byStatus?.['Novo'] || stats?.byStatus?.['novo'] || stats?.byStatus?.['Pendente'] || 0;
+  const rejectedLeads = stats?.byStatus?.['Perdido'] || stats?.byStatus?.['Rejeitado'] || stats?.byStatus?.['perdido'] || 0;
+  const scheduledMeetings = stats?.byStatus?.['Em Contato'] || stats?.byStatus?.['Agendado'] || stats?.byStatus?.['agendado'] || 0;
 
   const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : '0';
 
@@ -148,128 +150,224 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total de Leads"
-          value={totalLeads}
-          icon={UsersIcon}
-          color="bg-primary"
-          trend="+12% este mês"
-        />
-        <StatCard
-          title="Leads Convertidos"
-          value={convertedLeads}
-          icon={CheckCircleIcon}
-          color="bg-primary"
-          trend={`${conversionRate}% taxa de conversão`}
-        />
-        <StatCard
-          title="Em Andamento"
-          value={pendingLeads}
-          icon={ClockIcon}
-          color="bg-primary"
-        />
-        <StatCard
-          title="Reuniões Agendadas"
-          value={scheduledMeetings}
-          icon={CalendarIcon}
-          color="bg-primary"
-          trend="+3 esta semana"
-        />
-      </div>
-
-      {/* Content Grid */}
+      {/* Main Content Grid - Resumo de Leads, Chat e Integrações */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pipeline Status */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Status do Pipeline</h2>
+        {/* Resumo de Leads */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Resumo de Leads</h2>
+            <UsersIcon className="h-6 w-6 text-primary" />
+          </div>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
-                <span className="font-medium text-gray-900">Novos Leads</span>
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="font-medium text-gray-900">Novos</span>
               </div>
-              <span className="text-2xl font-bold text-primary">{pendingLeads}</span>
+              <span className="text-xl font-bold text-blue-600">{pendingLeads}</span>
             </div>
-            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                 <span className="font-medium text-gray-900">Em Contato</span>
               </div>
-              <span className="text-2xl font-bold text-primary">{scheduledMeetings}</span>
+              <span className="text-xl font-bold text-yellow-600">{scheduledMeetings}</span>
             </div>
-            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 <span className="font-medium text-gray-900">Convertidos</span>
               </div>
-              <span className="text-2xl font-bold text-primary">{convertedLeads}</span>
+              <span className="text-xl font-bold text-green-600">{convertedLeads}</span>
             </div>
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 <span className="font-medium text-gray-900">Perdidos</span>
               </div>
-              <span className="text-2xl font-bold text-primary">{rejectedLeads}</span>
+              <span className="text-xl font-bold text-red-600">{rejectedLeads}</span>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="text-center">
+              <p className="text-sm text-gray-500 mb-2">Taxa de Conversão</p>
+              <p className="text-2xl font-bold text-primary">{conversionRate}%</p>
             </div>
           </div>
         </div>
 
-        {/* Recent Activities */}
+        {/* Chat */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Atividades Recentes</h2>
-          <div className="space-y-2">
-            {recentActivities.map((activity, index) => (
-              <ActivityItem
-                key={index}
-                title={activity.title}
-                description={activity.description}
-                time={activity.time}
-                type={activity.type}
-              />
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Chat</h2>
+            <ChatBubbleLeftRightIcon className="h-6 w-6 text-primary" />
+          </div>
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-gray-900">Conversas Ativas</span>
+                <span className="text-lg font-bold text-primary">12</span>
+              </div>
+              <p className="text-sm text-gray-600">Leads em conversa no WhatsApp</p>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-gray-900">Mensagens Hoje</span>
+                <span className="text-lg font-bold text-green-600">47</span>
+              </div>
+              <p className="text-sm text-gray-600">Enviadas e recebidas</p>
+            </div>
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-gray-900">Pendentes</span>
+                <span className="text-lg font-bold text-yellow-600">3</span>
+              </div>
+              <p className="text-sm text-gray-600">Aguardando resposta</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button className="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition-colors">
+              Abrir Chat
+            </button>
+          </div>
+        </div>
+
+        {/* Integrações */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Integrações</h2>
+            <ArrowTrendingUpIcon className="h-6 w-6 text-primary" />
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <ChatBubbleLeftRightIcon className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">WhatsApp</p>
+                  <p className="text-sm text-gray-500">Conectado</p>
+                </div>
+              </div>
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            </div>
+            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <PhoneIcon className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Telefone</p>
+                  <p className="text-sm text-gray-500">Configurado</p>
+                </div>
+              </div>
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            </div>
+            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <CalendarIcon className="h-5 w-5 text-gray-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Calendário</p>
+                  <p className="text-sm text-gray-500">Desconectado</p>
+                </div>
+              </div>
+              <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+            </div>
           </div>
           <div className="mt-4 pt-4 border-t border-gray-200">
             <a
-              href="/leads"
+              href="/integracoes"
               className="text-sm text-primary hover:text-primary/70 font-medium"
             >
-              Ver todas as atividades →
+              Gerenciar integrações →
             </a>
           </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Atividades Recentes */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Ações Rápidas</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Atividades Recentes</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {recentActivities.map((activity, index) => (
+            <div key={index} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+              <ActivityItem
+                title={activity.title}
+                description={activity.description}
+                time={activity.time}
+                type={activity.type}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-200 text-center">
           <a
             href="/leads"
-            className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary hover:bg-primary/5 transition-colors group"
+            className="text-sm text-primary hover:text-primary/70 font-medium"
+          >
+            Ver todas as atividades →
+          </a>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">Ações Rápidas</h2>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">Acesso rápido às principais funcionalidades</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <a
+            href="/leads"
+            className="group p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-200 hover:shadow-md"
           >
             <div className="text-center">
-              <UsersIcon className="h-8 w-8 text-gray-400 group-hover:text-primary mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-900">Gerenciar Leads</p>
-              <p className="text-xs text-gray-500">Visualizar e editar leads</p>
+              <div className="mx-auto w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                <UsersIcon className="h-6 w-6 text-blue-600 group-hover:text-white" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900 mt-3">Gerenciar Leads</p>
+              <p className="text-xs text-gray-500 mt-1">Visualizar e editar leads</p>
             </div>
           </a>
-          <button className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary hover:bg-primary/5 transition-colors group">
+          
+          <button className="group p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-200 hover:shadow-md">
             <div className="text-center">
-              <CalendarIcon className="h-8 w-8 text-gray-400 group-hover:text-primary mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-900">Agendar Reunião</p>
-              <p className="text-xs text-gray-500">Nova reunião com lead</p>
+              <div className="mx-auto w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                <PlusIcon className="h-6 w-6 text-green-600 group-hover:text-white" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900 mt-3">Novo Lead</p>
+              <p className="text-xs text-gray-500 mt-1">Adicionar lead rapidamente</p>
             </div>
           </button>
-          <button className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary hover:bg-primary/5 transition-colors group">
+          
+          <button className="group p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-200 hover:shadow-md">
             <div className="text-center">
-              <ArrowTrendingUpIcon className="h-8 w-8 text-gray-400 group-hover:text-primary mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-900">Ver Relatórios</p>
-              <p className="text-xs text-gray-500">Análises e métricas</p>
+              <div className="mx-auto w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                <CalendarIcon className="h-6 w-6 text-purple-600 group-hover:text-white" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900 mt-3">Agendar Reunião</p>
+              <p className="text-xs text-gray-500 mt-1">Nova reunião com lead</p>
             </div>
           </button>
+          
+          <a
+            href="/integracoes/whatsapp"
+            className="group p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary hover:bg-primary/5 transition-all duration-200 hover:shadow-md"
+          >
+            <div className="text-center">
+              <div className="mx-auto w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                <ChatBubbleLeftRightIcon className="h-6 w-6 text-indigo-600 group-hover:text-white" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900 mt-3">WhatsApp</p>
+              <p className="text-xs text-gray-500 mt-1">Gerenciar integração</p>
+            </div>
+          </a>
         </div>
+        
       </div>
     </div>
   );
