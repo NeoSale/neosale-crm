@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import {
@@ -63,7 +63,8 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
+// Componente interno que usa useSearchParams
+function AdminLayoutContent({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [manuallyClosedMenus, setManuallyClosedMenus] = useState<string[]>([]);
@@ -496,5 +497,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </main>
       </div>
     </div>
+  );
+}
+
+// Componente principal com Suspense
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Carregando...</div>}>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </Suspense>
   );
 }

@@ -11,6 +11,8 @@ RUN mkdir -p public
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV ESLINT_NO_DEV_ERRORS=true
+# Variável temporária para o build (será sobrescrita em runtime)
+ENV NEXT_PUBLIC_API_URL=http://localhost:3000
 
 RUN npm run build
 
