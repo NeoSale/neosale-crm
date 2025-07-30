@@ -47,12 +47,11 @@ export async function POST(
     const fullUrl = `${API_BASE_URL}/evolution-api/disconnect/${instanceName}`;
     
     const response = await fetch(fullUrl, {
-      method: 'POST',
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
         'cliente_id': cliente_id,
       },
-      body: JSON.stringify(body),
     });
 
     if (!response.ok) {

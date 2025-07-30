@@ -41,9 +41,9 @@ export async function GET(
       );
     }
 
-    const { instanceId: instanceName } = await params;
+    const { instanceId } = await params;
     
-    const fullUrl = `${API_BASE_URL}/evolution-api/connect/${instanceName}`;
+    const fullUrl = `${API_BASE_URL}/evolution-api/connect/${instanceId}`;
     
     const response = await fetch(fullUrl, {
       method: 'GET',
@@ -66,7 +66,16 @@ export async function GET(
     }
 
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // Estruturar resposta conforme especificação
+    const formattedResponse = {
+      pairingCode: data.pairingCode || null,
+      code: data.code || "",
+      base64: data.base64 || data.qrcode || "data:image/png;base64,",
+      count: data.count || 24
+    };
+    
+    return NextResponse.json(formattedResponse);
   } catch (error) {
     console.error('Erro ao conectar instância:', error);
     return NextResponse.json(
@@ -138,7 +147,16 @@ export async function POST(
     }
 
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // Estruturar resposta conforme especificação
+    const formattedResponse = {
+      pairingCode: data.pairingCode || null,
+      code: data.code || "",
+      base64: data.base64 || data.qrcode || "data:image/png;base64,",
+      count: data.count || 24
+    };
+    
+    return NextResponse.json(formattedResponse);
   } catch (error) {
     console.error('Erro ao conectar instância:', error);
     return NextResponse.json(

@@ -17,6 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { APP_VERSION } from '../utils/app-version';
 import ThemeToggle from './ThemeToggle';
+import { clientesApi, Cliente } from '../services/clientesApi';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -66,7 +67,77 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [manuallyClosedMenus, setManuallyClosedMenus] = useState<string[]>([]);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [selectedCliente, setSelectedCliente] = useState<string>('');
+  const [loadingClientes, setLoadingClientes] = useState(false);
   const pathname = usePathname();
+
+  // Função para carregar clientes
+  const loadClientes = async () => {
+    if (clientes.length > 0) return; // Já carregou
+    
+    setLoadingClientes(true);
+    try {
+      const response = await clientesApi.getClientes();
+      if (response.success && response.data) {
+        setClientes(response.data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+    } finally {
+      setLoadingClientes(false);
+    }
+  };
+
+  // Função para lidar com a seleção de cliente
+  const handleClienteChange = (clienteId: string) => {
+    setSelectedCliente(clienteId);
+    if (clienteId) {
+      // Salvar no localStorage
+      localStorage.setItem('cliente_id', clienteId);
+      // Recarregar a página para atualizar os dados
+      window.location.reload();
+    } else {
+      // Remover do localStorage se nenhum cliente for selecionado
+      localStorage.removeItem('cliente_id');
+      // Recarregar a página para limpar os dados
+      window.location.reload();
+    }
+  };
+
+  // Carregar cliente_id do localStorage na inicialização
+  useEffect(() => {
+    const savedClienteId = localStorage.getItem('cliente_id');
+    if (savedClienteId) {
+      setSelectedCliente(savedClienteId);
+    }
+  }, []);
+
+  // Carregar clientes quando o tooltip for aberto
+  useEffect(() => {
+    if (showTooltip) {
+      loadClientes();
+    }
+  }, [showTooltip]);
+
+  // Fechar tooltip ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showTooltip && !target.closest('.user-tooltip-container')) {
+        setShowTooltip(false);
+      }
+    };
+
+    if (showTooltip) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTooltip]);
 
   // Automaticamente expandir o menu que contém a página atual
   useEffect(() => {
@@ -318,12 +389,73 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <button className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md transition-colors">
                 <BellIcon className="h-5 w-5" />
               </button>
-              <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-gray-100">
-                <img 
-                  src="/user-icon.svg" 
-                  alt="Usuário" 
-                  className="w-full h-full object-contain"
-                />
+              <div className="relative user-tooltip-container">
+                <button
+                  onClick={() => setShowTooltip(!showTooltip)}
+                  className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  <img 
+                    src="/user-icon.svg" 
+                    alt="Usuário" 
+                    className="w-full h-full object-contain"
+                  />
+                </button>
+                
+                {showTooltip && (
+                  <div className="absolute right-0 top-10 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
+                    {/* Nome do usuário */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Usuário
+                      </label>
+                      <div className="text-sm text-gray-900 font-semibold">
+                        Admin
+                      </div>
+                    </div>
+                    
+                    {/* Select de clientes */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Cliente
+                      </label>
+                      <select
+                        value={selectedCliente}
+                        onChange={(e) => handleClienteChange(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        disabled={loadingClientes}
+                      >
+                        <option value="">
+                          {loadingClientes ? 'Carregando...' : 'Selecione um cliente'}
+                        </option>
+                        {clientes.map((cliente) => (
+                          <option key={cliente.id} value={cliente.id}>
+                            {cliente.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {/* Versão do sistema */}
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Versão do Sistema
+                      </label>
+                      <div className="text-sm text-gray-600">
+                        v{APP_VERSION}
+                      </div>
+                    </div>
+                    
+                    {/* Botão para fechar */}
+                    <div className="flex justify-end pt-2 border-t border-gray-100">
+                      <button
+                        onClick={() => setShowTooltip(false)}
+                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

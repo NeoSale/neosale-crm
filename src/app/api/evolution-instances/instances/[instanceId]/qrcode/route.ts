@@ -41,9 +41,9 @@ export async function GET(
       );
     }
 
-    const { instanceId: instanceName } = await params;
+    const { instanceId } = await params;
     
-    const fullUrl = `${API_BASE_URL}/evolution-api/qrcode/${instanceName}`;
+    const fullUrl = `${API_BASE_URL}/evolution-api/connect/${instanceId}`;
     
     const response = await fetch(fullUrl, {
       method: 'GET',

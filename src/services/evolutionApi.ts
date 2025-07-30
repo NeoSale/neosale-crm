@@ -11,13 +11,7 @@ export interface EvolutionInstanceData {
   profilePictureUrl: string;
   profileStatus: string;
   status: 'open' | 'close' | 'connecting' | 'disconnected';
-  serverUrl: string;
-  apikey: string;
-  integration: {
-    integration: 'WHATSAPP-BAILEYS' | 'WHATSAPP-BUSINESS';
-    webhook_wa_business: string;
-    token: string;
-  };
+  webhook_wa_business: string;
 }
 
 export interface EvolutionInstance {
@@ -49,21 +43,15 @@ export interface UpdateInstanceRequest {
   alwaysOnline?: boolean;
   readMessages?: boolean;
   readStatus?: boolean;
-  webhook?: {
-    url?: string;
-    byEvents?: boolean;
-    base64?: boolean;
-    events?: string[];
-  };
+  enabled?: boolean;
+  url?: string;
 }
 
 export interface QRCodeResponse {
   pairingCode?: string;
   code?: string;
   count?: number;
-  qrcode?: string;
   base64?: string;
-  qr_code?: string;
 }
 
 export interface ApiResponse<T = any> {
@@ -213,7 +201,11 @@ class EvolutionApiService {
       };
     }
     const response = await this.makeRequest<any>(`/evolution-api/disconnect/${instanceId}`, {
-      method: 'POST',
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'cliente_id': cliente_id,
+      },
     });
 
     if (response.success) {
@@ -233,7 +225,7 @@ class EvolutionApiService {
       };
     }
     const response = await this.makeRequest<any>(`/evolution-api/restart/${instanceId}`, {
-      method: 'POST',
+      method: 'PUT',
     });
 
     if (response.success) {
@@ -288,7 +280,7 @@ class EvolutionApiService {
   }
 
   // Obter QR Code para conexão
-  async getQRCode(instanceName: string): Promise<ApiResponse<QRCodeResponse>> {
+  async getQRCode(instanceId: string): Promise<ApiResponse<QRCodeResponse>> {
     const cliente_id = getCurrentClienteId();
     if (!cliente_id) {
       return {
@@ -297,7 +289,7 @@ class EvolutionApiService {
       };
     }
     
-    const endpoint = `/evolution-api/qrcode/${instanceName}`;
+    const endpoint = `/evolution-api/connect/${instanceId}`;
     
     const response = await this.makeRequest<QRCodeResponse>(endpoint, {
       method: 'GET',

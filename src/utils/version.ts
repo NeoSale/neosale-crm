@@ -26,10 +26,10 @@ export class VersionLogger {
      */
     static logClientVersion(): void {
         if (typeof window !== 'undefined') {
-            console.log(`%c🚀 ${this.APP_NAME} v${this.VERSION}`, 'color: #0070f3; font-weight: bold; font-size: 16px;');
-            console.log(`%c📦 Versão: ${this.VERSION}`, 'color: #666; font-size: 12px;');
-            console.log(`%c🌐 Ambiente: ${process.env.NODE_ENV}`, 'color: #666; font-size: 12px;');
-            console.log('%c' + '─'.repeat(50), 'color: #ddd;');
+            // console.log(`%c🚀 ${this.APP_NAME} v${this.VERSION}`, 'color: #0070f3; font-weight: bold; font-size: 16px;');
+            // console.log(`%c📦 Versão: ${this.VERSION}`, 'color: #666; font-size: 12px;');
+            // console.log(`%c🌐 Ambiente: ${process.env.NODE_ENV}`, 'color: #666; font-size: 12px;');
+            // console.log('%c' + '─'.repeat(50), 'color: #ddd;');
         }
     }
 

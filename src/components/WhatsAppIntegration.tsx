@@ -8,10 +8,8 @@ import {
   TrashIcon,
   ArrowPathIcon,
   QrCodeIcon,
-  PhoneIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ExclamationTriangleIcon,
   LinkIcon,
   PowerIcon,
 } from '@heroicons/react/24/outline';
@@ -41,7 +39,14 @@ const WhatsAppIntegration: React.FC = () => {
     data: QRCodeResponse | null;
     instanceName: string | null;
     instanceId: string | null;
-  }>({ show: false, data: null, instanceName: null, instanceId: null });
+    loading: boolean;
+  }>({
+    show: false,
+    data: null,
+    instanceName: null,
+    instanceId: null,
+    loading: false
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -62,27 +67,23 @@ const WhatsAppIntegration: React.FC = () => {
       sync_full_history: false,
     },
   });
-  
+
   // Estado local para manter compatibilidade com o formulário
   const [localFormData, setLocalFormData] = useState({
     instanceName: '',
     qrcode: true,
     integration: 'WHATSAPP-BAILEYS' as const,
-    rejectCall: false,
+    rejectCall: true,
     msgCall: '',
-    groupsIgnore: false,
-    alwaysOnline: false,
-    readMessages: false,
+    groupsIgnore: true,
+    alwaysOnline: true,
+    readMessages: true,
     readStatus: false,
     syncFullHistory: false,
-    webhook: {
-      url: '',
-      byEvents: false,
-      base64: true,
-      events: ['MESSAGES_UPSERT'],
-    },
+    enabled: false,
+    url: '',
   });
-  const [webhookEnabled, setWebhookEnabled] = useState(false);
+
 
   useEffect(() => {
     loadInstances();
@@ -98,22 +99,17 @@ const WhatsAppIntegration: React.FC = () => {
       const response = await evolutionApi.getInstances();
       if (response.success && response.data) {
         // Mapear os dados da API para o formato esperado pelo componente
+        console.log(response.data);
         const mappedInstances: EvolutionInstance[] = response.data.map((item: any) => ({
           instance: {
-            instanceId: item.id,
-            instanceName: item.instance_name,
-            owner: item.connection_data?.owner || '',
-            profileName: item.connection_data?.profileName || '',
-            profilePictureUrl: item.connection_data?.profilePictureUrl || '',
-            profileStatus: item.connection_data?.profileStatus || '',
-            status: item.status === 'connected' ? 'open' : (item.status === 'disconnected' ? 'disconnected' : 'close') as 'open' | 'close' | 'connecting' | 'disconnected',
-            serverUrl: item.base_url || '',
-            apikey: item.api_key || '',
-            integration: {
-              integration: 'WHATSAPP-BAILEYS' as const,
-              webhook_wa_business: item.webhook_url || '',
-              token: item.api_key || ''
-            }
+            instanceId: item.instance.instanceId,
+            instanceName: item.instance.instanceName,
+            owner: item.instance.owner,
+            profileName: item.instance.profileName,
+            profilePictureUrl: item.instance.profilePictureUrl,
+            profileStatus: item.instance.profileStatus,
+            status: item.instance.status,
+            webhook_wa_business: item.instance.webhook_wa_business,
           }
         }));
         setInstances(mappedInstances);
@@ -132,7 +128,7 @@ const WhatsAppIntegration: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    
+
     try {
       let response;
       if (editingInstance) {
@@ -144,19 +140,16 @@ const WhatsAppIntegration: React.FC = () => {
           alwaysOnline: localFormData.alwaysOnline,
           readMessages: localFormData.readMessages,
           readStatus: localFormData.readStatus,
-          webhook: webhookEnabled ? {
-            ...localFormData.webhook,
-            base64: true,
-            events: ['MESSAGES_UPSERT']
-          } : undefined,
+          enabled: localFormData.enabled,
+          url: localFormData.url,
         };
         response = await evolutionApi.updateInstance(editingInstance.instanceId, updateData);
       } else {
         // Mapear dados do formulário para a nova estrutura da API
         const createData: CreateInstanceRequest = {
           instance_name: localFormData.instanceName,
-          webhook_url: webhookEnabled ? localFormData.webhook.url || '' : '',
-          webhook_events: webhookEnabled ? localFormData.webhook.events || ['MESSAGES_UPSERT'] : [],
+          webhook_url: localFormData.enabled ? localFormData.url || '' : '',
+          webhook_events: localFormData.enabled ? ['MESSAGES_UPSERT'] : [],
           integration: localFormData.integration,
           qrcode: localFormData.qrcode,
           settings: {
@@ -171,7 +164,7 @@ const WhatsAppIntegration: React.FC = () => {
         };
         response = await evolutionApi.createInstance(createData);
       }
-      
+
       if (response.success) {
         loadInstances();
         resetForm();
@@ -186,24 +179,19 @@ const WhatsAppIntegration: React.FC = () => {
   const handleEdit = (item: any) => {
     const instance = item.instance;
     const hasWebhook = instance.integration?.webhook_wa_business;
-    setWebhookEnabled(!!hasWebhook);
     setLocalFormData({
       instanceName: instance.instanceName || '',
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS',
-      rejectCall: false,
-      msgCall: '',
-      groupsIgnore: false,
-      alwaysOnline: false,
-      readMessages: false,
-      readStatus: false,
-      syncFullHistory: false,
-      webhook: {
-        url: hasWebhook || '',
-        byEvents: false,
-        base64: true,
-        events: ['MESSAGES_UPSERT'],
-      },
+      rejectCall: instance.rejectCall ?? true,
+      msgCall: instance.msgCall || '',
+      groupsIgnore: instance.groupsIgnore ?? true,
+      alwaysOnline: instance.alwaysOnline ?? true,
+      readMessages: instance.readMessages ?? true,
+      readStatus: instance.readStatus ?? false,
+      syncFullHistory: instance.syncFullHistory ?? false,
+      enabled: !!hasWebhook,
+      url: hasWebhook || '',
     });
     setEditingInstance(instance);
     setShowModal(true);
@@ -232,22 +220,36 @@ const WhatsAppIntegration: React.FC = () => {
   };
 
   const handleConnect = async (instanceId: string, instanceName: string) => {
+    // Abre o modal com loading
+    setQrCodeModal({
+      show: true,
+      instanceName: instanceName,
+      instanceId: instanceId,
+      data: null,
+      loading: true
+    });
+
     try {
-      setQrCodeModal({
-        show: true,
-        data: null,
-        instanceName: instanceName,
-        instanceId: instanceId
-      });
-      
-      const response = await evolutionApi.getQRCode(instanceName);
-      if (response.success && response.data) {
-        setQrCodeModal(prev => ({ ...prev, data: response.data || null }));
+      const response = await evolutionApi.getQRCode(instanceId);
+      if (response) {
+        setQrCodeModal(prev => ({
+          ...prev,
+          data: response as any,
+          loading: false
+        }));
       } else {
-        toast.error(response.message || 'Erro ao obter QR Code');
+        setQrCodeModal(prev => ({
+          ...prev,
+          loading: false
+        }));
+        toast.error('Erro ao obter QR Code');
       }
     } catch (error) {
       console.error('Erro ao conectar instância:', error);
+      setQrCodeModal(prev => ({
+        ...prev,
+        loading: false
+      }));
       toast.error('Erro ao conectar instância');
     }
   };
@@ -280,22 +282,22 @@ const WhatsAppIntegration: React.FC = () => {
 
   const handleRefreshQRCode = async () => {
     if (!qrCodeModal.instanceName) return;
-    
-    setRefreshingQR(true);
+
+    setQrCodeModal(prev => ({ ...prev, loading: true }));
     try {
-      const response = await evolutionApi.getQRCode(qrCodeModal.instanceName || '');
-      
-      if (response.success && response.data) {
-        setQrCodeModal(prev => ({ ...prev, data: response.data || null }));
+      const response = await evolutionApi.getQRCode(qrCodeModal.instanceId || '');
+
+      if (response) {
+        setQrCodeModal(prev => ({ ...prev, data: response as any, loading: false }));
         toast.success('QR Code atualizado com sucesso!');
       } else {
-        toast.error(response.message || 'Erro ao atualizar QR Code');
+        setQrCodeModal(prev => ({ ...prev, loading: false }));
+        toast.error('Erro ao atualizar QR Code');
       }
     } catch (error) {
       console.error('Erro ao atualizar QR Code:', error);
+      setQrCodeModal(prev => ({ ...prev, loading: false }));
       toast.error('Erro ao atualizar QR Code');
-    } finally {
-      setRefreshingQR(false);
     }
   };
 
@@ -304,21 +306,17 @@ const WhatsAppIntegration: React.FC = () => {
       instanceName: '',
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS',
-      rejectCall: false,
+      rejectCall: true,
       msgCall: '',
-      groupsIgnore: false,
-      alwaysOnline: false,
-      readMessages: false,
+      groupsIgnore: true,
+      alwaysOnline: true,
+      readMessages: true,
       readStatus: false,
       syncFullHistory: false,
-      webhook: {
-        url: '',
-        byEvents: false,
-        base64: true,
-        events: ['MESSAGES_UPSERT'],
-      },
+      enabled: false,
+      url: '',
     });
-    setWebhookEnabled(false);
+
     setEditingInstance(null);
     setShowModal(false);
   };
@@ -326,8 +324,6 @@ const WhatsAppIntegration: React.FC = () => {
   const getStatusIcon = (status: string) => {
     if (status === 'open') {
       return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-    } else if (status === 'connecting') {
-      return <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />;
     } else {
       return <XCircleIcon className="h-5 w-5 text-red-500" />;
     }
@@ -338,7 +334,7 @@ const WhatsAppIntegration: React.FC = () => {
       case 'open':
         return 'Conectado';
       case 'connecting':
-        return 'Conectando';
+        return 'Desconectado';
       case 'disconnected':
       case 'close':
       default:
@@ -478,99 +474,93 @@ const WhatsAppIntegration: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Perfil WhatsApp
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Instância
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ações
-                    </th>
-                  </tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Perfil WhatsApp
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Instância
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
+                </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentInstances.map((item) => {
                   const instance = item.instance;
                   if (!instance) return null;
                   return (
-                  <tr key={instance.instanceId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {instance.profilePictureUrl && (
-                          <img
-                            src={instance.profilePictureUrl}
-                            alt="Profile"
-                            className="h-8 w-8 rounded-full"
-                          />
-                        )}
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {instance.profileName || 'Não conectado'}
+                    <tr key={instance.instanceId} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {instance.profilePictureUrl && (
+                            <img
+                              src={instance.profilePictureUrl}
+                              alt="Profile"
+                              className="h-8 w-8 rounded-full"
+                            />
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {instance.profileName || 'Não conectado'}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {instance.instanceName}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(instance.status || 'close')}
-                        <span className={`text-sm font-medium ${
-                          instance.status === 'open'
-                            ? 'text-primary'
-                            : instance.status === 'connecting'
-                            ? 'text-yellow-600'
-                            : 'text-primary'
-                        }`}>
-                          {getStatusText(instance.status || 'close')}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        {(instance.status || 'close') !== 'open' ? (
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {instance.instanceName}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(instance.status || 'close')}
+                          <span className={`text-sm font-medium text-primary`}>
+                            {getStatusText(instance.status || 'close')}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center space-x-2">
+                          {(instance.status || 'close') !== 'open' ? (
+                            <button
+                              onClick={() => handleConnect(instance.instanceId, instance.instanceName)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            >
+                              <QrCodeIcon className="h-4 w-4 mr-1" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleDisconnect(instance.instanceId)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                              <PowerIcon className="h-4 w-4 mr-1" />
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleConnect(instance.instanceId, instance.instanceName)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            onClick={() => handleRestart(instance.instanceId)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                           >
-                            <QrCodeIcon className="h-4 w-4 mr-1" />
+                            <ArrowPathIcon className="h-4 w-4 mr-1" />
                           </button>
-                        ) : (
                           <button
-                            onClick={() => handleDisconnect(instance.instanceId)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            onClick={() => handleEdit(item)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                           >
-                            <PowerIcon className="h-4 w-4 mr-1" />
+                            <PencilIcon className="h-4 w-4 mr-1" />
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleRestart(instance.instanceId)}
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                        >
-                          <ArrowPathIcon className="h-4 w-4 mr-1" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                        >
-                          <PencilIcon className="h-4 w-4 mr-1" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(instance.instanceId)}
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                          <TrashIcon className="h-4 w-4 mr-1" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          <button
+                            onClick={() => handleDelete(instance.instanceId)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                          >
+                            <TrashIcon className="h-4 w-4 mr-1" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -614,16 +604,15 @@ const WhatsAppIntegration: React.FC = () => {
                   } else {
                     pageNumber = currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <button
                       key={pageNumber}
                       onClick={() => setCurrentPage(pageNumber)}
-                      className={`px-3 py-1 text-sm border rounded-md ${
-                        currentPage === pageNumber
-                          ? 'bg-primary text-white border-primary'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
+                      className={`px-3 py-1 text-sm border rounded-md ${currentPage === pageNumber
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                        }`}
                     >
                       {pageNumber}
                     </button>
@@ -661,8 +650,11 @@ const WhatsAppIntegration: React.FC = () => {
             <input
               type="checkbox"
               id="webhookEnabled"
-              checked={webhookEnabled}
-              onChange={(e) => setWebhookEnabled(e.target.checked)}
+              checked={localFormData.enabled}
+              onChange={(e) => setLocalFormData({
+                ...localFormData,
+                enabled: e.target.checked 
+              })}
               className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
             />
             <label htmlFor="webhookEnabled" className="ml-2 block text-sm text-gray-900">
@@ -670,23 +662,121 @@ const WhatsAppIntegration: React.FC = () => {
             </label>
           </div>
 
-          {webhookEnabled && (
+          {localFormData.enabled && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 URL do Webhook
               </label>
               <input
                 type="url"
-                value={localFormData.webhook.url}
+                value={localFormData.url}
                 onChange={(e) => setLocalFormData({
                   ...localFormData,
-                  webhook: { ...localFormData.webhook, url: e.target.value }
+                  url: e.target.value
                 })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
                 placeholder="https://seu-webhook.com/endpoint"
               />
             </div>
           )}
+
+          {/* Configurações Settings */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Configurações</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rejectCall"
+                  checked={localFormData.rejectCall}
+                  onChange={(e) => setLocalFormData({ ...localFormData, rejectCall: e.target.checked })}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="rejectCall" className="ml-2 block text-sm text-gray-900">
+                  Rejeitar Chamadas
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="groupsIgnore"
+                  checked={localFormData.groupsIgnore}
+                  onChange={(e) => setLocalFormData({ ...localFormData, groupsIgnore: e.target.checked })}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="groupsIgnore" className="ml-2 block text-sm text-gray-900">
+                  Ignorar Grupos
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="alwaysOnline"
+                  checked={localFormData.alwaysOnline}
+                  onChange={(e) => setLocalFormData({ ...localFormData, alwaysOnline: e.target.checked })}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="alwaysOnline" className="ml-2 block text-sm text-gray-900">
+                  Sempre Online
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="readMessages"
+                  checked={localFormData.readMessages}
+                  onChange={(e) => setLocalFormData({ ...localFormData, readMessages: e.target.checked })}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="readMessages" className="ml-2 block text-sm text-gray-900">
+                  Ler Mensagens
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="readStatus"
+                  checked={localFormData.readStatus}
+                  onChange={(e) => setLocalFormData({ ...localFormData, readStatus: e.target.checked })}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="readStatus" className="ml-2 block text-sm text-gray-900">
+                  Ler Status
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="syncFullHistory"
+                  checked={localFormData.syncFullHistory}
+                  onChange={(e) => setLocalFormData({ ...localFormData, syncFullHistory: e.target.checked })}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="syncFullHistory" className="ml-2 block text-sm text-gray-900">
+                  Sincronizar Histórico Completo
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mensagem para Chamadas
+              </label>
+              <input
+                type="text"
+                value={localFormData.msgCall}
+                onChange={(e) => setLocalFormData({ ...localFormData, msgCall: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                placeholder="Mensagem automática para chamadas rejeitadas"
+              />
+            </div>
+          </div>
 
           <div className="flex justify-end space-x-3 pt-4">
             <button
@@ -699,9 +789,8 @@ const WhatsAppIntegration: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md flex items-center justify-center space-x-2 ${
-                submitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
-              }`}
+              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md flex items-center justify-center space-x-2 ${submitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+                }`}
             >
               {submitting && (
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -724,71 +813,77 @@ const WhatsAppIntegration: React.FC = () => {
       <Modal
         isOpen={qrCodeModal.show}
         onClose={() => {
-          setQrCodeModal({ show: false, data: null, instanceName: null, instanceId: null });
+          setQrCodeModal({
+            show: false,
+            instanceName: null,
+            instanceId: null,
+            data: null,
+            loading: false
+          });
           loadInstances(false); // Recarrega as instâncias ao fechar o modal com loading específico
         }}
         title={`QR Code - ${qrCodeModal.instanceName}`}
         size="md"
       >
         <div className="text-center space-y-4">
-          {refreshingQR ? (
+          {qrCodeModal.loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
             <>
-              {qrCodeModal.data?.qr_code && (
+              {qrCodeModal.data?.base64 && qrCodeModal.data.base64 !== "data:image/png;base64," && (
                 <div className="flex justify-center">
                   <img
-                    src={qrCodeModal.data.qr_code}
+                    src={qrCodeModal.data.base64}
                     alt="QR Code"
                     className="max-w-xs"
                   />
                 </div>
               )}
-              
-              {qrCodeModal.data?.base64 && !qrCodeModal.data?.qr_code && (
+
+              {qrCodeModal.data?.code && (!qrCodeModal.data?.base64 || qrCodeModal.data.base64 === "data:image/png;base64,") && (
                 <div className="flex justify-center">
                   <img
-                    src={`data:image/png;base64,${qrCodeModal.data.base64}`}
+                    src={qrCodeModal.data.code}
                     alt="QR Code"
                     className="max-w-xs"
                   />
                 </div>
               )}
-              
-              {qrCodeModal.data?.qrcode && !qrCodeModal.data?.qr_code && !qrCodeModal.data?.base64 && (
-                <div className="bg-gray-100 p-4 rounded-lg">
-                  <code className="text-sm break-all">{qrCodeModal.data.qrcode}</code>
-                </div>
-              )}
-              
+
               {qrCodeModal.data?.pairingCode && (
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-blue-800 mb-2">Código de Pareamento:</p>
                   <code className="text-lg font-mono font-bold text-blue-900">{qrCodeModal.data.pairingCode}</code>
                 </div>
               )}
-              
-              {!qrCodeModal.data?.qr_code && !qrCodeModal.data?.base64 && !qrCodeModal.data?.qrcode && !qrCodeModal.data?.pairingCode && (
-                <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+
+              {(!qrCodeModal.data?.base64 || qrCodeModal.data.base64 === "data:image/png;base64,") && !qrCodeModal.data?.code && !qrCodeModal.data?.pairingCode && (
+                <div className="text-center text-gray-500">
+                  <p className="mb-2">Não foi possível carregar o QRCode.</p>
+                  <button
+                    onClick={handleRefreshQRCode}
+                    disabled={qrCodeModal.loading}
+                    className="text-blue-600 hover:text-blue-800 underline text-sm"
+                  >
+                    Clique aqui para atualizar
+                  </button>
                 </div>
               )}
             </>
           )}
-          
+
           <p className="text-sm text-gray-600">
             Escaneie o QR Code com seu WhatsApp para conectar a instância.
           </p>
-          
+
           <div className="flex space-x-3 pt-4">
             <button
               onClick={handleRefreshQRCode}
               disabled={refreshingQR}
-              className={`flex-1 px-4 py-2 text-sm font-medium border border-gray-300 rounded-md flex items-center justify-center space-x-2 ${
-                refreshingQR ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`flex-1 px-4 py-2 text-sm font-medium border border-gray-300 rounded-md flex items-center justify-center space-x-2 ${refreshingQR ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
             >
               {refreshingQR && (
                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -800,7 +895,13 @@ const WhatsAppIntegration: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                setQrCodeModal({ show: false, data: null, instanceName: null, instanceId: null });
+                setQrCodeModal({
+                  show: false,
+                  instanceName: null,
+                  instanceId: null,
+                  data: null,
+                  loading: false
+                });
                 loadInstances(false); // Recarrega as instâncias ao fechar o modal com loading específico
               }}
               className="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-md"
