@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import {
   HomeIcon,
@@ -71,7 +71,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<string>('');
   const [loadingClientes, setLoadingClientes] = useState(false);
+  const [clienteFromUrl, setClienteFromUrl] = useState<boolean>(false);
+  const [currentClienteId, setCurrentClienteId] = useState<string>('');
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Função para carregar clientes
   const loadClientes = async () => {
@@ -106,13 +109,34 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   };
 
-  // Carregar cliente_id do localStorage na inicialização
+  // Função para adicionar cliente_id às URLs quando necessário
+  const buildUrlWithClienteId = (href: string) => {
+    if (!currentClienteId) return href;
+    const url = new URL(href, window.location.origin);
+    url.searchParams.set('cliente_id', currentClienteId);
+    return url.pathname + url.search;
+  };
+
+  // Verificar parâmetro cliente_id na URL e carregar do localStorage
   useEffect(() => {
-    const savedClienteId = localStorage.getItem('cliente_id');
-    if (savedClienteId) {
-      setSelectedCliente(savedClienteId);
+    const clienteIdFromUrl = searchParams.get('cliente_id');
+    
+    if (clienteIdFromUrl) {
+      // Se há cliente_id na URL, usar ele e bloquear o select
+      setSelectedCliente(clienteIdFromUrl);
+      setClienteFromUrl(true);
+      setCurrentClienteId(clienteIdFromUrl);
+      localStorage.setItem('cliente_id', clienteIdFromUrl);
+    } else {
+      // Se não há cliente_id na URL, verificar localStorage e permitir troca
+      const savedClienteId = localStorage.getItem('cliente_id');
+      if (savedClienteId) {
+        setSelectedCliente(savedClienteId);
+      }
+      setClienteFromUrl(false);
+      setCurrentClienteId('');
     }
-  }, []);
+  }, [searchParams]);
 
   // Carregar clientes quando o tooltip for aberto
   useEffect(() => {
@@ -255,7 +279,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           return (
                             <a
                               key={child.name}
-                              href={child.href}
+                              href={buildUrlWithClienteId(child.href)}
                               className={classNames(
                                 isChildActive
                                   ? 'bg-primary text-white'
@@ -303,7 +327,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               return (
                 <a
                   key={item.name}
-                  href={item.href}
+                  href={buildUrlWithClienteId(item.href)}
                   className={classNames(
                     isActive
                       ? 'bg-primary text-white'
@@ -421,8 +445,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       <select
                         value={selectedCliente}
                         onChange={(e) => handleClienteChange(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                        disabled={loadingClientes}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
+                          clienteFromUrl ? 'bg-gray-100 cursor-not-allowed' : ''
+                        }`}
+                        disabled={loadingClientes || clienteFromUrl}
+                        title={clienteFromUrl ? 'Cliente definido via URL - não é possível alterar' : ''}
                       >
                         <option value="">
                           {loadingClientes ? 'Carregando...' : 'Selecione um cliente'}

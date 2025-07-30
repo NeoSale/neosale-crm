@@ -22,6 +22,7 @@ import {
   UpdateInstanceRequest,
   QRCodeResponse,
 } from '../services/evolutionApi';
+import { configuracoesApi } from '../services/configuracoesApi';
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 
@@ -50,6 +51,7 @@ const WhatsAppIntegration: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [urlN8n, setUrlN8n] = useState<string>('');
 
   const [formData, setFormData] = useState<CreateInstanceRequest>({
     instance_name: '',
@@ -80,14 +82,26 @@ const WhatsAppIntegration: React.FC = () => {
     readMessages: true,
     readStatus: false,
     syncFullHistory: false,
-    enabled: false,
+    enabled: true,
     url: '',
   });
 
 
   useEffect(() => {
     loadInstances();
+    loadUrlN8nConfig();
   }, []);
+
+  const loadUrlN8nConfig = async () => {
+    try {
+      const response = await configuracoesApi.getConfiguracaoByChave('url_n8n');
+      if (response.success && response.data) {
+        setUrlN8n(response.data.valor);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configuração url_n8n:', error);
+    }
+  };
 
   const loadInstances = async (showLoadingState = true) => {
     if (showLoadingState) {
@@ -389,7 +403,25 @@ const WhatsAppIntegration: React.FC = () => {
                 Atualizar
               </button>
               <button
-                onClick={() => setShowModal(true)}
+                onClick={() => {
+                  // Resetar formulário e definir URL padrão do webhook
+                  setLocalFormData({
+                    instanceName: '',
+                    qrcode: true,
+                    integration: 'WHATSAPP-BAILEYS',
+                    rejectCall: true,
+                    msgCall: '',
+                    groupsIgnore: true,
+                    alwaysOnline: true,
+                    readMessages: true,
+                    readStatus: false,
+                    syncFullHistory: false,
+                    enabled: true,
+                    url: urlN8n ? `${urlN8n}/` : '',
+                  });
+                  setEditingInstance(null);
+                  setShowModal(true);
+                }}
                 className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
                 <PlusIcon className="h-4 w-4" />
@@ -461,7 +493,25 @@ const WhatsAppIntegration: React.FC = () => {
               {!searchTerm && (
                 <div className="mt-6">
                   <button
-                    onClick={() => setShowModal(true)}
+                    onClick={() => {
+                      // Resetar formulário e definir URL padrão do webhook
+                      setLocalFormData({
+                        instanceName: '',
+                        qrcode: true,
+                        integration: 'WHATSAPP-BAILEYS',
+                        rejectCall: true,
+                        msgCall: '',
+                        groupsIgnore: true,
+                        alwaysOnline: true,
+                        readMessages: true,
+                        readStatus: false,
+                        syncFullHistory: false,
+                        enabled: true,
+                        url: urlN8n ? `${urlN8n}/` : '',
+                      });
+                      setEditingInstance(null);
+                      setShowModal(true);
+                    }}
                     className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90"
                   >
                     <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
@@ -639,46 +689,22 @@ const WhatsAppIntegration: React.FC = () => {
             <input
               type="text"
               value={localFormData.instanceName}
-              onChange={(e) => setLocalFormData({ ...localFormData, instanceName: e.target.value })}
+              onChange={(e) => {
+                const instanceName = e.target.value;
+                setLocalFormData({ 
+                  ...localFormData, 
+                  instanceName,
+                  // Atualizar URL do webhook automaticamente apenas se não estiver editando uma instância existente
+                  url: !editingInstance && urlN8n ? `${urlN8n}/${instanceName}` : localFormData.url
+                });
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
               placeholder="Digite o nome da instância"
               required
             />
           </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="webhookEnabled"
-              checked={localFormData.enabled}
-              onChange={(e) => setLocalFormData({
-                ...localFormData,
-                enabled: e.target.checked 
-              })}
-              className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-            />
-            <label htmlFor="webhookEnabled" className="ml-2 block text-sm text-gray-900">
-              Habilitar Webhook
-            </label>
-          </div>
 
-          {localFormData.enabled && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL do Webhook
-              </label>
-              <input
-                type="url"
-                value={localFormData.url}
-                onChange={(e) => setLocalFormData({
-                  ...localFormData,
-                  url: e.target.value
-                })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-                placeholder="https://seu-webhook.com/endpoint"
-              />
-            </div>
-          )}
 
           {/* Configurações Settings */}
           <div className="border-t pt-4">
@@ -737,42 +763,17 @@ const WhatsAppIntegration: React.FC = () => {
                 </label>
               </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="readStatus"
-                  checked={localFormData.readStatus}
-                  onChange={(e) => setLocalFormData({ ...localFormData, readStatus: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <label htmlFor="readStatus" className="ml-2 block text-sm text-gray-900">
-                  Ler Status
-                </label>
-              </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="syncFullHistory"
-                  checked={localFormData.syncFullHistory}
-                  onChange={(e) => setLocalFormData({ ...localFormData, syncFullHistory: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <label htmlFor="syncFullHistory" className="ml-2 block text-sm text-gray-900">
-                  Sincronizar Histórico Completo
-                </label>
-              </div>
             </div>
 
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mensagem para Chamadas
+                Mensagem para Chamadas Rejeitadas
               </label>
-              <input
-                type="text"
+              <textarea
                 value={localFormData.msgCall}
                 onChange={(e) => setLocalFormData({ ...localFormData, msgCall: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm h-24"
                 placeholder="Mensagem automática para chamadas rejeitadas"
               />
             </div>
