@@ -22,7 +22,7 @@ import {
   UpdateInstanceRequest,
   QRCodeResponse,
 } from '../services/evolutionApi';
-import { configuracoesApi } from '../services/configuracoesApi';
+
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 
@@ -51,7 +51,7 @@ const WhatsAppIntegration: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [urlN8n, setUrlN8n] = useState<string>('');
+
 
   const [formData, setFormData] = useState<CreateInstanceRequest>({
     instance_name: '',
@@ -89,19 +89,9 @@ const WhatsAppIntegration: React.FC = () => {
 
   useEffect(() => {
     loadInstances();
-    loadUrlN8nConfig();
   }, []);
 
-  const loadUrlN8nConfig = async () => {
-    try {
-      const response = await configuracoesApi.getConfiguracaoByChave('url_n8n');
-      if (response.success && response.data) {
-        setUrlN8n(response.data.valor);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar configuração url_n8n:', error);
-    }
-  };
+
 
   const loadInstances = async (showLoadingState = true) => {
     if (showLoadingState) {
@@ -417,7 +407,7 @@ const WhatsAppIntegration: React.FC = () => {
                     readStatus: false,
                     syncFullHistory: false,
                     enabled: true,
-                    url: urlN8n ? `${urlN8n}/` : '',
+                    url: '',
                   });
                   setEditingInstance(null);
                   setShowModal(true);
@@ -507,7 +497,7 @@ const WhatsAppIntegration: React.FC = () => {
                         readStatus: false,
                         syncFullHistory: false,
                         enabled: true,
-                        url: urlN8n ? `${urlN8n}/` : '',
+                        url: '',
                       });
                       setEditingInstance(null);
                       setShowModal(true);
@@ -695,7 +685,7 @@ const WhatsAppIntegration: React.FC = () => {
                   ...localFormData, 
                   instanceName,
                   // Atualizar URL do webhook automaticamente apenas se não estiver editando uma instância existente
-                  url: !editingInstance && urlN8n ? `${urlN8n}/${instanceName}` : localFormData.url
+                  url: localFormData.url
                 });
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"

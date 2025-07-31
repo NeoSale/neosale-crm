@@ -178,8 +178,14 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
       setLoading(true);
       setError(null);
       
+      // Processar telefone para formato internacional
+      const processedLead = {
+        ...lead,
+        telefone: lead.telefone ? formatPhoneForBackend(lead.telefone) : ''
+      };
+      
       const clienteId = currentClienteId();
-      const response = await leadsApi.createLead(lead);
+      const response = await leadsApi.createLead(processedLead, clienteId);
 
       if (response.success) {
         await refreshLeads();
@@ -201,10 +207,28 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
     }
   }, [refreshLeads, currentClienteId]);
 
+  // Função para converter telefone para formato backend (apenas números)
+  const formatPhoneForBackend = (phone: string): string => {
+    if (!phone) return '';
+    const cleanPhone = phone.replace(/\D/g, '');
+    // Se já começa com 55, retorna como está, senão adiciona 55
+    if (cleanPhone.startsWith('55')) {
+      return cleanPhone;
+    }
+    return `55${cleanPhone}`;
+  };
+
   // Função para adicionar múltiplos leads
   const addMultipleLeads = useCallback(async (newLeads: Omit<Lead, 'id'>[]): Promise<boolean> => {
     try {
-      const response = await leadsApi.createMultipleLeads(newLeads);
+      // Processar telefones para formato internacional
+      const processedLeads = newLeads.map(lead => ({
+        ...lead,
+        telefone: lead.telefone ? formatPhoneForBackend(lead.telefone) : ''
+      }));
+      
+      const clienteId = currentClienteId();
+      const response = await leadsApi.createMultipleLeads(processedLeads, clienteId);
 
       if (response.success) {
         await refreshLeads();
@@ -232,8 +256,16 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
       setLoading(true);
       setError(null);
       
+      // Processar telefone para formato internacional se estiver sendo atualizado
+      const processedLeadData = {
+        ...leadData,
+        ...(leadData.telefone !== undefined && {
+          telefone: leadData.telefone ? formatPhoneForBackend(leadData.telefone) : ''
+        })
+      };
+      
       const clienteId = currentClienteId();
-      const response = await leadsApi.updateLead(id, leadData);
+      const response = await leadsApi.updateLead(id, processedLeadData, clienteId);
 
       if (response.success) {
         await refreshLeads();
@@ -261,7 +293,7 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
       setError(null);
       
       const clienteId = currentClienteId();
-      const response = await leadsApi.deleteLead(id);
+      const response = await leadsApi.deleteLead(id, clienteId);
 
       if (response.success) {
         await refreshLeads();

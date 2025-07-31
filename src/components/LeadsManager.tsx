@@ -1304,7 +1304,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
     telefone: lead.telefone || '',
     empresa: lead.empresa || '',
     cargo: lead.cargo || '',
-    agendado: lead.status_agendamento || '',
+    agendado: lead.status_agendamento ? 'true' : lead.status_agendamento === false ? 'false' : '',
     contador: lead.contador || '',
     escritorio: lead.escritorio || '',
     responsavel: lead.responsavel || '',
@@ -1331,6 +1331,34 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
     return null;
   };
 
+  // Função para formatar telefone com máscara (99) 99999-9999
+  const formatPhoneDisplay = (phone: string): string => {
+    // Remove todos os caracteres não numéricos
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Aplica a máscara baseada no tamanho
+    if (cleanPhone.length <= 2) {
+      return cleanPhone;
+    } else if (cleanPhone.length <= 7) {
+      return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2)}`;
+    } else if (cleanPhone.length <= 11) {
+      return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}`;
+    }
+    
+    // Limita a 11 dígitos
+    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7, 11)}`;
+  };
+
+  // Função para converter telefone para formato backend (apenas números)
+  const formatPhoneForBackend = (phone: string): string => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    // Se já começa com 55, retorna como está, senão adiciona 55
+    if (cleanPhone.startsWith('55')) {
+      return cleanPhone;
+    }
+    return `55${cleanPhone}`;
+  };
+
   // Função para validar telefone
   const validatePhone = (phone: string): string | null => {
     if (!phone.trim()) {
@@ -1340,14 +1368,24 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
     // Remove todos os caracteres não numéricos
     const cleanPhone = phone.replace(/\D/g, '');
 
-    // Verifica se tem pelo menos 10 dígitos (DDD + número)
+    // Verifica se tem exatamente 10 ou 11 dígitos (DDD + número)
     if (cleanPhone.length < 10) {
-      return 'Telefone deve ter pelo menos 10 dígitos';
+      return 'Telefone deve ter pelo menos 10 dígitos (DDD + número)';
     }
 
-    // Verifica se tem no máximo 11 dígitos (celular com 9)
     if (cleanPhone.length > 11) {
       return 'Telefone deve ter no máximo 11 dígitos';
+    }
+
+    // Verifica se o DDD é válido (11-99)
+    const ddd = parseInt(cleanPhone.slice(0, 2));
+    if (ddd < 11 || ddd > 99) {
+      return 'DDD inválido';
+    }
+
+    // Para celular (11 dígitos), o primeiro dígito após o DDD deve ser 9
+    if (cleanPhone.length === 11 && cleanPhone[2] !== '9') {
+      return 'Número de celular deve começar com 9 após o DDD';
     }
 
     return null;
@@ -1447,13 +1485,21 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
       return;
     }
 
-    // Converter status_agendamento de string para boolean
+    // Converter agendado de string para boolean e mapear para status_agendamento
+    // Converter telefone para formato internacional
     const processedData = {
       ...formData,
-      status_agendamento: formData.status_agendamento === 'true' ? true :
-        formData.status_agendamento === 'false' ? false :
-          formData.status_agendamento
+      telefone: formData.telefone ? formatPhoneForBackend(formData.telefone) : '',
+      status_agendamento: formData.agendado === 'true' ? true :
+        formData.agendado === 'false' ? false :
+          Boolean(formData.agendado)
     };
+    
+    // Remover o campo 'agendado' do objeto final
+    delete processedData.agendado;
+
+    console.log('FormData antes do processamento:', formData);
+    console.log('ProcessedData após processamento (telefone: apenas números):', processedData);
 
     onSave(processedData);
   };
@@ -1502,14 +1548,33 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Telefone *</label>
-          <input
-            type="tel"
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.telefone ? 'border-red-500' : 'border-gray-300'
-              }`}
-            value={formData.telefone || ''}
-            onChange={(e) => handleChange('telefone', e.target.value)}
-            placeholder="(11) 99999-9999"
-          />
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="flex items-center space-x-1">
+                {/* Bandeira do Brasil SVG */}
+                <svg width="20" height="14" viewBox="0 0 20 14" className="rounded-sm">
+                  <rect width="20" height="14" fill="#009739"/>
+                  <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00"/>
+                  <circle cx="10" cy="7" r="3" fill="#012169"/>
+                  <path d="M7,6.5 Q10,5 13,6.5 Q10,8.5 7,6.5" fill="#FEDD00"/>
+                </svg>
+                <span className="text-sm font-medium text-gray-600">+55</span>
+              </div>
+            </div>
+            <input
+              type="tel"
+              className={`w-full pl-16 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.telefone ? 'border-red-500' : 'border-gray-300'
+                }`}
+              value={formatPhoneDisplay(formData.telefone || '')}
+              onChange={(e) => {
+                // Remove a formatação e mantém apenas os números
+                const cleanValue = e.target.value.replace(/\D/g, '');
+                handleChange('telefone', cleanValue);
+              }}
+              placeholder="(11) 99999-9999"
+              maxLength={15}
+            />
+          </div>
           {errors.telefone && (
             <p className="text-red-500 text-xs mt-1">{errors.telefone}</p>
           )}
@@ -1541,8 +1606,8 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
           <label className="block text-xs font-medium text-gray-700 mb-1">Agendado</label>
           <select
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.agendado || false}
-            onChange={(e) => handleChange('status_agendamento', e.target.value)}
+            value={formData.agendado || ''}
+            onChange={(e) => handleChange('agendado', e.target.value)}
           >
             <option value="">Selecione o Agendamento</option>
             <option value="true">Sim</option>

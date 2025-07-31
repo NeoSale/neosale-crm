@@ -18,6 +18,9 @@ export interface Lead {
   observacao?: string;
   segmento?: string;
   erp_atual?: string;
+  status_agendamento?: boolean;
+  agendado?: string;
+  cliente_id?: string;
   [key: string]: any;
 }
 
@@ -128,9 +131,16 @@ class LeadsApiService {
   }
 
   // Criar novo lead
-  async createLead(lead: Omit<Lead, 'id'>): Promise<ApiResponse<Lead>> {
+  async createLead(lead: Omit<Lead, 'id'>, cliente_id?: string): Promise<ApiResponse<Lead>> {
+    const headers: Record<string, string> = {};
+
+    if (cliente_id) {
+      headers['cliente_id'] = cliente_id;
+    }
+    
     return this.request<Lead>('/leads', {
       method: 'POST',
+      headers,
       body: JSON.stringify(lead),
     }, {
       showSuccess: true,
@@ -140,9 +150,16 @@ class LeadsApiService {
   }
 
   // Criar múltiplos leads (para importação)
-  async createMultipleLeads(leads: Omit<Lead, 'id'>[]): Promise<ApiResponse<Lead[]>> {
+  async createMultipleLeads(leads: Omit<Lead, 'id'>[], cliente_id?: string): Promise<ApiResponse<Lead[]>> {
+    const headers: Record<string, string> = {};
+
+    if (cliente_id) {
+      headers['cliente_id'] = cliente_id;
+    }
+    
     return this.request<Lead[]>('/leads/bulk', {
       method: 'POST',
+      headers,
       body: JSON.stringify({ leads }),
     }, {
       showSuccess: true,
@@ -152,9 +169,16 @@ class LeadsApiService {
   }
 
   // Atualizar lead
-  async updateLead(id: string, lead: Partial<Lead>): Promise<ApiResponse<Lead>> {
+  async updateLead(id: string, lead: Partial<Lead>, cliente_id?: string): Promise<ApiResponse<Lead>> {
+    const headers: Record<string, string> = {};
+
+    if (cliente_id) {
+      headers['cliente_id'] = cliente_id;
+    }
+    
     return this.request<Lead>(`/leads/${id}`, {
       method: 'PUT',
+      headers,
       body: JSON.stringify(lead),
     }, {
       showSuccess: true,
@@ -164,9 +188,16 @@ class LeadsApiService {
   }
 
   // Deletar lead
-  async deleteLead(id: string): Promise<ApiResponse<void>> {
+  async deleteLead(id: string, cliente_id?: string): Promise<ApiResponse<void>> {
+    const headers: Record<string, string> = {};
+
+    if (cliente_id) {
+      headers['cliente_id'] = cliente_id;
+    }
+    
     return this.request<void>(`/leads/${id}`, {
       method: 'DELETE',
+      headers,
     }, {
       showSuccess: true,
       showError: true,
