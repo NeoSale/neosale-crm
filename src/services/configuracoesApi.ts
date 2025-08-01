@@ -5,9 +5,12 @@ import { getValidatedApiUrl } from '../utils/api-config';
 import { getClienteId } from '../utils/cliente-utils';
 
 export interface Configuracao {
+  id?: string;
+  chave: string;
+  valor: string;
   apikeyopenai?: string;
-  promptsdr: string;
-  horario_inicio: string;
+  promptsdr?: string;
+  horario_inicio?: string;
   horario_fim?: string;
   qtd_envio_diario?: string;
   somente_dias_uteis?: string;

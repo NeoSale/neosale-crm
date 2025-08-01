@@ -37,7 +37,7 @@ export default function ConfiguracoesGerais() {
           horario_inicio: config.horario_inicio ? `${config.horario_inicio.toString().padStart(2, '0')}:00` : '',
           horario_fim: config.horario_fim ? `${config.horario_fim.toString().padStart(2, '0')}:00` : '',
           quantidade_diaria_maxima: config.qtd_envio_diario ? config.qtd_envio_diario.toString() : '',
-          envia_somente_dias_uteis: config.somente_dias_uteis || false
+          envia_somente_dias_uteis: Boolean(config.somente_dias_uteis)
         };
         setConfiguracoes(configMap);
       }
