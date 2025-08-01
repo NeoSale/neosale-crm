@@ -1,13 +1,18 @@
 'use client';
 
-import ConfiguracoesManager from '../../components/ConfiguracoesManager';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function ConfiguracoesPage() {
+export default function ConfiguracoesRedirect() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/configuracoes/geral');
+  }, [router]);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="py-8">
-        <ConfiguracoesManager />
-      </div>
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </div>
   );
 }

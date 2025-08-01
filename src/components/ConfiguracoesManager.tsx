@@ -408,7 +408,7 @@ const ConfiguracoesManager: React.FC = () => {
               </label>
               <input
                 type="text"
-                placeholder="HH:MM"
+                placeholder="HH"
                 value={configuracoes.horario_inicio as string || ''}
                 onChange={(e) => {
                   let value = e.target.value.replace(/\D/g, '');
@@ -446,7 +446,7 @@ const ConfiguracoesManager: React.FC = () => {
               </label>
               <input
                 type="text"
-                placeholder="HH:MM"
+                placeholder="HH"
                 value={configuracoes.horario_fim as string || ''}
                 onChange={(e) => {
                   let value = e.target.value.replace(/\D/g, '');

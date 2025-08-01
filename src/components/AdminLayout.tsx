@@ -54,7 +54,8 @@ const navigation: MenuItem[] = [
     name: 'Configurações', 
     icon: CogIcon,
     children: [
-      { name: 'Follow Up', href: '/configuracoes/followup', icon: SpeakerWaveIcon },
+      { name: 'Geral', href: '/configuracoes/geral', icon: CogIcon },
+      { name: 'Follow Up', icon: SpeakerWaveIcon },
     ]
   },
 ];
