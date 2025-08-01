@@ -41,6 +41,38 @@ try {
 }
 
 class LeadsApiService {
+  // Método para agrupar erros similares
+  private groupSimilarErrors(errors: string[]): string[] {
+    const errorGroups: { [key: string]: { count: number; message: string } } = {};
+    
+    errors.forEach(error => {
+      // Normalizar a mensagem para agrupamento (remover números específicos, IDs, etc.)
+      const normalizedKey = error
+        .replace(/\d+/g, 'X') // Substituir números por X
+        .replace(/linha \d+/gi, 'linha X') // Normalizar referências de linha
+        .replace(/registro \d+/gi, 'registro X') // Normalizar referências de registro
+        .toLowerCase()
+        .trim();
+      
+      if (errorGroups[normalizedKey]) {
+        errorGroups[normalizedKey].count++;
+      } else {
+        errorGroups[normalizedKey] = {
+          count: 1,
+          message: error
+        };
+      }
+    });
+    
+    // Converter grupos em mensagens formatadas
+    return Object.values(errorGroups).map(group => {
+      if (group.count > 1) {
+        return `${group.message} (${group.count} ocorrências)`;
+      }
+      return group.message;
+    });
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -71,12 +103,39 @@ class LeadsApiService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || errorData.message || `Erro HTTP: ${response.status}`;
-        if (toastConfig?.showError !== false) {
-          ToastInterceptor.handleError(errorMessage, toastConfig);
-        }
         
-        throw new Error(errorMessage);
+        // Tratar erros com estrutura específica (message + errors array)
+        if (errorData.message && errorData.errors && Array.isArray(errorData.errors)) {
+          // Exibir mensagem principal
+          let fullErrorMessage = errorData.message;
+          
+          // Agrupar mensagens de erro similares
+          const errorMessages: string[] = errorData.errors
+            .filter((error: any) => error.message)
+            .map((error: any) => error.message);
+          
+          // Remover duplicatas e agrupar mensagens similares
+          const uniqueErrors: string[] = [...new Set(errorMessages)];
+          const groupedErrors = this.groupSimilarErrors(uniqueErrors);
+          
+          if (groupedErrors.length > 0) {
+            fullErrorMessage += ':\n' + groupedErrors.join('\n');
+          }
+          
+          if (toastConfig?.showError !== false) {
+            ToastInterceptor.handleError(fullErrorMessage, toastConfig);
+          }
+          
+          throw new Error(fullErrorMessage);
+        } else {
+          // Tratamento padrão para outros tipos de erro
+          const errorMessage = errorData.error || errorData.message || `Erro HTTP: ${response.status}`;
+          if (toastConfig?.showError !== false) {
+            ToastInterceptor.handleError(errorMessage, toastConfig);
+          }
+          
+          throw new Error(errorMessage);
+        }
       }
 
       const result = await response.json();

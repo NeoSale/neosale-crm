@@ -128,7 +128,7 @@ const LeadsManager: React.FC = () => {
 
   const autoMapFields = (headers: string[]) => {
     const mapping: { [key: string]: string } = {};
-    const leadFields = ['nome', 'email', 'telefone', 'empresa', 'cargo', 'status', 'contador', 'escritorio', 'responsavel', 'cnpj', 'observacao', 'segmento', 'erp_atual'];
+    const leadFields = ['nome', 'email', 'telefone', 'empresa', 'cargo', 'contador', 'escritorio', 'responsavel', 'cnpj', 'observacao', 'segmento', 'erp_atual'];
 
     headers.forEach(header => {
       const normalizedHeader = header.toLowerCase().trim();
@@ -142,8 +142,6 @@ const LeadsManager: React.FC = () => {
         mapping['email'] = header;
       } else if (normalizedHeader.includes('cnpj') || normalizedHeader.includes('tax_id')) {
         mapping['cnpj'] = header;
-      } else if (normalizedHeader.includes('status') || normalizedHeader.includes('situação')) {
-        mapping['status'] = header;
       }
     });
 

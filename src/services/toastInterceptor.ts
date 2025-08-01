@@ -15,11 +15,25 @@ export class ToastInterceptor {
     duration: 8000,
   };
 
+  // Armazenar mensagens ativas para evitar duplicatas
+  private static activeMessages: Set<string> = new Set();
+  private static messageTimers: Map<string, NodeJS.Timeout> = new Map();
+
   static handleSuccess(message?: string, config?: ToastConfig) {
     const finalConfig = { ...this.defaultConfig, ...config };
     
     if (finalConfig.showSuccess) {
       const successMessage = message || finalConfig.successMessage || 'Operação realizada com sucesso!';
+      
+      // Verificar se a mensagem já está ativa
+      const messageKey = `success:${successMessage}`;
+      if (this.activeMessages.has(messageKey)) {
+        return; // Não exibir mensagem duplicada
+      }
+      
+      // Adicionar à lista de mensagens ativas
+      this.activeMessages.add(messageKey);
+      
       toast.success(successMessage, {
         duration: finalConfig.duration,
         position: 'bottom-right',
@@ -33,6 +47,14 @@ export class ToastInterceptor {
           secondary: '#10B981',
         },
       });
+      
+      // Remover da lista após a duração do toast
+      const timer = setTimeout(() => {
+        this.activeMessages.delete(messageKey);
+        this.messageTimers.delete(messageKey);
+      }, finalConfig.duration || 8000);
+      
+      this.messageTimers.set(messageKey, timer);
     }
   }
 
@@ -41,6 +63,16 @@ export class ToastInterceptor {
     
     if (finalConfig.showError) {
       const errorMessage = message || finalConfig.errorMessage || 'Ocorreu um erro. Tente novamente.';
+      
+      // Verificar se a mensagem já está ativa
+      const messageKey = `error:${errorMessage}`;
+      if (this.activeMessages.has(messageKey)) {
+        return; // Não exibir mensagem duplicada
+      }
+      
+      // Adicionar à lista de mensagens ativas
+      this.activeMessages.add(messageKey);
+      
       toast.error(errorMessage, {
         duration: finalConfig.duration,
         position: 'bottom-right',
@@ -54,6 +86,14 @@ export class ToastInterceptor {
           secondary: '#EF4444',
         },
       });
+      
+      // Remover da lista após a duração do toast
+      const timer = setTimeout(() => {
+        this.activeMessages.delete(messageKey);
+        this.messageTimers.delete(messageKey);
+      }, finalConfig.duration || 8000);
+      
+      this.messageTimers.set(messageKey, timer);
     }
   }
 
@@ -73,6 +113,10 @@ export class ToastInterceptor {
       toast.dismiss(toastId);
     } else {
       toast.dismiss();
+      // Limpar todas as mensagens ativas e timers
+      this.activeMessages.clear();
+      this.messageTimers.forEach(timer => clearTimeout(timer));
+      this.messageTimers.clear();
     }
   }
 
