@@ -13,6 +13,7 @@ export interface LeadsStats {
 export interface UseLeadsReturn {
   leads: Lead[];
   stats: LeadsStats | null;
+  totalFromApi: number;
   loading: boolean;
   error: string | null;
   refreshLeads: () => Promise<void>;
@@ -31,7 +32,8 @@ export interface UseLeadsReturn {
 export const useLeads = (cliente_id?: string): UseLeadsReturn => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<LeadsStats | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [totalFromApi, setTotalFromApi] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
@@ -123,6 +125,7 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
       const response = await leadsApi.getLeads(clienteId);
       if (response.success && response.data) {
         setLeads(response.data);
+        setTotalFromApi(response.total || response.data.length);
       } else {
         setError('Erro ao carregar leads da API');
       }
@@ -142,13 +145,13 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
   const calculateLocalStats = (leadsData: Lead[]): LeadsStats => {
     const total = leadsData.length;
     const withEmail = leadsData.filter(lead =>
-      lead.email && lead.email.includes('@')
+      lead.email && lead.email.trim() !== '' && lead.email.includes('@')
     ).length;
     const qualified = leadsData.filter(lead =>
-      lead.status === 'Qualificado'
+      lead.status && (lead.status.toLowerCase() === 'qualificado' || lead.status.toLowerCase() === 'qualified')
     ).length;
     const newLeads = leadsData.filter(lead =>
-      lead.status === 'Novo'
+      lead.status && (lead.status.toLowerCase() === 'novo' || lead.status.toLowerCase() === 'new')
     ).length;
 
     const byStatus: Record<string, number> = {};
@@ -370,6 +373,7 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
   return {
     leads,
     stats,
+    totalFromApi,
     loading,
     error,
     refreshLeads,
@@ -377,7 +381,7 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
     addMultipleLeads,
     updateLead,
     deleteLead,
-    searchLeads
+    searchLeads,
   };
 };
 

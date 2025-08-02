@@ -21,6 +21,8 @@ export interface Lead {
   status_agendamento?: boolean;
   agendado?: string;
   cliente_id?: string;
+  created_at?: string;
+  origem?: string;
   [key: string]: any;
 }
 
@@ -28,6 +30,7 @@ export interface ApiResponse<T> {
   data: T;
   message?: string;
   success: boolean;
+  total?: number;
 }
 
 // Validar e obter URL da API de forma segura

@@ -8,17 +8,12 @@ import { useLeads } from '../hooks/useLeads';
 import { Lead } from '../services/leadsApi';
 
 const LeadsManager: React.FC = () => {
-  const {
-    leads,
-    stats,
-    loading,
-    error,
-    refreshLeads,
-    addLead,
-    addMultipleLeads,
-    updateLead,
-    deleteLead
-  } = useLeads();
+  const { leads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, updateLead, deleteLead } = useLeads();
+
+  // Função para formatar números com pontos de milhar
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString('pt-BR');
+  };
 
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -77,13 +72,79 @@ const LeadsManager: React.FC = () => {
   }, [isClient, showEditModal, showDeleteModal, showMappingModal, showBulkDeleteModal]);
 
   const handleImportLeads = async (newLeads: Lead[]) => {
+    const totalLeads = newLeads.length;
+    let processedLeads = 0;
+    
+    // Criar toast com progresso
+    const toastId = toast.loading(
+      <div className="flex flex-col gap-2 min-w-[250px]">
+        <div className="flex justify-between items-center">
+          <span>Importando leads...</span>
+          <span className="text-sm text-gray-500">{processedLeads}/{totalLeads}</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+            style={{ width: `${(processedLeads / totalLeads) * 100}%` }}
+          ></div>
+        </div>
+      </div>,
+      { duration: Infinity }
+    );
+
     try {
+      // Simular progresso durante a importação
+      const updateProgress = () => {
+        processedLeads = Math.min(processedLeads + Math.ceil(totalLeads / 10), totalLeads);
+        toast.loading(
+          <div className="flex flex-col gap-2 min-w-[250px]">
+            <div className="flex justify-between items-center">
+              <span>Importando leads...</span>
+              <span className="text-sm text-gray-500">{processedLeads}/{totalLeads}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                style={{ width: `${(processedLeads / totalLeads) * 100}%` }}
+              ></div>
+            </div>
+          </div>,
+          { id: toastId }
+        );
+      };
+
+      // Atualizar progresso em intervalos
+      const progressInterval = setInterval(updateProgress, 200);
+      
       const success = await addMultipleLeads(newLeads);
+      
+      clearInterval(progressInterval);
+      
       if (success) {
+        // Mostrar progresso completo
+        toast.loading(
+          <div className="flex flex-col gap-2 min-w-[250px]">
+            <div className="flex justify-between items-center">
+              <span>Finalizando...</span>
+              <span className="text-sm text-gray-500">{totalLeads}/{totalLeads}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-green-600 h-2 rounded-full w-full"></div>
+            </div>
+          </div>,
+          { id: toastId }
+        );
+        
         await refreshLeads();
+        
+        // Toast de sucesso
+        toast.success(`${totalLeads} leads importados com sucesso!`, { id: toastId });
+      } else {
+        toast.error('Erro ao importar leads', { id: toastId });
       }
     } catch (error) {
       console.error('Erro ao importar leads:', error);
+      toast.error('Erro ao importar leads', { id: toastId });
     }
   };
 
@@ -140,8 +201,6 @@ const LeadsManager: React.FC = () => {
         mapping['telefone'] = header;
       } else if (normalizedHeader.includes('email') || normalizedHeader.includes('e-mail')) {
         mapping['email'] = header;
-      } else if (normalizedHeader.includes('cnpj') || normalizedHeader.includes('tax_id')) {
-        mapping['cnpj'] = header;
       }
     });
 
@@ -525,36 +584,20 @@ const LeadsManager: React.FC = () => {
         {/* Estatísticas */}
         {Array.isArray(leads) && leads.length > 0 && (
           <div className="bg-secondary px-4 py-3 border-b">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-center">
               <div>
                 <div className="text-2xl font-bold text-primary">
-                  {stats?.total || (Array.isArray(leads) ? leads.length : 0)}
+                  {formatNumber(totalFromApi || 0)}
                 </div>
                 <div className="text-sm text-gray-600">Total de Leads</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-primary">
-                  {stats?.withEmail || leads.filter(lead =>
-                    lead.email && lead.email.trim() !== ''
-                  ).length}
+                  {formatNumber(leads.filter(lead =>
+                    lead.email && lead.email.trim() !== '' && lead.email.includes('@')
+                  ).length)}
                 </div>
                 <div className="text-sm text-gray-600">Com Email</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-primary">
-                  {stats?.qualified || leads.filter(lead =>
-                    lead.status === 'qualificado'
-                  ).length}
-                </div>
-                <div className="text-sm text-gray-600">Qualificados</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-primary">
-                  {stats?.new || leads.filter(lead =>
-                    lead.status === 'novo'
-                  ).length}
-                </div>
-                <div className="text-sm text-gray-600">Novos</div>
               </div>
             </div>
           </div>
@@ -589,12 +632,15 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {['nome', 'telefone', 'email', 'cnpj', 'origem', 'status_agendamento', 'created_at'].map((header, index) => (
+                    {['nome', 'telefone', 'email', 'created_at', 'hora'].map((header, index) => (
                       <th
                         key={index}
-                        className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                          header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
+                        }`}
                       >
                         {header === 'created_at' ? 'Data' :
+                          header === 'hora' ? 'Hora' :
                           header === 'status_agendamento' ? 'Agendado' :
                             header === 'status_negociacao' ? 'Negociação' :
                               header === 'etapa_funil' ? 'Etapa' :
@@ -619,10 +665,13 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {['nome', 'telefone', 'email', 'cnpj', 'origem', 'status_agendamento', 'created_at'].map((header, colIndex) => (
+                      {['nome', 'telefone', 'email', 'created_at', 'hora'].map((header, colIndex) => (
                         <td
                           key={colIndex}
-                          className="px-3 py-2 whitespace-nowrap text-sm text-gray-700"
+                          className={`px-3 py-2 text-sm text-gray-700 ${
+                            header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
+                          }`}
+                          title={header === 'nome' || header === 'email' ? String(lead[header] || '') : undefined}
                         >
                           {(() => {
                             const value = lead[header];
@@ -651,6 +700,25 @@ const LeadsManager: React.FC = () => {
                               } catch {
                                 return value;
                               }
+                            }
+
+                            // Tratar hora
+                            if (header === 'hora') {
+                              // Tentar diferentes campos de data
+                              const createdAt = lead.created_at || lead.createdAt || lead.data_criacao || lead.timestamp;
+                              if (createdAt) {
+                                try {
+                                  const date = new Date(createdAt);
+                                  if (!isNaN(date.getTime())) {
+                                    const hours = date.getHours().toString().padStart(2, '0');
+                                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                                    return `${hours}:${minutes}`;
+                                  }
+                                } catch (error) {
+                                  // Silenciar erro
+                                }
+                              }
+                              return '-';
                             }
 
                             return value;
@@ -700,6 +768,9 @@ const LeadsManager: React.FC = () => {
                         <option value={20}>20</option>
                         <option value={50}>50</option>
                         <option value={100}>100</option>
+                        <option value={500}>500</option>
+                        <option value={1000}>1000</option>
+                        <option value={999999}>Todos</option>
                       </select>
                     </div>
                   </div>
