@@ -103,7 +103,6 @@ const WhatsAppIntegration: React.FC = () => {
       const response = await evolutionApi.getInstances();
       if (response.success && response.data) {
         // Mapear os dados da API para o formato esperado pelo componente
-        console.log(response.data);
         const mappedInstances: EvolutionInstance[] = response.data.map((item: any) => ({
           instance: {
             instanceId: item.instance.instanceId,
@@ -114,6 +113,7 @@ const WhatsAppIntegration: React.FC = () => {
             profileStatus: item.instance.profileStatus,
             status: item.instance.status,
             webhook_wa_business: item.instance.webhook_wa_business,
+            settings: item.instance.settings,
           }
         }));
         setInstances(mappedInstances);
@@ -146,6 +146,15 @@ const WhatsAppIntegration: React.FC = () => {
           readStatus: localFormData.readStatus,
           enabled: localFormData.enabled,
           url: localFormData.url,
+          settings: {
+            reject_call: localFormData.rejectCall,
+            msg_call: localFormData.msgCall,
+            groups_ignore: localFormData.groupsIgnore,
+            always_online: localFormData.alwaysOnline,
+            read_messages: localFormData.readMessages,
+            read_status: localFormData.readStatus,
+            sync_full_history: localFormData.syncFullHistory,
+          },
         };
         response = await evolutionApi.updateInstance(editingInstance.instanceId, updateData);
       } else {
@@ -183,19 +192,20 @@ const WhatsAppIntegration: React.FC = () => {
   const handleEdit = (item: any) => {
     const instance = item.instance;
     const hasWebhook = instance.integration?.webhook_wa_business;
+    const settings = instance.settings || {};
     setLocalFormData({
       instanceName: instance.instanceName || '',
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS',
-      rejectCall: instance.rejectCall ?? true,
-      msgCall: instance.msgCall || '',
-      groupsIgnore: instance.groupsIgnore ?? true,
-      alwaysOnline: instance.alwaysOnline ?? true,
-      readMessages: instance.readMessages ?? true,
-      readStatus: instance.readStatus ?? false,
-      syncFullHistory: instance.syncFullHistory ?? false,
+      rejectCall: settings.reject_call ?? instance.rejectCall ?? true,
+      msgCall: settings.msg_call ?? (instance.msgCall || ''),
+      groupsIgnore: settings.groups_ignore ?? instance.groupsIgnore ?? true,
+      alwaysOnline: settings.always_online ?? instance.alwaysOnline ?? true,
+      readMessages: settings.read_messages ?? instance.readMessages ?? true,
+      readStatus: settings.read_status ?? instance.readStatus ?? false,
+      syncFullHistory: settings.sync_full_history ?? instance.syncFullHistory ?? false,
       enabled: !!hasWebhook,
-      url: hasWebhook || '',
+      url: (hasWebhook || ''),
     });
     setEditingInstance(instance);
     setShowModal(true);
@@ -768,8 +778,6 @@ const WhatsAppIntegration: React.FC = () => {
                   Ler Mensagens
                 </label>
               </div>
-
-
             </div>
 
             <div className="mt-4">

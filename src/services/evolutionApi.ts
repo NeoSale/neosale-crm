@@ -12,6 +12,16 @@ export interface EvolutionInstanceData {
   profileStatus: string;
   status: 'open' | 'close' | 'connecting' | 'disconnected';
   webhook_wa_business: string;
+  settings?: {
+    reject_call?: boolean;
+    msg_call?: string;
+    groups_ignore?: boolean;
+    always_online?: boolean;
+    read_messages?: boolean;
+    read_status?: boolean;
+    sync_full_history?: boolean;
+    msgCall: string;
+  };
 }
 
 export interface EvolutionInstance {
@@ -45,6 +55,15 @@ export interface UpdateInstanceRequest {
   readStatus?: boolean;
   enabled?: boolean;
   url?: string;
+  settings?: {
+    reject_call?: boolean;
+    msg_call?: string;
+    groups_ignore?: boolean;
+    always_online?: boolean;
+    read_messages?: boolean;
+    read_status?: boolean;
+    sync_full_history?: boolean;
+  };
 }
 
 export interface QRCodeResponse {
