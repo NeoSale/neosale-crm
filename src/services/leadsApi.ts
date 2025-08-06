@@ -23,6 +23,8 @@ export interface Lead {
   cliente_id?: string;
   created_at?: string;
   origem?: string;
+  ai_habilitada?: boolean;
+  profile_picture_url?: string;
   [key: string]: any;
 }
 
@@ -265,6 +267,30 @@ class LeadsApiService {
       showError: true,
       successMessage: 'Lead excluído com sucesso!',
     });
+  }
+
+  async updateAiHabilitada(id: string, ai_habilitada: boolean, cliente_id?: string): Promise<ApiResponse<Lead>> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (cliente_id) {
+      headers['cliente_id'] = cliente_id;
+    }
+
+    return this.request<Lead>(
+      `/leads/${id}/ai-habilitada`,
+      {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ ai_habilitada }),
+      },
+      {
+        showSuccess: false, // Não mostrar toast automático
+        showError: true,
+        errorMessage: 'Erro ao atualizar AI Agent',
+      }
+    );
   }
 
   // Buscar leads com filtros

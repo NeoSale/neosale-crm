@@ -101,19 +101,19 @@ const WhatsAppIntegration: React.FC = () => {
     }
     try {
       const response = await evolutionApi.getInstances();
-      if (response.success && response.data) {
+      if (response.success && response.data && Array.isArray(response.data)) {
         // Mapear os dados da API para o formato esperado pelo componente
         const mappedInstances: EvolutionInstance[] = response.data.map((item: any) => ({
           instance: {
-            instanceId: item.instance.instanceId,
-            instanceName: item.instance.instanceName,
-            owner: item.instance.owner,
-            profileName: item.instance.profileName,
-            profilePictureUrl: item.instance.profilePictureUrl,
-            profileStatus: item.instance.profileStatus,
-            status: item.instance.status,
-            webhook_wa_business: item.instance.webhook_wa_business,
-            settings: item.instance.settings,
+            instanceId: item?.instance?.instanceId || '',
+            instanceName: item?.instance?.instanceName || '',
+            owner: item?.instance?.owner || '',
+            profileName: item?.instance?.profileName || '',
+            profilePictureUrl: item?.instance?.profilePictureUrl || '',
+            profileStatus: item?.instance?.profileStatus || '',
+            status: item?.instance?.status || 'disconnected',
+            webhook_wa_business: item?.instance?.webhook_wa_business || '',
+            settings: item?.instance?.settings || {},
           }
         }));
         setInstances(mappedInstances);

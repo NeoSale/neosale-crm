@@ -2,13 +2,23 @@
 
 import React, { useState } from 'react';
 import { Users, Database, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { ChatBubbleLeftRightIcon, UserIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 import { useLeads } from '../hooks/useLeads';
-import { Lead } from '../services/leadsApi';
+import { Lead, leadsApi } from '../services/leadsApi';
+import { getClienteId } from '../utils/cliente-utils';
 
 const LeadsManager: React.FC = () => {
-  const { leads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, updateLead, deleteLead } = useLeads();
+  const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, updateLead, deleteLead } = useLeads();
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const router = useRouter();
+
+  // Sincronizar leads do hook com o estado local
+  React.useEffect(() => {
+    setLeads(hookLeads);
+  }, [hookLeads]);
 
   // Função para formatar números com pontos de milhar
   const formatNumber = (num: number): string => {
@@ -632,15 +642,19 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {['nome', 'telefone', 'email', 'created_at', 'hora'].map((header, index) => (
+                    {['picture', 'nome', 'telefone', 'email', 'created_at', 'hora', 'ai_agent'].map((header, index) => (
                       <th
                         key={index}
                         className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
                           header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
+                        } ${
+                          header === 'picture' ? 'w-16' : ''
                         }`}
                       >
-                        {header === 'created_at' ? 'Data' :
+                        {header === 'picture' ? 'Foto' :
+                          header === 'created_at' ? 'Data' :
                           header === 'hora' ? 'Hora' :
+                          header === 'ai_agent' ? 'Agente' :
                           header === 'status_agendamento' ? 'Agendado' :
                             header === 'status_negociacao' ? 'Negociação' :
                               header === 'etapa_funil' ? 'Etapa' :
@@ -665,15 +679,75 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {['nome', 'telefone', 'email', 'created_at', 'hora'].map((header, colIndex) => (
+                      {['picture', 'nome', 'telefone', 'email', 'created_at', 'hora', 'ai_agent'].map((header, colIndex) => (
                         <td
                           key={colIndex}
                           className={`px-3 py-2 text-sm text-gray-700 ${
                             header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
+                          } ${
+                            header === 'picture' ? 'w-16' : ''
                           }`}
                           title={header === 'nome' || header === 'email' ? String(lead[header] || '') : undefined}
                         >
                           {(() => {
+                            // Coluna Picture com profile_picture_url ou UserIcon
+                            if (header === 'picture') {
+                              return (
+                                <div className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                                  {lead.profile_picture_url ? (
+                                    <img 
+                                      src={lead.profile_picture_url} 
+                                      alt={`Foto de ${lead.nome}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                      }}
+                                    />
+                                  ) : null}
+                                  <UserIcon className={`w-5 h-5 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
+                                </div>
+                              );
+                            }
+
+                            // Coluna AI Agent com toggle
+                            if (header === 'ai_agent') {
+                              return (
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={async () => {
+                                      if (!lead?.id) return;
+                                      try {
+                                        const newValue = !lead.ai_habilitada;
+                                        const cliente_id = getClienteId();
+                                        const response = await leadsApi.updateAiHabilitada(lead.id, newValue, cliente_id);
+                                        if (response.success) {
+                                          // Atualizar o lead localmente sem chamar a API novamente
+                                          setLeads(prev => prev.map(l => 
+                                            l.id === lead.id ? { ...l, ai_habilitada: newValue } : l
+                                          ));
+                                          toast.success(`AI Agent ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
+                                        }
+                                      } catch (error) {
+                                        console.error('Erro ao atualizar AI Agent:', error);
+                                        toast.error('Erro ao atualizar AI Agent');
+                                      }
+                                    }}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${
+                                      lead.ai_habilitada ? 'bg-[#403CCF]' : 'bg-gray-300'
+                                    }`}
+                                    title={`AI Agent ${lead.ai_habilitada ? 'ativo' : 'inativo'}`}
+                                  >
+                                    <span
+                                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
+                                        lead.ai_habilitada ? 'translate-x-5' : 'translate-x-1'
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
+                              );
+                            }
+
                             const value = lead[header];
                             if (value === null || value === undefined) return '-';
 
@@ -728,18 +802,28 @@ const LeadsManager: React.FC = () => {
                       <td className="px-3 py-2 whitespace-nowrap text-sm">
                         <div className="flex items-center gap-1">
                           <button
+                            onClick={() => {
+                              // Navegar para a tela de chat passando o ID do lead
+                              router.push(`/chat?leadId=${lead.id}`);
+                            }}
+                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                            title="Abrir chat"
+                          >
+                            <ChatBubbleLeftRightIcon className="h-5 w-5" />
+                          </button>
+                          <button
                             onClick={() => handleEditLead(lead)}
-                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
+                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer"
                             title="Editar lead"
                           >
-                            <Edit size={14} />
+                            <Edit size={18} />
                           </button>
                           <button
                             onClick={() => handleDeleteLead(lead)}
-                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
+                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer"
                             title="Excluir lead"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </td>

@@ -33,7 +33,7 @@ interface MenuItem {
 
 const navigation: MenuItem[] = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
-  { name: 'Chat', icon: ChatBubbleLeftRightIcon },
+  { name: 'Chat', href: '/chat', icon: ChatBubbleLeftRightIcon },
   { name: 'Leads', href: '/leads', icon: UsersIcon },
   { name: 'Documentos', icon: DocumentTextIcon },
   { 
