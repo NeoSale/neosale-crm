@@ -353,7 +353,10 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 truncate mt-1">
-                        {typeof cliente.ultima_mensagem.content === 'string' ? cliente.ultima_mensagem.content : JSON.stringify(cliente.ultima_mensagem.content)}
+                        {cliente.ultima_mensagem && cliente.ultima_mensagem.content ? 
+                          (typeof cliente.ultima_mensagem.content === 'string' ? cliente.ultima_mensagem.content : JSON.stringify(cliente.ultima_mensagem.content))
+                          : 'Sem mensagens'
+                        }
                       </p>
                     </div>
                   </div>
@@ -470,18 +473,21 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   {messages.slice().reverse().map((message) => (
                     <div
                       key={message.id}
-                      className={`flex ${message.message.type === 'human' ? 'justify-start' : 'justify-end'} mb-4`}
+                      className={`flex ${message.message?.type === 'human' ? 'justify-start' : 'justify-end'} mb-4`}
                     >
                       <div
-                        className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-md ${message.message.type === 'human'
+                        className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-md ${message.message?.type === 'human'
                             ? 'bg-white border border-gray-200'
                             : 'bg-[#403CCF]'
                           }`}
                       >
-                        <p className={`text-sm leading-relaxed ${message.message.type === 'human' ? 'text-gray-800' : 'text-white'}`}>
-                          {typeof message.message.content === 'string' ? message.message.content : JSON.stringify(message.message.content)}
+                        <p className={`text-sm leading-relaxed ${message.message?.type === 'human' ? 'text-gray-800' : 'text-white'}`}>
+                          {message.message && message.message.content ? 
+                            (typeof message.message.content === 'string' ? message.message.content : JSON.stringify(message.message.content))
+                            : 'Mensagem sem conteúdo'
+                          }
                           </p>
-                        <p className={`text-xs mt-2 ${message.message.type === 'human' ? 'text-left text-gray-400' : 'text-right text-gray-100'}`}>
+                        <p className={`text-xs mt-2 ${message.message?.type === 'human' ? 'text-left text-gray-400' : 'text-right text-gray-100'}`}>
                           {formatTime(message.created_at)}
                         </p>
                       </div>
