@@ -6,12 +6,12 @@ import { ChatBubbleLeftRightIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-import { useLeads } from '../hooks/useLeads';
+import { useLeads, ImportError } from '../hooks/useLeads';
 import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 
 const LeadsManager: React.FC = () => {
-  const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, updateLead, deleteLead } = useLeads();
+  const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, addMultipleLeadsWithDetails, updateLead, deleteLead } = useLeads();
   const [leads, setLeads] = useState<Lead[]>([]);
   const router = useRouter();
 
@@ -28,6 +28,8 @@ const LeadsManager: React.FC = () => {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showMappingModal, setShowMappingModal] = useState<boolean>(false);
+  const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
+  const [importErrors, setImportErrors] = useState<ImportError[]>([]);
   const [fileData, setFileData] = useState<any[]>([]);
   const [fileHeaders, setFileHeaders] = useState<string[]>([]);
   const [fieldMapping, setFieldMapping] = useState<{ [key: string]: string }>({});
@@ -126,11 +128,11 @@ const LeadsManager: React.FC = () => {
       // Atualizar progresso em intervalos
       const progressInterval = setInterval(updateProgress, 200);
       
-      const success = await addMultipleLeads(newLeads);
+      const result = await addMultipleLeadsWithDetails(newLeads);
       
       clearInterval(progressInterval);
       
-      if (success) {
+      if (result.success) {
         // Mostrar progresso completo
         toast.loading(
           <div className="flex flex-col gap-2 min-w-[250px]">
@@ -147,14 +149,28 @@ const LeadsManager: React.FC = () => {
         
         await refreshLeads();
         
-        // Toast de sucesso
-        toast.success(`${totalLeads} leads importados com sucesso!`, { id: toastId });
+        // Fechar o toast de progresso e mostrar sucesso
+        toast.dismiss(toastId);
+        toast.success(`${totalLeads} leads importados com sucesso!`, {
+          duration: 6000
+        });
       } else {
-        toast.error('Erro ao importar leads', { id: toastId });
+        // Fechar o toast "Finalizando" e mostrar erro
+        toast.dismiss(toastId);
+        
+        // Se há erros detalhados, mostrar modal
+        if (result.errors && result.errors.length > 0) {
+          setImportErrors(result.errors);
+          setShowErrorModal(true);
+        } else {
+          toast.error('Erro ao importar leads');
+        }
       }
     } catch (error) {
       console.error('Erro ao importar leads:', error);
-      toast.error('Erro ao importar leads', { id: toastId });
+      // Fechar o toast "Finalizando" e mostrar erro
+      toast.dismiss(toastId);
+      toast.error('Erro ao importar leads');
     }
   };
 
@@ -1439,9 +1455,84 @@ const LeadsManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Erros de Importação */}
+      {showErrorModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 text-gray-700"
+          onClick={() => {
+            setShowErrorModal(false);
+            setImportErrors([]);
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Erros na Importação
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {importErrors.length} erro(s) encontrado(s) durante a importação
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <p className="text-red-800 text-sm">
+                <strong>Atenção:</strong> Os leads com erros não foram importados. Corrija os problemas e tente novamente.
+              </p>
+            </div>
+
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Linha
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Erro
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {importErrors.map((error, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                        {error.line}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-700">
+                        {error.message}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowErrorModal(false);
+                  setImportErrors([]);
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
-};
+   );
+ };
 
 // Componente para editar lead
 interface EditLeadFormProps {

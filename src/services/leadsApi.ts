@@ -33,6 +33,7 @@ export interface ApiResponse<T> {
   message?: string;
   success: boolean;
   total?: number;
+  errors?: any[];
 }
 
 // Validar e obter URL da API de forma segura
@@ -112,26 +113,26 @@ class LeadsApiService {
         // Tratar erros com estrutura específica (message + errors array)
         if (errorData.message && errorData.errors && Array.isArray(errorData.errors)) {
           // Exibir mensagem principal
-          let fullErrorMessage = errorData.message;
+          // let fullErrorMessage = errorData.message;
           
           // Agrupar mensagens de erro similares
-          const errorMessages: string[] = errorData.errors
-            .filter((error: any) => error.message)
-            .map((error: any) => error.message);
+          // const errorMessages: string[] = errorData.errors
+          //   .filter((error: any) => error.message)
+          //   .map((error: any) => error.message);
           
           // Remover duplicatas e agrupar mensagens similares
-          const uniqueErrors: string[] = [...new Set(errorMessages)];
-          const groupedErrors = this.groupSimilarErrors(uniqueErrors);
+          // const uniqueErrors: string[] = [...new Set(errorMessages)];
+          // const groupedErrors = this.groupSimilarErrors(uniqueErrors);
           
-          if (groupedErrors.length > 0) {
-            fullErrorMessage += ':\n' + groupedErrors.join('\n');
-          }
+          // if (groupedErrors.length > 0) {
+          //   fullErrorMessage += ':\n' + groupedErrors.join('\n');
+          // }
           
-          if (toastConfig?.showError !== false) {
-            ToastInterceptor.handleError(fullErrorMessage, toastConfig);
-          }
+          // if (toastConfig?.showError !== false) {
+          //   ToastInterceptor.handleError(fullErrorMessage, toastConfig);
+          // }
           
-          throw new Error(fullErrorMessage);
+          throw new Error(errorData);
         } else {
           // Tratamento padrão para outros tipos de erro
           const errorMessage = errorData.error || errorData.message || `Erro HTTP: ${response.status}`;
@@ -161,6 +162,7 @@ class LeadsApiService {
       
       return {
         data: null as T,
+        errors: error instanceof Error ? [error.message] : [errorMessage],
         message: errorMessage,
         success: false,
       };
@@ -220,7 +222,7 @@ class LeadsApiService {
     if (cliente_id) {
       headers['cliente_id'] = cliente_id;
     }
-    
+
     return this.request<Lead[]>('/leads/bulk', {
       method: 'POST',
       headers,

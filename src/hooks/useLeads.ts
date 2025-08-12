@@ -10,6 +10,16 @@ export interface LeadsStats {
   byStatus: Record<string, number>;
 }
 
+export interface ImportError {
+  line: number;
+  message: string;
+}
+
+export interface ImportResult {
+  success: boolean;
+  errors?: ImportError[];
+}
+
 export interface UseLeadsReturn {
   leads: Lead[];
   stats: LeadsStats | null;
@@ -19,6 +29,7 @@ export interface UseLeadsReturn {
   refreshLeads: () => Promise<void>;
   addLead: (lead: Omit<Lead, 'id'>) => Promise<boolean>;
   addMultipleLeads: (leads: Omit<Lead, 'id'>[]) => Promise<boolean>;
+  addMultipleLeadsWithDetails: (leads: Omit<Lead, 'id'>[]) => Promise<ImportResult>;
   updateLead: (id: string, lead: Partial<Lead>) => Promise<boolean>;
   deleteLead: (id: string) => Promise<boolean>;
   searchLeads: (params: {
@@ -237,21 +248,72 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
         await refreshLeads();
         return true;
       } else {
-        // Adicionar localmente se a API falhar
-        const leadsWithIds = newLeads.map((lead, index) => ({
-          ...lead,
-          // Gerar ID temporário único sem usar Date.now() para evitar problemas de hidratação
-          id: `temp_${crypto.randomUUID ? crypto.randomUUID() : `${Math.floor(Math.random() * 1000000)}_${index}`}`
-        }));
-        setLeads(prev => [...prev, ...leadsWithIds]);
-        return true;
+        setError('Erro ao importar leads');
+        return false;
       }
     } catch (err) {
       console.error('Erro ao adicionar múltiplos leads:', err);
       setError('Erro ao importar leads');
       return false;
     }
-  }, [refreshLeads]);
+  }, [refreshLeads, currentClienteId]);
+
+  // Função para adicionar múltiplos leads com detalhes dos erros
+  const addMultipleLeadsWithDetails = useCallback(async (newLeads: Omit<Lead, 'id'>[]): Promise<ImportResult> => {
+    try {
+      // Processar telefones para formato internacional
+      const processedLeads = newLeads.map(lead => ({
+        ...lead,
+        telefone: lead.telefone ? formatPhoneForBackend(lead.telefone) : ''
+      }));
+      
+      const clienteId = currentClienteId();
+      
+      // Usar o serviço leadsApi para criar múltiplos leads
+      const response = await leadsApi.createMultipleLeads(processedLeads, clienteId);
+      const data = response;
+
+      if (data.success) {
+        await refreshLeads();
+        return { success: true };
+      } else {
+        // Extrair erros detalhados da resposta
+        const errors: ImportError[] = [];
+
+        console.log("data:", data)
+        
+        if (data.errors && Array.isArray(data.errors)) {
+          data.errors.forEach((error: any, index: number) => {
+            if (error.path && error.path[1] !== undefined && error.message) {
+              errors.push({
+                line: error.path[1] + 1, // +1 porque o array é 0-indexed mas queremos mostrar linha 1-indexed
+                message: error.message
+              });
+            } else if (error.message) {
+              // Se não há path, usar o índice do erro como linha
+              errors.push({
+                line: index + 1,
+                message: error.message
+              });
+            }
+          });
+        };
+
+        setError('Erro ao importar leads');
+        return { 
+          success: false, 
+          errors: errors.length > 0 ? errors : [{ line: 0, message: data.message || 'Erro desconhecido' }]
+        };
+      }
+    } catch (err) {
+      console.error('Erro ao adicionar múltiplos leads:', err);
+      setError('Erro ao importar leads');
+      return { 
+        success: false, 
+        errors: [{ line: 0, message: 'Erro de conexão com o servidor' }]
+      };
+    }
+  }, [refreshLeads, currentClienteId]);
 
   // Função para atualizar um lead
   const updateLead = useCallback(async (id: string, leadData: Partial<Lead>): Promise<boolean> => {
@@ -379,6 +441,7 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
     refreshLeads,
     addLead,
     addMultipleLeads,
+    addMultipleLeadsWithDetails,
     updateLead,
     deleteLead,
     searchLeads,

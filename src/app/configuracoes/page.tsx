@@ -7,7 +7,7 @@ export default function ConfiguracoesRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/configuracoes/geral');
+    router.replace('/configuracoes/negocio');
   }, [router]);
 
   return (

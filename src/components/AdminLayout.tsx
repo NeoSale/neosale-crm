@@ -36,6 +36,16 @@ const navigation: MenuItem[] = [
   { name: 'Chat', href: '/chat', icon: ChatBubbleLeftRightIcon },
   { name: 'Leads', href: '/leads', icon: UsersIcon },
   { name: 'Documentos', icon: DocumentTextIcon },
+  { name: 'Agentes', icon: UsersIcon },
+  { 
+    name: 'Follow Up', 
+    icon: SpeakerWaveIcon,
+    children: [
+      { name: 'Configurações', icon: CogIcon },
+      { name: 'Mensagens', icon: ChatBubbleLeftRightIcon },
+      { name: 'Agendamento', icon: DocumentTextIcon },
+    ]
+  },
   { 
     name: 'Integrações', 
     icon: LinkIcon,
@@ -47,15 +57,14 @@ const navigation: MenuItem[] = [
     name: 'Relatórios', 
     icon: ChartBarIcon,
     children: [
-      { name: 'Follow Up', icon: SpeakerWaveIcon },
+      { name: 'Vendas', icon: ChartBarIcon },
     ]
   },
   { 
     name: 'Configurações', 
     icon: CogIcon,
     children: [
-      { name: 'Geral', href: '/configuracoes/geral', icon: CogIcon },
-      { name: 'Follow Up', icon: SpeakerWaveIcon },
+      { name: 'Negócio', href: '/configuracoes/negocio', icon: CogIcon },
     ]
   },
 ];
@@ -398,15 +407,15 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                 {pathname === '/' ? 'Dashboard' : 
                  pathname === '/leads' ? 'Leads' :
                  pathname === '/chat' ? 'Chat' :
-                 pathname === '/mensagens' ? 'Mensagens' :
-                 pathname === '/configuracoes/mensagens' ? 'Mensagens' :
-                 pathname === '/followup' ? 'Follow Up' :
-                 pathname === '/configuracoes/followup' ? 'Follow Up' :
-                 pathname === '/relatorios/followup' ? 'Follow Up' :
+                 pathname === '/followup/configuracoes' ? 'Follow Up - Configurações' :
+                 pathname === '/followup/mensagens' ? 'Follow Up - Mensagens' :
+                 pathname === '/followup/agendamento' ? 'Follow Up - Agendamento' :
+                 pathname.startsWith('/followup') ? 'Follow Up' :
                  pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
                  pathname.startsWith('/integracoes') ? 'Integrações' :
                  pathname === '/reports' ? 'Relatórios' :
                  pathname === '/documents' ? 'Documentos' :
+                 pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
                  pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
               </h2>
             </div>
