@@ -1,5 +1,6 @@
 import { toast } from 'react-hot-toast';
 import { getValidatedApiUrl } from '../utils/api-config';
+import { getClienteId } from '../utils/cliente-utils';
 
 // Validar e obter URL da API de forma segura
 let API_BASE_URL: string;
@@ -43,6 +44,19 @@ export interface ApiResponse<T> {
 }
 
 class MensagensApiService {
+  private getHeaders(): Record<string, string> {
+    const clienteId = getClienteId();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (clienteId) {
+      headers['cliente_id'] = clienteId;
+    }
+    
+    return headers;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -60,7 +74,7 @@ class MensagensApiService {
       
       const response = await fetch(fullUrl, {
         headers: {
-          'Content-Type': 'application/json',
+          ...this.getHeaders(),
           ...options.headers,
         },
         ...options,

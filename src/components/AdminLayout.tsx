@@ -42,7 +42,7 @@ const navigation: MenuItem[] = [
     icon: SpeakerWaveIcon,
     children: [
       { name: 'Configurações', icon: CogIcon },
-      { name: 'Mensagens', icon: ChatBubbleLeftRightIcon },
+      { name: 'Mensagens', href: '/follow-up/mensagens', icon: PaperAirplaneIcon },
       { name: 'Agendamento', icon: DocumentTextIcon },
     ]
   },
@@ -459,9 +459,8 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                         className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
                           clienteFromUrl ? 'bg-gray-100 cursor-not-allowed' : ''
                         }`}
-                        // disabled={loadingClientes || clienteFromUrl}
-                        disabled={true}
-                        title={clienteFromUrl ? 'Cliente definido via URL - não é possível alterar' : ''}
+                        disabled={loadingClientes || (clienteFromUrl && !window.location.hostname.includes('localhost'))}
+                        title={clienteFromUrl && !window.location.hostname.includes('localhost') ? 'Cliente definido via URL - não é possível alterar' : ''}
                       >
                         <option value="">
                           {loadingClientes ? 'Carregando...' : 'Selecione um cliente'}

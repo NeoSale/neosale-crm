@@ -1,6 +1,6 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import { configuracoesApi, Configuracao, ConfiguracaoForm } from '../services/configuracoesApi';
 import {
   PlusIcon,
   PencilIcon,
@@ -35,16 +35,15 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-interface MensagensManagerProps {}
-
-const MensagensManager: React.FC<MensagensManagerProps> = () => {
-  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+const ConfiguracoesManager: React.FC = () => {
+  const [configuracoes, setConfiguracoes] = useState<ConfiguracaoForm>({});
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingMensagem, setEditingMensagem] = useState<Mensagem | null>(null);
   const [viewingMensagem, setViewingMensagem] = useState<Mensagem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null }>({ show: false, id: null });
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [formData, setFormData] = useState<MensagemForm>({
     nome: '',
@@ -57,15 +56,56 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
   // Estados para paginação
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [searchTerm, setSearchTerm] = useState('');
 
+  // Carregar configurações e mensagens ao montar o componente
   useEffect(() => {
+    loadConfiguracoes();
     loadMensagens();
   }, []);
 
-  // Resetar página quando filtro mudar
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, itemsPerPage]);
+  const loadConfiguracoes = async () => {
+    setLoading(true);
+    try {
+      const response = await configuracoesApi.getConfiguracoes();
+      if (response.success && response.data) {
+        const newConfiguracoes: ConfiguracaoForm = {};
+        response.data.forEach((config: Configuracao) => {
+          if (config.chave === 'envia_somente_dias_uteis') {
+            newConfiguracoes[config.chave] = config.valor === 'true';
+          } else {
+            newConfiguracoes[config.chave] = config.valor;
+          }
+        });
+        setConfiguracoes(newConfiguracoes);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const success = await configuracoesApi.saveMultipleConfiguracoes(configuracoes);
+      if (!success) {
+        throw new Error('Falha ao salvar configurações');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar configurações:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setConfiguracoes(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   const loadMensagens = async () => {
     setLoading(true);
@@ -87,10 +127,6 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
       setLoading(false);
     }
   };
-
-
-
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,16 +264,6 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
     }
   };
 
-
-
-  if (loading && mensagens.length === 0) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   // Filtrar mensagens baseado no termo de busca
   const filteredMensagens = mensagens.filter(mensagem => {
     if (!searchTerm) return true;
@@ -273,97 +299,71 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
       <tr
         ref={setNodeRef}
         style={style}
-        className={`hover:bg-gray-50 ${isDragging ? 'bg-primary/10' : ''}`}
+        {...attributes}
+        className={`border-b border-gray-200 hover:bg-gray-50 ${isDragging ? 'bg-primary/10' : ''}`}
       >
-        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
           <div className="flex items-center gap-2">
             <button
-              {...attributes}
               {...listeners}
-              className="p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
-              title="Arrastar para reordenar"
+              className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-200 rounded"
             >
-              <Bars3Icon className="h-4 w-4" />
+              <Bars3Icon className="h-4 w-4 text-gray-400" />
             </button>
-            <span className="text-xs text-gray-500 font-mono">#{index + 1}</span>
+            <span>{startIndex + index + 1}</span>
           </div>
         </td>
-        {['nome', 'intervalo_tipo', 'intervalo_numero', 'texto_mensagem', 'ativo'].map((header, colIndex) => (
-          <td
-            key={colIndex}
-            className="px-3 py-2 whitespace-nowrap text-sm text-gray-700"
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          {mensagem.nome || 'Sem nome'}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          {mensagem.intervalo_numero} {mensagem.intervalo_tipo}
+        </td>
+        <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+          {mensagem.texto_mensagem}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <button
+            onClick={() => handleToggleAtivo(mensagem)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+              mensagem.ativo ? 'bg-primary' : 'bg-gray-200'
+            }`}
+            title={mensagem.ativo ? 'Clique para desativar' : 'Clique para ativar'}
           >
-            {(() => {
-              const value = mensagem[header as keyof Mensagem];
-              if (value === null || value === undefined) return '-';
-
-              // Tratar campo nome
-              if (header === 'nome') {
-                return value || 'Sem nome';
-              }
-
-              // Tratar tipo de intervalo
-              if (header === 'intervalo_tipo') {
-                return typeof value === 'string' ? value.charAt(0).toUpperCase() + value.slice(1) : value;
-              }
-
-              // Tratar mensagem (truncar se muito longa)
-              if (header === 'texto_mensagem') {
-                return typeof value === 'string' && value.length > 50 
-                  ? value.substring(0, 50) + '...' 
-                  : value;
-              }
-
-              // Tratar campo ativo (toggle switch)
-              if (header === 'ativo') {
-                return (
-                  <button
-                    onClick={() => handleToggleAtivo(mensagem)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
-                      value ? 'bg-primary' : 'bg-gray-200'
-                    }`}
-                    title={value ? 'Clique para desativar' : 'Clique para ativar'}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        value ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                );
-              }
-
-              return value;
-            })()}
-          </td>
-        ))}
-        <td className="px-3 py-2 whitespace-nowrap text-sm">
-          <div className="flex items-center gap-1">
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                mensagem.ativo ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+          <div className="flex items-center space-x-2">
             <button
               onClick={() => setViewingMensagem(mensagem)}
-              className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
-              title="Visualizar mensagem"
+              className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
+              title="Visualizar"
             >
               <EyeIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleEdit(mensagem)}
-              className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
-              title="Editar mensagem"
+              className="text-primary hover:text-primary/70 p-1 rounded hover:bg-primary/10"
+              title="Editar"
             >
               <PencilIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleDuplicar(mensagem.id)}
-              className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors"
-              title="Duplicar mensagem"
+              className="text-primary hover:text-blue-700 p-1 rounded hover:bg-primary/10"
+              title="Duplicar"
             >
               <DocumentDuplicateIcon className="h-4 w-4" />
             </button>
             <button
               onClick={() => handleDelete(mensagem.id)}
-              className="p-1 text-primary hover:text-blue-700 hover:bg-primary/10 rounded transition-colors"
-              title="Excluir mensagem"
+              className="text-primary hover:text-blue-700 p-1 rounded hover:bg-primary/10"
+              title="Deletar"
             >
               <TrashIcon className="h-4 w-4" />
             </button>
@@ -373,32 +373,40 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
     );
   };
 
+  if (loading && mensagens.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto p-6">
       {/* Seção de Mensagens */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-primary text-white p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <PaperAirplaneIcon className="h-6 w-6" />
+              <PaperAirplaneIcon className="h-6 w-6 text-white" />
               <div>
-                <h2 className="text-lg font-bold">Mensagens Cadastradas</h2>
+                <h2 className="text-lg font-bold !text-white">Mensagens Cadastradas</h2>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={loadMensagens}
                 disabled={loading}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <ArrowPathIcon className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <ArrowPathIcon className={`h-3.5 w-3.5 text-white ${loading ? 'animate-spin' : ''}`} />
                 Atualizar
               </button>
               <button
                 onClick={() => setShowModal(true)}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <PlusIcon className="h-3.5 w-3.5" />
+                <PlusIcon className="h-3.5 w-3.5 text-white" />
                 Nova Mensagem
               </button>
             </div>
@@ -458,14 +466,13 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Ordem
                       </th>
-                      {['nome', 'intervalo_tipo', 'intervalo_numero', 'texto_mensagem', 'ativo'].map((header, index) => (
+                      {['nome', 'intervalo_tipo', 'texto_mensagem', 'ativo'].map((header, index) => (
                         <th
                           key={index}
                           className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                         >
                           {header === 'nome' ? 'Nome' :
-                            header === 'intervalo_tipo' ? 'Tipo Intervalo' :
-                              header === 'intervalo_numero' ? 'Intervalo' :
+                            header === 'intervalo_tipo' ? 'Intervalo' :
                                 header === 'texto_mensagem' ? 'Mensagem' :
                                   header === 'ativo' ? 'Ativo' :
                                     header.charAt(0).toUpperCase() + header.slice(1)}
@@ -590,7 +597,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
             )}
             {searchTerm && (
               <button
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
                 onClick={() => setSearchTerm('')}
               >
                 Limpar Filtro
@@ -657,7 +664,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
               min="1"
               value={formData.intervalo_numero}
               onChange={(e) => setFormData({ ...formData, intervalo_numero: parseInt(e.target.value) || 1 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Número do intervalo"
               required
             />
@@ -671,7 +678,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
               value={formData.texto_mensagem}
               onChange={(e) => setFormData({ ...formData, texto_mensagem: e.target.value })}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Digite o texto da mensagem..."
               required
             />
@@ -799,7 +806,7 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
             <div className="flex justify-end pt-4">
               <button
                 onClick={() => setViewingMensagem(null)}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
               >
                 Fechar
               </button>
@@ -819,8 +826,9 @@ const MensagensManager: React.FC<MensagensManagerProps> = () => {
         cancelText="Cancelar"
         type="danger"
       />
+
     </div>
   );
 };
 
-export default MensagensManager;
+export default ConfiguracoesManager;
