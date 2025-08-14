@@ -26,7 +26,7 @@ interface ChatManagerProps {
 
 const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   // Função para formatar texto com quebras de linha e links clicáveis
-  const formatMessageContent = (content: string) => {
+  const formatMessageContent = (content: string, messageType: 'human' | 'ai') => {
     if (!content) return 'Mensagem sem conteúdo';
     
     // Regex para detectar URLs
@@ -34,6 +34,11 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     
     // Dividir o texto por quebras de linha
     const lines = content.split(/\\n|\n/);
+    
+    // Definir classes de cor baseadas no tipo de mensagem
+    const linkClasses = messageType === 'human' 
+      ? 'text-blue-500 underline hover:no-underline hover:text-blue-700'
+      : 'text-white underline hover:no-underline hover:text-gray-200';
     
     return lines.map((line, lineIndex) => {
       // Dividir cada linha por URLs
@@ -50,7 +55,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                    href={part}
                    target="_blank"
                    rel="noopener noreferrer"
-                   className="text-blue-500 underline hover:no-underline hover:text-blue-700"
+                   className={linkClasses}
                  >
                    {part}
                  </a>
@@ -537,7 +542,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       >
                         <div className={`text-sm leading-relaxed ${message.message?.type === 'human' ? 'text-gray-800' : 'text-white'}`}>
                           {message.message && message.message.content ? 
-                            (typeof message.message.content === 'string' ? formatMessageContent(message.message.content) : JSON.stringify(message.message.content))
+                            (typeof message.message.content === 'string' ? formatMessageContent(message.message.content, message.message.type || 'ai') : JSON.stringify(message.message.content))
                             : 'Mensagem sem conteúdo'
                           }
                         </div>
