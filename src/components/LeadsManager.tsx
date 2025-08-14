@@ -371,9 +371,17 @@ const LeadsManager: React.FC = () => {
         setEditingLead(null);
         setIsCreatingLead(false);
         await refreshLeads();
+        
+        // Exibir toast de sucesso
+        toast.success(isCreatingLead ? 'Lead criado com sucesso!' : 'Lead atualizado com sucesso!');
+      } else {
+        // Exibir toast de erro quando success é false
+        toast.error(isCreatingLead ? 'Erro ao criar lead' : 'Erro ao atualizar lead');
       }
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
+      // Exibir toast de erro para exceções
+      toast.error(isCreatingLead ? 'Erro ao criar lead' : 'Erro ao atualizar lead');
     }
   };
 
@@ -1525,10 +1533,21 @@ interface EditLeadFormProps {
 }
 
 const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) => {
+  // Função para remover o prefixo '55' do telefone para exibição no formulário
+  const removePhonePrefix = (phone: string): string => {
+    if (!phone) return '';
+    const cleanPhone = phone.replace(/\D/g, '');
+    // Se começa com 55, remove o prefixo
+    if (cleanPhone.startsWith('55') && cleanPhone.length > 2) {
+      return cleanPhone.substring(2);
+    }
+    return cleanPhone;
+  };
+
   const [formData, setFormData] = useState<Partial<Lead>>({
     nome: lead.nome || '',
     email: lead.email || '',
-    telefone: lead.telefone || '',
+    telefone: removePhonePrefix(lead.telefone || ''),
     empresa: lead.empresa || '',
     cargo: lead.cargo || '',
     agendado: lead.status_agendamento ? 'true' : lead.status_agendamento === false ? 'false' : '',

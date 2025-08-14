@@ -205,12 +205,9 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
         await refreshLeads();
         return true;
       } else {
-        // Adicionar localmente se a API falhar
-        // Gerar ID temporário único sem usar Date.now() para evitar problemas de hidratação
-        const tempId = crypto.randomUUID ? crypto.randomUUID() : `temp_${Math.floor(Math.random() * 1000000)}`;
-        const newLead = { ...lead, id: `temp_${tempId}` };
-        setLeads(prev => [...prev, newLead]);
-        return true;
+        // Se a API falhar, não adicionar localmente e retornar false
+        setError(response.message || 'Erro ao criar lead');
+        return false;
       }
     } catch (err) {
       console.error('Erro ao adicionar lead:', err);
@@ -336,11 +333,9 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
         await refreshLeads();
         return true;
       } else {
-        // Atualizar localmente se a API falhar
-        setLeads(prev => prev.map(lead =>
-          lead.id === id ? { ...lead, ...leadData } : lead
-        ));
-        return true;
+        // Se a API falhar, não atualizar localmente e retornar false
+        setError(response.message || 'Erro ao atualizar lead');
+        return false;
       }
     } catch (err) {
       console.error('Erro ao atualizar lead:', err);
@@ -364,9 +359,9 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
         await refreshLeads();
         return true;
       } else {
-        // Deletar localmente se a API falhar
-        setLeads(prev => prev.filter(lead => lead.id !== id));
-        return true;
+        // Se a API falhar, não deletar localmente e retornar false
+        setError(response.message || 'Erro ao deletar lead');
+        return false;
       }
     } catch (err) {
       console.error('Erro ao deletar lead:', err);

@@ -25,6 +25,44 @@ interface ChatManagerProps {
 }
 
 const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
+  // Função para formatar texto com quebras de linha e links clicáveis
+  const formatMessageContent = (content: string) => {
+    if (!content) return 'Mensagem sem conteúdo';
+    
+    // Regex para detectar URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    
+    // Dividir o texto por quebras de linha
+    const lines = content.split(/\\n|\n/);
+    
+    return lines.map((line, lineIndex) => {
+      // Dividir cada linha por URLs
+      const parts = line.split(urlRegex);
+      
+      return (
+        <React.Fragment key={lineIndex}>
+          {parts.map((part, partIndex) => {
+            // Verificar se a parte é uma URL
+            if (urlRegex.test(part)) {
+              return (
+                <a
+                   key={partIndex}
+                   href={part}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="text-blue-500 underline hover:no-underline hover:text-blue-700"
+                 >
+                   {part}
+                 </a>
+              );
+            }
+            return part;
+          })}
+          {lineIndex < lines.length - 1 && <br />}
+        </React.Fragment>
+      );
+    });
+  };
   const [clientes, setClientes] = useState<ChatCliente[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<ChatCliente | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -125,11 +163,14 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
     setSending(true);
     try {
+      // Converter quebras de linha para \n
+      const contentWithLineBreaks = messageText.trim().replace(/\n/g, '\n');
+      
       await chatApi.sendMessage({
         session_id: selectedCliente.session_id,
         message: {
           type: 'ai',
-          content: messageText.trim(),
+          content: contentWithLineBreaks,
           tool_calls: [],
           additional_kwargs: {},
           response_metadata: {},
@@ -149,12 +190,22 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
   };
 
+  // Função para lidar com teclas no textarea
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+    // Shift + Enter permite quebra de linha naturalmente
+  };
+
   // Selecionar cliente
   const selectCliente = async (cliente: ChatCliente) => {
     setSelectedCliente(cliente);
     setMessages([]);
     setMessagesPage(1);
     setHasMoreMessages(true);
+    setMessageText(''); // Limpar campo de mensagem ao selecionar conversa
     await loadMessages(cliente.session_id);
     await loadLeadInfo(cliente.id);
   };
@@ -484,12 +535,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                             : 'bg-[#403CCF]'
                           }`}
                       >
-                        <p className={`text-sm leading-relaxed ${message.message?.type === 'human' ? 'text-gray-800' : 'text-white'}`}>
+                        <div className={`text-sm leading-relaxed ${message.message?.type === 'human' ? 'text-gray-800' : 'text-white'}`}>
                           {message.message && message.message.content ? 
-                            (typeof message.message.content === 'string' ? message.message.content : JSON.stringify(message.message.content))
+                            (typeof message.message.content === 'string' ? formatMessageContent(message.message.content) : JSON.stringify(message.message.content))
                             : 'Mensagem sem conteúdo'
                           }
-                          </p>
+                        </div>
                         <p className={`text-xs mt-2 ${message.message?.type === 'human' ? 'text-left text-gray-600' : 'text-right text-gray-100'}`}>
                           {formatDate(message.created_at)} - {formatTime(message.created_at)}
                         </p>
@@ -504,14 +555,14 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             {/* Input de mensagem */}
             <div className="p-6 bg-gray-50 border-t border-gray-200">
               <div className="flex space-x-3">
-                <input
-                  type="text"
+                <textarea
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder={leadInfo?.ai_habilitada ? "🤖 Desabilite o agente para enviar mensagem manualmente" : "✍️ Digite sua mensagem..."}
-                  className={`flex-1 px-6 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 shadow-sm hover:shadow-md ${leadInfo?.ai_habilitada ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                  onKeyDown={handleKeyDown}
+                  placeholder={leadInfo?.ai_habilitada ? "🤖 Desabilite o agente para enviar mensagem manualmente" : "✍️ Digite sua mensagem... (Shift+Enter para quebrar linha)"}
+                  className={`flex-1 px-6 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 shadow-sm hover:shadow-md resize-none min-h-[56px] max-h-32 ${leadInfo?.ai_habilitada ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                   disabled={sending || leadInfo?.ai_habilitada}
+                  rows={1}
                 />
                 <button
                   onClick={sendMessage}

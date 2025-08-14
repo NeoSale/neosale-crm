@@ -112,7 +112,7 @@ class ChatApi {
   }
 
   async sendMessage(data: SendMessageRequest): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/chat`, {
+    const response = await fetch(`${API_BASE_URL}/chat/sendText`, {
       method: 'POST',
       headers: this.getHeaders(),
       body: JSON.stringify(data),
