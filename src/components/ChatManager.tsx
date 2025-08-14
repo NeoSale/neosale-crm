@@ -17,6 +17,7 @@ import {
 import { chatApi, ChatCliente, ChatMessage } from '../services/chatApi';
 import { leadsApi, Lead } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
+import { formatPhone, copyPhone } from '../utils/phone-utils';
 
 
 
@@ -239,59 +240,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
   };
 
-  // Formatação de telefone
-  const formatPhone = (phone: string) => {
-    if (!phone) return '';
-    // Remove todos os caracteres não numéricos
-    const cleaned = phone.replace(/\D/g, '');
 
-    // Se tem 13 dígitos e começa com 55, é um número brasileiro
-    if (cleaned.length === 13 && cleaned.startsWith('55')) {
-      const countryCode = cleaned.slice(0, 2);
-      const areaCode = cleaned.slice(2, 4);
-      const firstPart = cleaned.slice(4, 9);
-      const secondPart = cleaned.slice(9, 13);
-      return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
-    }
-
-    // Se tem 12 dígitos e começa com 55, é um número brasileiro (telefone fixo)
-    if (cleaned.length === 12 && cleaned.startsWith('55')) {
-      const countryCode = cleaned.slice(0, 2);
-      const areaCode = cleaned.slice(2, 4);
-      const firstPart = cleaned.slice(4, 8);
-      const secondPart = cleaned.slice(8, 12);
-      return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
-    }
-
-    // Se tem 11 dígitos, assume que é brasileiro sem código do país
-    if (cleaned.length === 11) {
-      const areaCode = cleaned.slice(0, 2);
-      const firstPart = cleaned.slice(2, 7);
-      const secondPart = cleaned.slice(7, 11);
-      return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
-    }
-
-    // Se tem 10 dígitos, assume que é brasileiro sem código do país (telefone fixo)
-    if (cleaned.length === 10) {
-      const areaCode = cleaned.slice(0, 2);
-      const firstPart = cleaned.slice(2, 6);
-      const secondPart = cleaned.slice(6, 10);
-      return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
-    }
-
-    // Retorna o número original se não conseguir formatar
-    return phone;
-  };
-
-  // Copiar telefone para clipboard
-  const copyPhone = async (phone: string) => {
-    try {
-      await navigator.clipboard.writeText(phone);
-      toast.success('Telefone copiado!');
-    } catch (error) {
-      toast.error('Erro ao copiar telefone');
-    }
-  };
 
   // Formatação de data
   const formatTime = (dateString: string) => {

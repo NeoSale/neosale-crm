@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { useLeads, ImportError } from '../hooks/useLeads';
 import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
+import { FormattedPhone } from '../utils/phone-utils';
 
 const LeadsManager: React.FC = () => {
   const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, addMultipleLeadsWithDetails, updateLead, deleteLead } = useLeads();
@@ -779,6 +780,17 @@ const LeadsManager: React.FC = () => {
                             if (typeof value === 'object' && value !== null) {
                               // Se for um objeto, tentar extrair o nome primeiro, depois id
                               return value.nome || value.id || '-';
+                            }
+
+                            // Tratar telefone com formatação e botão de cópia
+                            if (header === 'telefone' && typeof value === 'string') {
+                              return (
+                                <FormattedPhone 
+                                  phone={value} 
+                                  className="text-sm text-gray-700"
+                                  copyButtonClassName="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                />
+                              );
                             }
 
                             // Tratar datas com hora
