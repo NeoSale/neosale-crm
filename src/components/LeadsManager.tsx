@@ -215,7 +215,6 @@ const LeadsManager: React.FC = () => {
 
   const autoMapFields = (headers: string[]) => {
     const mapping: { [key: string]: string } = {};
-    const leadFields = ['nome', 'email', 'telefone', 'empresa', 'cargo', 'contador', 'escritorio', 'responsavel', 'cnpj', 'observacao', 'segmento', 'erp_atual'];
 
     headers.forEach(header => {
       const normalizedHeader = header.toLowerCase().trim();
@@ -225,8 +224,6 @@ const LeadsManager: React.FC = () => {
         mapping['nome'] = header;
       } else if (normalizedHeader.includes('telefone') || normalizedHeader.includes('phone') || normalizedHeader.includes('celular')) {
         mapping['telefone'] = header;
-      } else if (normalizedHeader.includes('email') || normalizedHeader.includes('e-mail')) {
-        mapping['email'] = header;
       }
     });
 
@@ -471,7 +468,6 @@ const LeadsManager: React.FC = () => {
   const handleCreateLead = () => {
     const newLead: Lead = {
       nome: '',
-      email: '',
       telefone: '',
       empresa: '',
       cargo: '',
@@ -658,7 +654,7 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {['picture', 'nome', 'telefone', 'email', 'created_at', 'hora', 'ai_agent'].map((header, index) => (
+                    {['picture', 'nome', 'telefone', 'created_at', 'ai_agent'].map((header, index) => (
                       <th
                         key={index}
                         className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
@@ -668,8 +664,7 @@ const LeadsManager: React.FC = () => {
                         }`}
                       >
                         {header === 'picture' ? 'Foto' :
-                          header === 'created_at' ? 'Data' :
-                          header === 'hora' ? 'Hora' :
+                          header === 'created_at' ? 'Data/Hora' :
                           header === 'ai_agent' ? 'Agente' :
                           header === 'status_agendamento' ? 'Agendado' :
                             header === 'status_negociacao' ? 'Negociação' :
@@ -695,7 +690,7 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {['picture', 'nome', 'telefone', 'email', 'created_at', 'hora', 'ai_agent'].map((header, colIndex) => (
+                      {['picture', 'nome', 'telefone', 'created_at', 'ai_agent'].map((header, colIndex) => (
                         <td
                           key={colIndex}
                           className={`px-3 py-2 text-sm text-gray-700 ${
@@ -778,7 +773,7 @@ const LeadsManager: React.FC = () => {
                               return value.nome || value.id || '-';
                             }
 
-                            // Tratar datas
+                            // Tratar datas com hora
                             if (header === 'created_at' && typeof value === 'string') {
                               try {
                                 const date = new Date(value);
@@ -786,29 +781,17 @@ const LeadsManager: React.FC = () => {
                                 const day = date.getDate().toString().padStart(2, '0');
                                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
                                 const year = date.getFullYear();
-                                return `${day}/${month}/${year}`;
+                                const hours = date.getHours().toString().padStart(2, '0');
+                                const minutes = date.getMinutes().toString().padStart(2, '0');
+                                return (
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{`${day}/${month}/${year}`}</span>
+                                    <span className="text-xs text-gray-500">{`${hours}:${minutes}`}</span>
+                                  </div>
+                                );
                               } catch {
                                 return value;
                               }
-                            }
-
-                            // Tratar hora
-                            if (header === 'hora') {
-                              // Tentar diferentes campos de data
-                              const createdAt = lead.created_at || lead.createdAt || lead.data_criacao || lead.timestamp;
-                              if (createdAt) {
-                                try {
-                                  const date = new Date(createdAt);
-                                  if (!isNaN(date.getTime())) {
-                                    const hours = date.getHours().toString().padStart(2, '0');
-                                    const minutes = date.getMinutes().toString().padStart(2, '0');
-                                    return `${hours}:${minutes}`;
-                                  }
-                                } catch (error) {
-                                  // Silenciar erro
-                                }
-                              }
-                              return '-';
                             }
 
                             return value;

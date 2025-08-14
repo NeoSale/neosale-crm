@@ -38,15 +38,6 @@ h1, h2, h3, h4, h5, h6 {
   color: #1f2937; /* gray-800 */
 }
 
-p, span, div {
-  color: inherit; /* Inherit from parent or body */
-}
-
-/* Override any potential white text issues - but preserve Tailwind colors */
-*:not([class*="bg-"]):not([class*="text-"]):not([class*="border-"]) {
-  color: inherit;
-}
-
 /* Specific overrides for text elements */
 .text-default {
   color: #1f2937 !important;
@@ -55,6 +46,12 @@ p, span, div {
 /* Ensure Tailwind primary colors are applied correctly */
 .bg-primary {
   background-color: #403CCF !important;
+}
+
+/* Force white text for AI messages */
+.bg-\[\#403CCF\] .text-white,
+.bg-\[\#403CCF\] p.text-white {
+  color: #ffffff !important;
 }
 
 .text-primary {

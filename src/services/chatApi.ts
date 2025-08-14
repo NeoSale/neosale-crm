@@ -85,7 +85,7 @@ class ChatApi {
     };
   }
 
-  async getClientes(page: number = 1, limit: number = 10): Promise<ChatClientesResponse> {
+  async getClientes(page: number = 1, limit: number = 50): Promise<ChatClientesResponse> {
     const response = await fetch(`${API_BASE_URL}/chat/cliente?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: this.getHeaders(),

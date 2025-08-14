@@ -37,6 +37,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const [hasMoreClientes, setHasMoreClientes] = useState(true);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [showLeadInfo, setShowLeadInfo] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [leadInfo, setLeadInfo] = useState<Lead | null>(null);
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
@@ -55,7 +56,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
 
     try {
-      const response = await chatApi.getClientes(page, 10);
+      const response = await chatApi.getClientes(page, 50);
       if (response.success) {
         if (append) {
           setClientes(prev => [...prev, ...response.data]);
@@ -238,8 +239,8 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
   // Formatação de data
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const [hours, minutes] = dateString.split('T')[1].split(':');
+    return `${hours}:${minutes}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -348,9 +349,11 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         <h3 className="text-sm font-semibold text-gray-900 truncate">
                           {typeof cliente.nome === 'string' ? cliente.nome : JSON.stringify(cliente.nome)}
                         </h3>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                          {formatTime(cliente.data_ultima_mensagem)}
-                        </span>
+                        <div className="flex items-center space-x-1 text-xs text-gray-600 ml-2">
+                          <span>{formatDate(cliente.data_ultima_mensagem)}</span>
+                          <span>-</span>
+                          <span>{formatTime(cliente.data_ultima_mensagem)}</span>
+                        </div>
                       </div>
                       <p className="text-sm text-gray-500 truncate mt-1">
                         {cliente.ultima_mensagem && cliente.ultima_mensagem.content ? 
@@ -375,7 +378,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       </div>
 
       {/* Área de Chat */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col border-b border-gray-200 shadow">
         {selectedCliente ? (
           <>
             {/* Header do chat */}
@@ -442,13 +445,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   </button>
                 </div>
                 
-                {/* <button
+                <button
                   onClick={() => setShowLeadInfo(true)}
                   className="p-3 text-[#403CCF] hover:text-white hover:bg-[#403CCF] bg-gray-50 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
                   title="Ver informações do lead"
                 >
                   <InformationCircleIcon className="w-6 h-6" />
-                </button> */}
+                </button>
               </div>
             </div>
 
@@ -487,8 +490,8 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                             : 'Mensagem sem conteúdo'
                           }
                           </p>
-                        <p className={`text-xs mt-2 ${message.message?.type === 'human' ? 'text-left text-gray-400' : 'text-right text-gray-100'}`}>
-                          {formatTime(message.created_at)}
+                        <p className={`text-xs mt-2 ${message.message?.type === 'human' ? 'text-left text-gray-600' : 'text-right text-gray-100'}`}>
+                          {formatDate(message.created_at)} - {formatTime(message.created_at)}
                         </p>
                       </div>
                     </div>
@@ -542,97 +545,137 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       {showLeadInfo && (
         <div className="w-80 bg-white border-l border-gray-200 flex flex-col rounded-r-xl overflow-hidden shadow-lg">
           {/* Header do painel */}
-          <div className="p-6 bg-[#403CCF] text-white flex items-center justify-between">
+          <div className="p-6 flex items-center justify-between border-b border-gray-200 ">
             <div>
-              <h3 className="text-xl font-bold">👤 Informações do Lead</h3>
-              <p className="text-sm text-gray-100 mt-1">Detalhes do contato</p>
+              <h3 className="text-xl font-bold">Informações do Lead</h3>
             </div>
             <button
               onClick={() => setShowLeadInfo(false)}
-              className="p-2 text-white hover:bg-white hover:text-[#403CCF] rounded-xl transition-all duration-200"
+              className="p-2 hover:text-[#403CCF] rounded-xl transition-all duration-200 cursor-pointer"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
 
           {/* Conteúdo do painel */}
-          <div className="flex-1 p-4 space-y-6">
+          <div className="flex-1 p-3 space-y-4">
             {leadInfo ? (
               <>
                 {/* Avatar e nome */}
                 <div className="text-center">
-                  <div className="w-24 h-24 bg-[#403CCF] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <UserIcon className="w-12 h-12 text-white" />
+                  <div 
+                    className={`w-16 h-16 bg-[#403CCF] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden ${leadInfo.profile_picture_url ? 'cursor-pointer hover:shadow-xl transition-shadow' : ''}`}
+                    onClick={() => leadInfo.profile_picture_url && setShowPhotoModal(true)}
+                  >
+                    {leadInfo.profile_picture_url ? (
+                      <img 
+                        src={leadInfo.profile_picture_url} 
+                        alt="Foto do lead" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <UserIcon className={`w-8 h-8 text-white ${leadInfo.profile_picture_url ? 'hidden' : ''}`} />
                   </div>
-                  <h4 className="text-2xl font-bold text-gray-900">{typeof leadInfo.nome === 'string' ? leadInfo.nome : JSON.stringify(leadInfo.nome)}</h4>
-                  <div className="w-16 h-1 bg-[#403CCF] rounded-full mx-auto mt-2"></div>
+                  <h4 className="text-lg font-bold text-gray-900 truncate">
+                    {typeof leadInfo.nome === 'string' 
+                      ? leadInfo.nome 
+                      : typeof leadInfo.nome === 'object' && leadInfo.nome && 'nome' in leadInfo.nome 
+                        ? (leadInfo.nome as any).nome 
+                        : 'Nome não disponível'
+                    }
+                  </h4>
+                  <div className="w-12 h-0.5 bg-[#403CCF] rounded-full mx-auto mt-1"></div>
                 </div>
 
-                {/* Informações */}
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-400 rounded-full flex items-center justify-center">
-                        <PhoneIcon className="w-5 h-5 text-white" />
+                {/* Informações compactas */}
+                <div className="space-y-2">
+                  <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0">
+                        <PhoneIcon className="w-3 h-3 text-white" />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">📞 Telefone</p>
-                        <p className="text-lg font-bold text-gray-900">{leadInfo.telefone || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-400 rounded-full flex items-center justify-center">
-                        <EnvelopeIcon className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">📧 Email</p>
-                        <p className="text-lg font-bold text-gray-900 break-all">{leadInfo.email || 'N/A'}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-600">Telefone</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                           {typeof leadInfo.telefone === 'string' 
+                             ? leadInfo.telefone 
+                             : typeof leadInfo.telefone === 'object' && leadInfo.telefone && 'nome' in leadInfo.telefone 
+                               ? (leadInfo.telefone as any).nome 
+                               : 'N/A'
+                           }
+                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-purple-400 rounded-full flex items-center justify-center">
-                        <CalendarIcon className="w-5 h-5 text-white" />
+                  <div className="bg-orange-50 p-2 rounded-lg border border-orange-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-orange-400 rounded-full flex items-center justify-center flex-shrink-0">
+                        <EnvelopeIcon className="w-3 h-3 text-white" />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">📅 Data de Criação</p>
-                        <p className="text-lg font-bold text-gray-900">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-600">Email</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                           {typeof leadInfo.email === 'string' 
+                             ? leadInfo.email 
+                             : typeof leadInfo.email === 'object' && leadInfo.email && 'nome' in leadInfo.email 
+                               ? (leadInfo.email as any).nome 
+                               : 'N/A'
+                           }
+                         </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 p-2 rounded-lg border border-purple-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-purple-400 rounded-full flex items-center justify-center flex-shrink-0">
+                        <CalendarIcon className="w-3 h-3 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-600">Criado em</p>
+                        <p className="text-sm font-semibold text-gray-900">
                           {leadInfo.created_at ? new Date(leadInfo.created_at).toLocaleDateString('pt-BR') : 'N/A'}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <TagIcon className="w-5 h-5 text-white" />
+                  <div className="bg-yellow-50 p-2 rounded-lg border border-yellow-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
+                        <TagIcon className="w-3 h-3 text-white" />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-600">🏷️ Origem</p>
-                        <p className="text-lg font-bold text-gray-900">{leadInfo.origem || 'N/A'}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-600">Origem</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                           {typeof leadInfo.origem === 'string' 
+                             ? leadInfo.origem 
+                             : typeof leadInfo.origem === 'object' && leadInfo.origem && 'nome' in leadInfo.origem 
+                               ? (leadInfo.origem as any).nome 
+                               : 'N/A'
+                           }
+                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Status AI Agent */}
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="text-lg">🤖</span>
-                    <span className="text-lg font-bold text-gray-900">AI Agent</span>
+                {/* Status AI Agent compacto */}
+                <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm">🤖</span>
+                      <span className="text-sm font-semibold text-gray-900">AI Agent</span>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${leadInfo?.ai_habilitada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {leadInfo?.ai_habilitada ? 'Ativo' : 'Inativo'}
+                    </span>
                   </div>
-                  <p className={`text-sm font-medium ${leadInfo?.ai_habilitada ? 'text-green-600' : 'text-red-500'}`}>
-                    {leadInfo?.ai_habilitada ? '✅ AI Agent está ativo' : '❌ AI Agent está desativado'}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Use o toggle no cabeçalho para ativar/desativar
-                  </p>
                 </div>
               </>
             ) : (
@@ -640,6 +683,26 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal da foto */}
+      {showPhotoModal && leadInfo?.profile_picture_url && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setShowPhotoModal(false)}>
+          <div className="relative max-w-4xl max-h-4xl p-4">
+            <button
+              onClick={() => setShowPhotoModal(false)}
+              className="absolute top-2 right-2 text-white hover:text-gray-300 z-10"
+            >
+              <XMarkIcon className="w-8 h-8" />
+            </button>
+            <img
+              src={leadInfo.profile_picture_url}
+              alt="Foto do lead"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}

@@ -12,6 +12,7 @@ import {
   XCircleIcon,
   LinkIcon,
   PowerIcon,
+  DocumentDuplicateIcon,
 } from '@heroicons/react/24/outline';
 import { Search } from 'lucide-react';
 import {
@@ -356,6 +357,67 @@ const WhatsAppIntegration: React.FC = () => {
     }
   };
 
+  const formatPhone = (phone: string) => {
+    if (!phone) return 'Não conectado';
+    // Remove todos os caracteres não numéricos
+    const cleaned = phone.replace(/\D/g, '');
+
+    // Se tem 13 dígitos e começa com 55, é um número brasileiro
+    if (cleaned.length === 13 && cleaned.startsWith('55')) {
+      const countryCode = cleaned.slice(0, 2);
+      const areaCode = cleaned.slice(2, 4);
+      const firstPart = cleaned.slice(4, 9);
+      const secondPart = cleaned.slice(9, 13);
+      return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
+    }
+
+    // Se tem 12 dígitos e começa com 55, é um número brasileiro (telefone fixo)
+    if (cleaned.length === 12 && cleaned.startsWith('55')) {
+      const countryCode = cleaned.slice(0, 2);
+      const areaCode = cleaned.slice(2, 4);
+      const firstPart = cleaned.slice(4, 8);
+      const secondPart = cleaned.slice(8, 12);
+      return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
+    }
+
+    // Se tem 11 dígitos, assume que é brasileiro sem código do país
+    if (cleaned.length === 11) {
+      const areaCode = cleaned.slice(0, 2);
+      const firstPart = cleaned.slice(2, 7);
+      const secondPart = cleaned.slice(7, 11);
+      return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
+    }
+
+    // Se tem 10 dígitos, assume que é brasileiro sem código do país (telefone fixo)
+    if (cleaned.length === 10) {
+      const areaCode = cleaned.slice(0, 2);
+      const firstPart = cleaned.slice(2, 6);
+      const secondPart = cleaned.slice(6, 10);
+      return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
+    }
+
+    // Retorna o número original se não conseguir formatar
+    return phone;
+  };
+
+  const copyPhoneToClipboard = async (phone: string) => {
+    if (!phone || phone === 'Não conectado') {
+      toast.error('Número não disponível para cópia');
+      return;
+    }
+    
+    // Remove todos os caracteres não numéricos para copiar apenas os números
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    try {
+      await navigator.clipboard.writeText(cleanPhone);
+      toast.success('Número copiado para a área de transferência!');
+    } catch (error) {
+      console.error('Erro ao copiar número:', error);
+      toast.error('Erro ao copiar número');
+    }
+  };
+
   // Filtrar instâncias baseado no termo de busca
   const filteredInstances = instances.filter(item => {
     if (!searchTerm) return true;
@@ -531,6 +593,9 @@ const WhatsAppIntegration: React.FC = () => {
                     Instância
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Telefone
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -563,6 +628,22 @@ const WhatsAppIntegration: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {instance.instanceName}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatPhone(instance.owner)}
+                          </div>
+                          {instance.owner && instance.owner !== 'Não conectado' && (
+                            <button
+                              onClick={() => copyPhoneToClipboard(instance.owner)}
+                              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                              title="Copiar número"
+                            >
+                              <DocumentDuplicateIcon className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
