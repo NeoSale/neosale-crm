@@ -103,7 +103,6 @@ const WhatsAppIntegration: React.FC = () => {
     }
     try {
       const response = await evolutionApi.getInstances();
-      console.log('Resposta do GET instances:', response);
       if (response.success && response.data && Array.isArray(response.data)) {
         // Mapear os dados da API para o formato esperado pelo componente
         const mappedInstances: EvolutionInstance[] = response.data.map((item: any) => ({
@@ -120,7 +119,6 @@ const WhatsAppIntegration: React.FC = () => {
             agendamento: item?.instance?.agendamento || false,
           }
         }));
-        console.log('Instâncias mapeadas:', mappedInstances);
         setInstances(mappedInstances);
       }
     } catch (error) {
@@ -609,6 +607,9 @@ const WhatsAppIntegration: React.FC = () => {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Agendamento
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
                   </th>
                 </tr>
@@ -663,6 +664,41 @@ const WhatsAppIntegration: React.FC = () => {
                             {getStatusText(instance.status || 'close')}
                           </span>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={async () => {
+                            if (!instance?.instanceId) return;
+                            try {
+                              const newValue = !instance.agendamento;
+                              const response = await evolutionApi.updateInstance(instance.instanceId, {
+                                agendamento: newValue
+                              });
+                              if (response.success) {
+                                // Atualizar a instância localmente sem chamar a API novamente
+                                setInstances(prev => prev.map(inst => 
+                                  inst.instance.instanceId === instance.instanceId 
+                                    ? { ...inst, instance: { ...inst.instance, agendamento: newValue } } 
+                                    : inst
+                                ));
+                                toast.success(`Agendamento ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
+                              }
+                            } catch (error) {
+                              console.error('Erro ao atualizar agendamento:', error);
+                              toast.error('Erro ao atualizar agendamento');
+                            }
+                          }}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${
+                            instance.agendamento ? 'bg-[#403CCF]' : 'bg-gray-300'
+                          }`}
+                          title={`Agendamento ${instance.agendamento ? 'ativo' : 'inativo'}`}
+                        >
+                          <span
+                            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${
+                              instance.agendamento ? 'translate-x-5' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">
@@ -784,17 +820,24 @@ const WhatsAppIntegration: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
 
-            {/* Faz agendamento */}
+            {/* agendamento */}
             <div className="flex items-center mb-4">
-              <input
-                type="checkbox"
-                id="agendamento"
-                checked={localFormData.agendamento}
-                onChange={(e) => setLocalFormData({ ...localFormData, agendamento: e.target.checked })}
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-              />
-              <label htmlFor="agendamento" className="ml-2 block text-sm text-gray-900">
-                Faz Agendamento
+              <button
+                type="button"
+                onClick={() => setLocalFormData({ ...localFormData, agendamento: !localFormData.agendamento })}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${
+                  localFormData.agendamento ? 'bg-[#403CCF]' : 'bg-gray-300'
+                }`}
+                title={`Agendamento ${localFormData.agendamento ? 'ativo' : 'inativo'}`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${
+                    localFormData.agendamento ? 'translate-x-5' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <label className="ml-3 block text-sm text-gray-900">
+                Agendamento
               </label>
             </div>
 
