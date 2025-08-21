@@ -12,6 +12,7 @@ export interface EvolutionInstanceData {
   profileStatus: string;
   status: 'open' | 'close' | 'connecting' | 'disconnected';
   webhook_wa_business: string;
+  agendamento?: boolean;
   settings?: {
     reject_call?: boolean;
     msg_call?: string;
@@ -34,6 +35,7 @@ export interface CreateInstanceRequest {
   webhook_events: string[];
   integration: 'WHATSAPP-BAILEYS' | 'WHATSAPP-BUSINESS';
   qrcode: boolean;
+  agendamento?: boolean;
   settings: {
     reject_call: boolean;
     msg_call: string;
@@ -55,6 +57,7 @@ export interface UpdateInstanceRequest {
   readStatus?: boolean;
   enabled?: boolean;
   url?: string;
+  agendamento?: boolean;
   settings?: {
     reject_call?: boolean;
     msg_call?: string;

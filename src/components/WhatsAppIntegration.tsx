@@ -85,6 +85,7 @@ const WhatsAppIntegration: React.FC = () => {
     syncFullHistory: false,
     enabled: true,
     url: '',
+    agendamento: false,
   });
 
 
@@ -102,6 +103,7 @@ const WhatsAppIntegration: React.FC = () => {
     }
     try {
       const response = await evolutionApi.getInstances();
+      console.log('Resposta do GET instances:', response);
       if (response.success && response.data && Array.isArray(response.data)) {
         // Mapear os dados da API para o formato esperado pelo componente
         const mappedInstances: EvolutionInstance[] = response.data.map((item: any) => ({
@@ -115,8 +117,10 @@ const WhatsAppIntegration: React.FC = () => {
             status: item?.instance?.status || 'disconnected',
             webhook_wa_business: item?.instance?.webhook_wa_business || '',
             settings: item?.instance?.settings || {},
+            agendamento: item?.instance?.agendamento || false,
           }
         }));
+        console.log('Instâncias mapeadas:', mappedInstances);
         setInstances(mappedInstances);
       }
     } catch (error) {
@@ -147,6 +151,7 @@ const WhatsAppIntegration: React.FC = () => {
           readStatus: localFormData.readStatus,
           enabled: localFormData.enabled,
           url: localFormData.url,
+          agendamento: localFormData.agendamento,
           settings: {
             reject_call: localFormData.rejectCall,
             msg_call: localFormData.msgCall,
@@ -166,6 +171,7 @@ const WhatsAppIntegration: React.FC = () => {
           webhook_events: localFormData.enabled ? ['MESSAGES_UPSERT'] : [],
           integration: localFormData.integration,
           qrcode: localFormData.qrcode,
+          agendamento: localFormData.agendamento,
           settings: {
             reject_call: localFormData.rejectCall,
             msg_call: localFormData.msgCall,
@@ -207,6 +213,7 @@ const WhatsAppIntegration: React.FC = () => {
       syncFullHistory: settings.sync_full_history ?? instance.syncFullHistory ?? false,
       enabled: !!hasWebhook,
       url: (hasWebhook || ''),
+      agendamento: instance.agendamento ?? false,
     });
     setEditingInstance(instance);
     setShowModal(true);
@@ -330,6 +337,7 @@ const WhatsAppIntegration: React.FC = () => {
       syncFullHistory: false,
       enabled: false,
       url: '',
+      agendamento: false,
     });
 
     setEditingInstance(null);
@@ -405,10 +413,10 @@ const WhatsAppIntegration: React.FC = () => {
       toast.error('Número não disponível para cópia');
       return;
     }
-    
+
     // Remove todos os caracteres não numéricos para copiar apenas os números
     const cleanPhone = phone.replace(/\D/g, '');
-    
+
     try {
       await navigator.clipboard.writeText(cleanPhone);
       toast.success('Número copiado para a área de transferência!');
@@ -480,6 +488,7 @@ const WhatsAppIntegration: React.FC = () => {
                     syncFullHistory: false,
                     enabled: true,
                     url: '',
+                    agendamento: false,
                   });
                   setEditingInstance(null);
                   setShowModal(true);
@@ -570,6 +579,7 @@ const WhatsAppIntegration: React.FC = () => {
                         syncFullHistory: false,
                         enabled: true,
                         url: '',
+                        agendamento: false,
                       });
                       setEditingInstance(null);
                       setShowModal(true);
@@ -690,11 +700,10 @@ const WhatsAppIntegration: React.FC = () => {
                           <button
                             onClick={() => handleDelete(instance.instanceId)}
                             disabled={instance.status === 'open'}
-                            className={`inline-flex items-center px-3 py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                              instance.status === 'open'
-                                ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'
-                                : 'border-gray-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500'
-                            }`}
+                            className={`inline-flex items-center px-3 py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${instance.status === 'open'
+                              ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'
+                              : 'border-gray-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500'
+                              }`}
                             title={instance.status === 'open' ? 'Não é possível excluir instância conectada' : 'Excluir'}
                           >
                             <TrashIcon className="h-4 w-4 mr-1" />
@@ -774,6 +783,21 @@ const WhatsAppIntegration: React.FC = () => {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+
+            {/* Faz agendamento */}
+            <div className="flex items-center mb-4">
+              <input
+                type="checkbox"
+                id="agendamento"
+                checked={localFormData.agendamento}
+                onChange={(e) => setLocalFormData({ ...localFormData, agendamento: e.target.checked })}
+                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+              />
+              <label htmlFor="agendamento" className="ml-2 block text-sm text-gray-900">
+                Faz Agendamento
+              </label>
+            </div>
+
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nome da Instância
             </label>
@@ -800,8 +824,6 @@ const WhatsAppIntegration: React.FC = () => {
               required
             />
           </div>
-
-
 
           {/* Configurações Settings */}
           <div className="border-t pt-4">
