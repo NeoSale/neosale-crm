@@ -12,7 +12,9 @@ export interface EvolutionInstanceData {
   profileStatus: string;
   status: 'open' | 'close' | 'connecting' | 'disconnected';
   webhook_wa_business: string;
-  agendamento?: boolean;
+  followup?: boolean;
+  qtd_envios_diarios?: number;
+  id_agente?: string;
   settings?: {
     reject_call?: boolean;
     msg_call?: string;
@@ -23,6 +25,19 @@ export interface EvolutionInstanceData {
     sync_full_history?: boolean;
     msgCall: string;
   };
+  agente: AgenteData;
+}
+
+export interface AgenteData {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  agendamento: boolean;
+  prompt: string;
+  prompt_agendamento: string;
+  tipo_agente: {
+    nome: string;
+  }
 }
 
 export interface EvolutionInstance {
@@ -35,7 +50,9 @@ export interface CreateInstanceRequest {
   webhook_events: string[];
   integration: 'WHATSAPP-BAILEYS' | 'WHATSAPP-BUSINESS';
   qrcode: boolean;
-  agendamento?: boolean;
+  followup?: boolean;
+  qtd_envios_diarios?: number;
+  id_agente?: string;
   settings: {
     reject_call: boolean;
     msg_call: string;
@@ -57,7 +74,9 @@ export interface UpdateInstanceRequest {
   readStatus?: boolean;
   enabled?: boolean;
   url?: string;
-  agendamento?: boolean;
+  followup?: boolean;
+  qtd_envios_diarios?: number;
+  id_agente?: string;
   settings?: {
     reject_call?: boolean;
     msg_call?: string;
@@ -101,17 +120,17 @@ class EvolutionApiService {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
       const cliente_id = getCurrentClienteId();
-      
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...(options.headers as Record<string, string>),
       };
-      
+
       // Adicionar cliente_id ao header se disponível
       if (cliente_id) {
         headers['cliente_id'] = cliente_id;
       }
-      
+
       const response = await fetch(url, {
         headers,
         ...options,
@@ -310,9 +329,9 @@ class EvolutionApiService {
         message: 'Cliente ID não encontrado. Faça login novamente.',
       };
     }
-    
+
     const endpoint = `/evolution-api/connect/${instanceId}`;
-    
+
     const response = await this.makeRequest<QRCodeResponse>(endpoint, {
       method: 'GET',
     });

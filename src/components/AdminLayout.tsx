@@ -18,6 +18,7 @@ import {
 import { APP_VERSION } from '../utils/app-version';
 import ThemeToggle from './ThemeToggle';
 import { clientesApi, Cliente } from '../services/clientesApi';
+import { Bot } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -36,14 +37,13 @@ const navigation: MenuItem[] = [
   { name: 'Chat', href: '/chat', icon: ChatBubbleLeftRightIcon },
   { name: 'Leads', href: '/leads', icon: UsersIcon },
   { name: 'Documentos', icon: DocumentTextIcon },
-  { name: 'Agentes', icon: UsersIcon },
+  { name: 'Agentes', href: '/agentes', icon: Bot },
   { 
     name: 'Follow Up', 
     icon: SpeakerWaveIcon,
     children: [
       { name: 'Configurações', icon: CogIcon },
       { name: 'Mensagens', href: '/follow-up/mensagens', icon: PaperAirplaneIcon },
-      { name: 'Agendamento', icon: DocumentTextIcon },
     ]
   },
   { 
@@ -407,6 +407,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                 {pathname === '/' ? 'Dashboard' : 
                  pathname === '/leads' ? 'Leads' :
                  pathname === '/chat' ? 'Chat' :
+                 pathname === '/agentes' ? 'Agentes' :
                  pathname === '/followup/configuracoes' ? 'Follow Up - Configurações' :
                  pathname === '/followup/mensagens' ? 'Follow Up - Mensagens' :
                  pathname === '/followup/agendamento' ? 'Follow Up - Agendamento' :

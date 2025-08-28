@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import {
   PlusIcon,
@@ -26,6 +26,7 @@ import {
 
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
+import { agentesApi, Agente } from '@/services/agentesApi';
 
 const WhatsAppIntegration: React.FC = () => {
   const [instances, setInstances] = useState<EvolutionInstance[]>([]);
@@ -52,6 +53,10 @@ const WhatsAppIntegration: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [showAgenteModal, setShowAgenteModal] = useState(false);
+  const [selectedAgente, setSelectedAgente] = useState<any>(null);
+  const [agentes, setAgentes] = useState<Agente[]>([]);
+  const updateQtdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
   const [formData, setFormData] = useState<CreateInstanceRequest>({
@@ -85,12 +90,15 @@ const WhatsAppIntegration: React.FC = () => {
     syncFullHistory: false,
     enabled: true,
     url: '',
-    agendamento: false,
+    followup: false,
+    qtd_envios_diarios: 50,
+    id_agente: '',
   });
 
 
   useEffect(() => {
     loadInstances();
+    loadAgentes();
   }, []);
 
 
@@ -105,20 +113,33 @@ const WhatsAppIntegration: React.FC = () => {
       const response = await evolutionApi.getInstances();
       if (response.success && response.data && Array.isArray(response.data)) {
         // Mapear os dados da API para o formato esperado pelo componente
-        const mappedInstances: EvolutionInstance[] = response.data.map((item: any) => ({
-          instance: {
-            instanceId: item?.instance?.instanceId || '',
-            instanceName: item?.instance?.instanceName || '',
-            owner: item?.instance?.owner || '',
-            profileName: item?.instance?.profileName || '',
-            profilePictureUrl: item?.instance?.profilePictureUrl || '',
-            profileStatus: item?.instance?.profileStatus || '',
-            status: item?.instance?.status || 'disconnected',
-            webhook_wa_business: item?.instance?.webhook_wa_business || '',
-            settings: item?.instance?.settings || {},
-            agendamento: item?.instance?.agendamento || false,
-          }
-        }));
+        const mappedInstances: EvolutionInstance[] = response.data
+          .map((item: any, index: number) => ({
+            instance: {
+              instanceId: item?.id || ``,
+              instanceName: item?.name || '',
+              owner: item?.owner || '',
+              profileName: item?.profileName || '',
+              profilePictureUrl: item?.profilePictureUrl || '',
+              profileStatus: item?.profileStatus || '',
+              status: item?.connectionStatus || 'disconnected',
+              webhook_wa_business: item?.webhook_wa_business || '',
+              settings: item?.settings || {},
+              followup: item?.followup || false,
+              qtd_envios_diarios: item?.qtd_envios_diarios || 50,
+              agente: {
+                id: item?.agente?.id || '',
+                nome: item?.agente?.nome || '',
+                ativo: item?.agente?.ativo || false,
+                agendamento: item?.agente?.agendamento || false,
+                prompt: item?.agente?.prompt || '',
+                prompt_agendamento: item?.agente?.prompt_agendamento || '',
+                tipo_agente: {
+                  nome: item?.agente?.tipo_agente?.nome || '',
+                }
+              }
+            }
+          }));
         setInstances(mappedInstances);
       }
     } catch (error) {
@@ -134,6 +155,13 @@ const WhatsAppIntegration: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validação obrigatória do agente
+    if (!localFormData.id_agente) {
+      toast.error('Por favor, selecione um agente.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -149,7 +177,9 @@ const WhatsAppIntegration: React.FC = () => {
           readStatus: localFormData.readStatus,
           enabled: localFormData.enabled,
           url: localFormData.url,
-          agendamento: localFormData.agendamento,
+          followup: localFormData.followup,
+          qtd_envios_diarios: localFormData.qtd_envios_diarios,
+          id_agente: localFormData.id_agente,
           settings: {
             reject_call: localFormData.rejectCall,
             msg_call: localFormData.msgCall,
@@ -169,7 +199,9 @@ const WhatsAppIntegration: React.FC = () => {
           webhook_events: localFormData.enabled ? ['MESSAGES_UPSERT'] : [],
           integration: localFormData.integration,
           qrcode: localFormData.qrcode,
-          agendamento: localFormData.agendamento,
+          followup: localFormData.followup,
+          qtd_envios_diarios: localFormData.qtd_envios_diarios,
+          id_agente: localFormData.id_agente,
           settings: {
             reject_call: localFormData.rejectCall,
             msg_call: localFormData.msgCall,
@@ -211,7 +243,9 @@ const WhatsAppIntegration: React.FC = () => {
       syncFullHistory: settings.sync_full_history ?? instance.syncFullHistory ?? false,
       enabled: !!hasWebhook,
       url: (hasWebhook || ''),
-      agendamento: instance.agendamento ?? false,
+      followup: instance.followup ?? false,
+      qtd_envios_diarios: instance.qtd_envios_diarios ?? 50,
+      id_agente: instance.agente.id ?? '',
     });
     setEditingInstance(instance);
     setShowModal(true);
@@ -234,6 +268,28 @@ const WhatsAppIntegration: React.FC = () => {
       }
     }
   };
+
+  // Modal para visualizar dados do agente
+  const handleOpenAgenteModal = (agente: any) => {
+    setSelectedAgente(agente);
+    setShowAgenteModal(true);
+  };
+
+  const handleCloseAgenteModal = () => {
+    setShowAgenteModal(false);
+    setSelectedAgente(null);
+  };
+
+  const loadAgentes = async () => {
+    try {
+      const response = await agentesApi.getAgentes();
+      setAgentes(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar agentes:', error);
+    }
+  };
+
+
 
   const cancelDelete = () => {
     setDeleteConfirm({ show: false, id: null });
@@ -335,7 +391,9 @@ const WhatsAppIntegration: React.FC = () => {
       syncFullHistory: false,
       enabled: false,
       url: '',
-      agendamento: false,
+      followup: false,
+      qtd_envios_diarios: 50,
+      id_agente: '',
     });
 
     setEditingInstance(null);
@@ -486,7 +544,9 @@ const WhatsAppIntegration: React.FC = () => {
                     syncFullHistory: false,
                     enabled: true,
                     url: '',
-                    agendamento: false,
+                    followup: false,
+                    qtd_envios_diarios: 50,
+                    id_agente: '',
                   });
                   setEditingInstance(null);
                   setShowModal(true);
@@ -577,7 +637,9 @@ const WhatsAppIntegration: React.FC = () => {
                         syncFullHistory: false,
                         enabled: true,
                         url: '',
-                        agendamento: false,
+                        followup: false,
+                        qtd_envios_diarios: 50,
+                        id_agente: '',
                       });
                       setEditingInstance(null);
                       setShowModal(true);
@@ -607,7 +669,13 @@ const WhatsAppIntegration: React.FC = () => {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Agendamento
+                    Agente
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Follow UP
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Por dia
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
@@ -615,11 +683,11 @@ const WhatsAppIntegration: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentInstances.map((item) => {
+                {currentInstances.map((item, index) => {
                   const instance = item.instance;
                   if (!instance) return null;
                   return (
-                    <tr key={instance.instanceId} className="hover:bg-gray-50">
+                    <tr key={instance.instanceId || `instance-${index}`} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           {instance.profilePictureUrl && (
@@ -666,39 +734,100 @@ const WhatsAppIntegration: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-900">
+                            {instance.agente?.nome ? (
+                              <button
+                                onClick={() => handleOpenAgenteModal(instance.agente)}
+                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors cursor-pointer"
+                              >
+                                {instance.agente?.nome}
+                              </button>
+                            ) : (
+                              <span className="text-gray-400">Nenhum agente</span>
+                            )}
+                          </div>
+
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={async () => {
                             if (!instance?.instanceId) return;
                             try {
-                              const newValue = !instance.agendamento;
+                              const newValue = !instance.followup;
                               const response = await evolutionApi.updateInstance(instance.instanceId, {
-                                agendamento: newValue
+                                followup: newValue
                               });
                               if (response.success) {
                                 // Atualizar a instância localmente sem chamar a API novamente
-                                setInstances(prev => prev.map(inst => 
-                                  inst.instance.instanceId === instance.instanceId 
-                                    ? { ...inst, instance: { ...inst.instance, agendamento: newValue } } 
+                                setInstances(prev => prev.map(inst =>
+                                  inst.instance.instanceId === instance.instanceId
+                                    ? { ...inst, instance: { ...inst.instance, followup: newValue } }
                                     : inst
                                 ));
-                                toast.success(`Agendamento ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
+                                toast.success(`Follow UP ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
                               }
                             } catch (error) {
-                              console.error('Erro ao atualizar agendamento:', error);
-                              toast.error('Erro ao atualizar agendamento');
+                              toast.error('Erro ao atualizar follow up');
                             }
                           }}
-                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${
-                            instance.agendamento ? 'bg-[#403CCF]' : 'bg-gray-300'
-                          }`}
-                          title={`Agendamento ${instance.agendamento ? 'ativo' : 'inativo'}`}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${instance.followup ? 'bg-[#403CCF]' : 'bg-gray-300'
+                            }`}
+                          title={`Follow UP ${instance.followup ? 'ativo' : 'inativo'}`}
                         >
                           <span
-                            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${
-                              instance.agendamento ? 'translate-x-5' : 'translate-x-1'
-                            }`}
+                            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${instance.followup ? 'translate-x-5' : 'translate-x-1'
+                              }`}
                           />
                         </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {instance.followup ? (
+                          <input
+                            type="number"
+                            value={instance.qtd_envios_diarios || 50}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value) || 50;
+
+                              // Atualizar o estado local imediatamente para feedback visual
+                              setInstances(prev => prev.map(inst =>
+                                inst.instance.instanceId === instance.instanceId
+                                  ? { ...inst, instance: { ...inst.instance, qtd_envios_diarios: newValue } }
+                                  : inst
+                              ));
+
+                              // Limpar timeout anterior se existir
+                              if (updateQtdTimeoutRef.current) {
+                                clearTimeout(updateQtdTimeoutRef.current);
+                              }
+
+                              // Criar novo timeout com delay de 1 segundo
+                              updateQtdTimeoutRef.current = setTimeout(async () => {
+                                try {
+                                  const response = await evolutionApi.updateInstance(instance.instanceId, {
+                                    qtd_envios_diarios: newValue
+                                  });
+                                  if (response.success) {
+                                    toast.success('Quantidade de envios atualizada com sucesso!');
+                                  }
+                                } catch (error) {
+                                  console.error('Erro ao atualizar quantidade de envios:', error);
+                                  toast.error('Erro ao atualizar quantidade de envios');
+                                  // Reverter o valor em caso de erro
+                                  setInstances(prev => prev.map(inst =>
+                                    inst.instance.instanceId === instance.instanceId
+                                      ? { ...inst, instance: { ...inst.instance, qtd_envios_diarios: instance.qtd_envios_diarios || 50 } }
+                                      : inst
+                                  ));
+                                }
+                              }, 1000);
+                            }}
+                            className="w-15 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent text-center"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-gray-900">-</div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">
@@ -819,28 +948,6 @@ const WhatsAppIntegration: React.FC = () => {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-
-            {/* agendamento */}
-            <div className="flex items-center mb-4">
-              <button
-                type="button"
-                onClick={() => setLocalFormData({ ...localFormData, agendamento: !localFormData.agendamento })}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${
-                  localFormData.agendamento ? 'bg-[#403CCF]' : 'bg-gray-300'
-                }`}
-                title={`Agendamento ${localFormData.agendamento ? 'ativo' : 'inativo'}`}
-              >
-                <span
-                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${
-                    localFormData.agendamento ? 'translate-x-5' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-              <label className="ml-3 block text-sm text-gray-900">
-                Agendamento
-              </label>
-            </div>
-
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nome da Instância
             </label>
@@ -926,7 +1033,7 @@ const WhatsAppIntegration: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mensagem para Chamadas Rejeitadas
               </label>
@@ -936,6 +1043,69 @@ const WhatsAppIntegration: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm h-24"
                 placeholder="Mensagem automática para chamadas rejeitadas"
               />
+            </div>
+
+            {/* ID do Agente */}
+            <div className="mb-4 border-t pt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Agente
+              </label>
+              <select
+                value={localFormData.id_agente}
+                onChange={(e) => setLocalFormData({ ...localFormData, id_agente: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                required
+              >
+                <option value="">Selecione um agente</option>
+                {agentes.map((agente) => (
+                  <option key={agente.id} value={agente.id}>
+                    {agente.nome} - {agente.tipo_agente?.nome || 'Sem tipo'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Follow UP e Quantidade lado a lado */}
+            <div className="flex mb-4">
+              {/* Follow UP */}
+              <div className="mt-2 mr-4">
+                <div className="flex items-center">
+                  <label className="mr-3 block text-sm text-gray-900">
+                    Follow UP
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setLocalFormData({ ...localFormData, followup: !localFormData.followup })}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${localFormData.followup ? 'bg-[#403CCF]' : 'bg-gray-300'
+                      }`}
+                    title={`Follow UP ${localFormData.followup ? 'ativo' : 'inativo'}`}
+                  >
+                    <span
+                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${localFormData.followup ? 'translate-x-5' : 'translate-x-1'
+                        }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Por dia */}
+              <div className="flex-1 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                  Por dia
+                </label>
+                <input
+                  type="number"
+                  value={localFormData.qtd_envios_diarios}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 50;
+                    setLocalFormData({ ...localFormData, qtd_envios_diarios: value });
+                  }}
+                  className={`w-16 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-center ${!localFormData.followup ? 'bg-gray-100 cursor-not-allowed' : ''
+                    }`}
+                  placeholder="50"
+                  disabled={!localFormData.followup}
+                />
+              </div>
             </div>
           </div>
 
@@ -1084,6 +1254,118 @@ const WhatsAppIntegration: React.FC = () => {
         cancelText="Cancelar"
         type="danger"
       />
+
+      {/* Modal de Detalhes do Agente */}
+      <Modal
+        isOpen={showAgenteModal && !!selectedAgente}
+        onClose={handleCloseAgenteModal}
+        title={`Detalhes do Agente - ${selectedAgente?.nome}`}
+        size="2xl"
+      >
+        <div>
+          {selectedAgente ? (
+            <div className="space-y-6">
+              {/* Informações básicas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Coluna esquerda */}
+                <div className="space-y-4">
+                  {/* Nome */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Nome do Agente</label>
+                    <div className="text-sm font-medium text-gray-900 mt-1">
+                      {selectedAgente?.nome || 'Nome não disponível'}
+                    </div>
+                  </div>
+
+                  {/* Tipo de Agente */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Agente</label>
+                    <div className="text-sm font-medium text-gray-900 mt-1">
+                      {selectedAgente?.tipo_agente?.nome || 'Não definido'}
+                    </div>
+                  </div>
+
+
+                </div>
+
+                {/* Coluna direita */}
+                <div className="space-y-4">
+                  {/* Status */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Status</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-flex h-4 w-7 items-center rounded-full ${selectedAgente?.ativo ? 'bg-[#403CCF]' : 'bg-gray-300'
+                        }`}>
+                        <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${selectedAgente?.ativo ? 'translate-x-4' : 'translate-x-1'
+                          }`} />
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedAgente?.ativo ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Agendamento */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Agendamento</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-flex h-4 w-7 items-center rounded-full ${selectedAgente?.agendamento ? 'bg-[#403CCF]' : 'bg-gray-300'
+                        }`}>
+                        <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${selectedAgente?.agendamento ? 'translate-x-4' : 'translate-x-1'
+                          }`} />
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        {selectedAgente?.agendamento ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Prompt Principal */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Prompt Principal</label>
+                <textarea
+                  value={selectedAgente?.prompt || ''}
+                  placeholder="Nenhum prompt definido"
+                  className="mt-2 w-full p-4 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  rows={6}
+                  readOnly
+                />
+              </div>
+
+              {/* Prompt de Agendamento */}
+              {selectedAgente?.agendamento && selectedAgente?.prompt_agendamento && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Prompt de Agendamento</label>
+                  <div className="mt-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-sm text-gray-900 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                      {selectedAgente?.prompt_agendamento}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
+              </div>
+              <p className="text-gray-500">Nenhum agente selecionado.</p>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-4 border-t border-gray-200 mt-6">
+            <button
+              onClick={handleCloseAgenteModal}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
