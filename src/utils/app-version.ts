@@ -1,9 +1,9 @@
 /**
  * Versão da aplicação extraída do package.json
  * Este arquivo é atualizado automaticamente durante o build
- * Última atualização: 2025-08-28T13:36:34.413Z
+ * Última atualização: 2025-08-28T14:33:00.671Z
  */
-export const APP_VERSION = '1.6.0';
+export const APP_VERSION = '1.6.1';
 export const APP_NAME = 'NeoSale CRM';
 
 /**

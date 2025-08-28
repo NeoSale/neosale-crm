@@ -51,6 +51,14 @@ export const formatPhone = (phone: string): string => {
 // Função para copiar telefone para clipboard (número bruto sem formatação e sem código 55)
 export const copyPhone = async (phone: string): Promise<void> => {
   try {
+    // Verifica se o número tem o padrão @lid
+    if (phone.includes('@lid')) {
+      // Se tem @lid, copia o número completo incluindo @lid
+      await navigator.clipboard.writeText(phone);
+      toast.success('Telefone copiado!');
+      return;
+    }
+    
     // Remove todos os caracteres não numéricos
     const cleaned = phone.replace(/\D/g, '');
     

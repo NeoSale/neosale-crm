@@ -945,11 +945,16 @@ const AgentesManager: React.FC = () => {
                         return;
                       }
 
-                      // Remove todos os caracteres não numéricos para copiar apenas os números
-                      const cleanPhone = phone.replace(/\D/g, '');
-
                       try {
-                        await navigator.clipboard.writeText(cleanPhone);
+                        // Verifica se o número tem o padrão @lid
+                        if (phone.includes('@lid')) {
+                          // Se tem @lid, copia o número completo incluindo @lid
+                          await navigator.clipboard.writeText(phone);
+                        } else {
+                          // Remove todos os caracteres não numéricos para copiar apenas os números
+                          const cleanPhone = phone.replace(/\D/g, '');
+                          await navigator.clipboard.writeText(cleanPhone);
+                        }
                         toast.success('Número copiado para a área de transferência!');
                       } catch (error) {
                         console.error('Erro ao copiar número:', error);
