@@ -116,13 +116,13 @@ const WhatsAppIntegration: React.FC = () => {
         const mappedInstances: EvolutionInstance[] = response.data
           .map((item: any, index: number) => ({
             instance: {
-              instanceId: item?.id || ``,
-              instanceName: item?.name || '',
+              instanceId: item?.instanceId || ``,
+              instanceName: item?.instanceName || '',
               owner: item?.owner || '',
               profileName: item?.profileName || '',
               profilePictureUrl: item?.profilePictureUrl || '',
               profileStatus: item?.profileStatus || '',
-              status: item?.connectionStatus || 'disconnected',
+              status: item?.status || 'disconnected',
               webhook_wa_business: item?.webhook_wa_business || '',
               settings: item?.settings || {},
               followup: item?.followup || false,

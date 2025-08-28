@@ -304,10 +304,6 @@ const AgentesManager: React.FC = () => {
     return tipo?.nome || 'Tipo não encontrado';
   };
 
-  const getWhatsAppInstanceNames = (agente: Agente) => {
-    return agente.instancias_evolution_api?.map(inst => inst.instance_name) || [];
-  };
-
   const handleOpenInstanceModal = (agente: Agente) => {
     setSelectedAgenteForInstances(agente);
     setShowInstanceModal(true);
@@ -975,7 +971,7 @@ const AgentesManager: React.FC = () => {
                           {instancia.profilePictureUrl ? (
                             <img
                               src={instancia.profilePictureUrl}
-                              alt={instancia.profileName || instancia.instance_name}
+                              alt={instancia.profileName || instancia.instanceName}
                               className="w-12 h-12 rounded-full object-cover"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
@@ -986,7 +982,7 @@ const AgentesManager: React.FC = () => {
                           ) : null}
                           <div className={`w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center ${instancia.profilePictureUrl ? 'hidden' : ''}`}>
                             <span className="text-gray-500 text-sm font-medium">
-                              {(instancia.profileName || instancia.instance_name)?.charAt(0)?.toUpperCase()}
+                              {(instancia.profileName || instancia.instanceName)?.charAt(0)?.toUpperCase()}
                             </span>
                           </div>
                         </div>
@@ -1010,7 +1006,7 @@ const AgentesManager: React.FC = () => {
                               <div>
                                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Instância</label>
                                 <div className="text-sm font-medium text-gray-900 mt-1">
-                                  {instancia.instance_name}
+                                  {instancia.instanceName}
                                 </div>
                               </div>
                             </div>

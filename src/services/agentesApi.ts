@@ -19,7 +19,7 @@ export interface Agente {
   tipo_agente?: TipoAgente;
   // Instâncias do Evolution API associadas ao agente
   instancias_evolution_api?: Array<{
-    instance_name: string;
+    instanceName: string;
     profileName?: string;
     profilePictureUrl?: string;
     status?: string;
