@@ -9,7 +9,8 @@ import {
   ChevronRightIcon,
   ArrowPathIcon,
   CalendarIcon,
-  DocumentDuplicateIcon
+  DocumentDuplicateIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import { Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -17,6 +18,7 @@ import { formatPhone, copyPhone } from '../utils/phone-utils';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ptBR } from 'date-fns/locale';
+import Modal from './Modal';
 
 // Registrar localização pt-BR para o DatePicker
 registerLocale('pt-BR', ptBR);
@@ -35,6 +37,8 @@ const PorDiaFollowUpManager: React.FC = () => {
     const dateParam = searchParams.get('data');
     return dateParam || new Date().toISOString().split('T')[0];
   });
+  const [selectedItem, setSelectedItem] = useState<DetalheFollowUp | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Obter data da URL ao carregar o componente
   useEffect(() => {
@@ -174,6 +178,109 @@ const PorDiaFollowUpManager: React.FC = () => {
     if (!dateString) return null;
     const [year, month, day] = dateString.split('-');
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  };
+
+  const openModal = (item: DetalheFollowUp) => {
+    setSelectedItem(item);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setSelectedItem(null);
+    setIsModalOpen(false);
+  };
+
+  const DetailModal = ({ item, isOpen, onClose }: { item: DetalheFollowUp | null; isOpen: boolean; onClose: () => void }) => {
+    if (!item) return null;
+
+    const { date, time } = formatDateTime(item.horario);
+
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Detalhes da Mensagem"
+        size="2xl"
+      >
+        <div className="space-y-6">
+          {/* Informações do Lead */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide flex items-center gap-2">
+              <InformationCircleIcon className="h-4 w-4" />
+              Informações do Lead
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nome</label>
+                <p className="text-sm font-medium text-gray-900 mt-1">{item.nome_lead}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Telefone</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-sm font-medium text-gray-900">{formatPhone(item.telefone_lead)}</p>
+                  <button
+                    onClick={() => copyPhone(item.telefone_lead)}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Copiar telefone"
+                  >
+                    <DocumentDuplicateIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Informações da Mensagem */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Detalhes da Mensagem</h4>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{date}</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Horário</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{time}</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(item.status)}`}>
+                      {getStatusText(item.status)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Mensagem Enviada</label>
+                <div className="mt-1 p-3 bg-white border border-gray-200 rounded-md">
+                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{item.mensagem_enviada}</p>
+                </div>
+              </div>
+              {item.mensagem_erro && (
+                <div>
+                  <label className="text-xs font-medium text-red-500 uppercase tracking-wide">Mensagem de Erro</label>
+                  <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-sm text-red-700 whitespace-pre-wrap">{ErrorHandler.handleError(item.mensagem_erro)}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Fechar
+          </button>
+        </div>
+      </Modal>
+    );
   };
 
   return (
@@ -360,7 +467,12 @@ const PorDiaFollowUpManager: React.FC = () => {
                 {paginatedData.map((item, index) => {
                   const { date, time } = formatDateTime(item.horario);
                   return (
-                    <tr key={`${item.id_lead}-${index}`} className="hover:bg-gray-50">
+                    <tr
+                      key={`${item.id_lead}-${index}`}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => openModal(item)}
+                      title="Clique para ver detalhes completos"
+                    >
                       <td className="px-3 py-2 text-sm font-medium text-gray-900 max-w-xs">
                         <div className="truncate" title={item.nome_lead}>
                           {item.nome_lead}
@@ -371,7 +483,10 @@ const PorDiaFollowUpManager: React.FC = () => {
                           <span>{formatPhone(item.telefone_lead)}</span>
                           {item.telefone_lead && (
                             <button
-                              onClick={() => copyPhone(item.telefone_lead)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyPhone(item.telefone_lead);
+                              }}
                               className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                               title="Copiar telefone"
                             >
@@ -493,6 +608,13 @@ const PorDiaFollowUpManager: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de Detalhes */}
+      <DetailModal
+        item={selectedItem}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+      />
     </div>
   );
 };
