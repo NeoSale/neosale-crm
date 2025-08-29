@@ -14,6 +14,8 @@ import {
   SpeakerWaveIcon,
   ChatBubbleLeftRightIcon,
   LinkIcon,
+  PresentationChartBarIcon,
+  DocumentChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { APP_VERSION } from '../utils/app-version';
 import ThemeToggle from './ThemeToggle';
@@ -38,30 +40,38 @@ const navigation: MenuItem[] = [
   { name: 'Leads', href: '/leads', icon: UsersIcon },
   { name: 'Documentos', icon: DocumentTextIcon },
   { name: 'Agentes', href: '/agentes', icon: Bot },
-  { 
-    name: 'Follow Up', 
+  {
+    name: 'Follow Up',
     icon: SpeakerWaveIcon,
     children: [
+      {
+        name: 'Relatórios',
+        icon: ChartBarIcon,
+        children: [
+          { name: 'Geral', href: '/followup/relatorio/geral', icon: PresentationChartBarIcon },
+          { name: 'Por Dia', href: '/followup/relatorio/por-dia', icon: DocumentChartBarIcon },
+        ]
+      },
+      { name: 'Mensagens', href: '/followup/mensagens', icon: PaperAirplaneIcon },
       { name: 'Configurações', icon: CogIcon },
-      { name: 'Mensagens', href: '/follow-up/mensagens', icon: PaperAirplaneIcon },
     ]
   },
-  { 
-    name: 'Integrações', 
+  {
+    name: 'Integrações',
     icon: LinkIcon,
     children: [
       { name: 'WhatsApp', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
     ]
   },
-  { 
-    name: 'Relatórios', 
+  {
+    name: 'Relatórios',
     icon: ChartBarIcon,
     children: [
       { name: 'Vendas', icon: ChartBarIcon },
     ]
   },
-  { 
-    name: 'Configurações', 
+  {
+    name: 'Configurações',
     icon: CogIcon,
     children: [
       { name: 'Negócio', href: '/configuracoes/negocio', icon: CogIcon },
@@ -90,7 +100,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   // Função para carregar clientes
   const loadClientes = async () => {
     if (clientes.length > 0) return; // Já carregou
-    
+
     setLoadingClientes(true);
     try {
       const response = await clientesApi.getClientes();
@@ -131,7 +141,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   // Verificar parâmetro cliente_id na URL e carregar do localStorage
   useEffect(() => {
     const clienteIdFromUrl = searchParams.get('cliente_id');
-    
+
     if (clienteIdFromUrl) {
       // Se há cliente_id na URL, usar ele e bloquear o select
       setSelectedCliente(clienteIdFromUrl);
@@ -176,10 +186,10 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
   // Automaticamente expandir o menu que contém a página atual
   useEffect(() => {
-    const menuWithActivePage = navigation.find(item => 
+    const menuWithActivePage = navigation.find(item =>
       item.children?.some(child => pathname === child.href)
     );
-    
+
     if (menuWithActivePage && !expandedMenus.includes(menuWithActivePage.name)) {
       setExpandedMenus(prev => [...prev, menuWithActivePage.name]);
       // Remove da lista de menus fechados manualmente quando a página muda
@@ -189,7 +199,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
   const toggleMenu = (menuName: string) => {
     const isCurrentlyExpanded = expandedMenus.includes(menuName);
-    
+
     if (isCurrentlyExpanded) {
       // Se está expandido, fechar e marcar como fechado manualmente
       setExpandedMenus(prev => prev.filter(name => name !== menuName));
@@ -214,9 +224,9 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
-              <img 
-                src="/icone-azul.png" 
-                alt="NeoSale Logo" 
+              <img
+                src="/icone-azul.png"
+                alt="NeoSale Logo"
                 className="w-8 h-8"
               />
             </div>
@@ -241,10 +251,12 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            const hasActiveChild = item.children?.some(child => pathname === child.href);
+            const hasActiveChild = item.children?.some(child => 
+              pathname === child.href || child.children?.some(grandchild => pathname === grandchild.href)
+            );
             const isManuallyClosed = manuallyClosedMenus.includes(item.name);
             const isExpanded = expandedMenus.includes(item.name) || (hasActiveChild && !isManuallyClosed);
-            
+
             if (item.children) {
               return (
                 <div key={item.name}>
@@ -285,8 +297,68 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                       {item.children.map((child) => {
                         const ChildIcon = child.icon;
                         const isChildActive = pathname === child.href;
-                        
-                        if (child.href) {
+                        const hasActiveGrandchild = child.children?.some(grandchild => pathname === grandchild.href);
+                        const childIsExpanded = expandedMenus.includes(`${item.name}-${child.name}`) || hasActiveGrandchild;
+
+                        if (child.children) {
+                          return (
+                            <div key={child.name}>
+                              <button
+                                onClick={() => toggleMenu(`${item.name}-${child.name}`)}
+                                className={classNames(
+                                  hasActiveGrandchild
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                                  'group flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors'
+                                )}
+                              >
+                                <ChildIcon
+                                  className={classNames(
+                                    hasActiveGrandchild ? 'text-primary' : 'text-gray-400 group-hover:text-gray-500',
+                                    'mr-3 flex-shrink-0 h-4 w-4'
+                                  )}
+                                  aria-hidden="true"
+                                />
+                                <span className="flex-1 text-left">{child.name}</span>
+                                {childIsExpanded ? (
+                                  <ChevronUpIcon className="h-3 w-3" />
+                                ) : (
+                                  <ChevronDownIcon className="h-3 w-3" />
+                                )}
+                              </button>
+                              {childIsExpanded && (
+                                <div className="ml-6 mt-1 space-y-1">
+                                  {child.children.map((grandchild) => {
+                                    const GrandchildIcon = grandchild.icon;
+                                    const isGrandchildActive = pathname === grandchild.href;
+
+                                    return (
+                                      <a
+                                        key={grandchild.name}
+                                        href={buildUrlWithClienteId(grandchild.href!)}
+                                        className={classNames(
+                                          isGrandchildActive
+                                            ? 'bg-primary text-white'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                                          'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors'
+                                        )}
+                                      >
+                                        <GrandchildIcon
+                                          className={classNames(
+                                            isGrandchildActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-500',
+                                            'mr-3 flex-shrink-0 h-3 w-3'
+                                          )}
+                                          aria-hidden="true"
+                                        />
+                                        {grandchild.name}
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        } else if (child.href) {
                           return (
                             <a
                               key={child.name}
@@ -333,7 +405,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                 </div>
               );
             }
-            
+
             if (item.href) {
               return (
                 <a
@@ -404,20 +476,20 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                 </button>
               )}
               <h2 className="text-2xl font-semibold text-gray-900">
-                {pathname === '/' ? 'Dashboard' : 
-                 pathname === '/leads' ? 'Leads' :
-                 pathname === '/chat' ? 'Chat' :
-                 pathname === '/agentes' ? 'Agentes' :
-                 pathname === '/followup/configuracoes' ? 'Follow Up - Configurações' :
-                 pathname === '/followup/mensagens' ? 'Follow Up - Mensagens' :
-                 pathname === '/followup/agendamento' ? 'Follow Up - Agendamento' :
-                 pathname.startsWith('/followup') ? 'Follow Up' :
-                 pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
-                 pathname.startsWith('/integracoes') ? 'Integrações' :
-                 pathname === '/reports' ? 'Relatórios' :
-                 pathname === '/documents' ? 'Documentos' :
-                 pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
-                 pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
+                {pathname === '/' ? 'Dashboard' :
+                  pathname === '/leads' ? 'Leads' :
+                    pathname === '/chat' ? 'Chat' :
+                      pathname === '/agentes' ? 'Agentes' :
+                        pathname === '/followup/configuracoes' ? 'Follow Up - Configurações' :
+                          pathname === '/followup/mensagens' ? 'Follow Up - Mensagens' :
+                            pathname === '/followup/agendamento' ? 'Follow Up - Agendamento' :
+                              pathname.startsWith('/followup') ? 'Follow Up' :
+                                pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
+                                  pathname.startsWith('/integracoes') ? 'Integrações' :
+                                    pathname === '/reports' ? 'Relatórios' :
+                                      pathname === '/documents' ? 'Documentos' :
+                                        pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
+                                          pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
               </h2>
             </div>
             <div className="flex items-center gap-4">
@@ -430,13 +502,13 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                   onClick={() => setShowTooltip(!showTooltip)}
                   className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
-                  <img 
-                    src="/user-icon.svg" 
-                    alt="Usuário" 
+                  <img
+                    src="/user-icon.svg"
+                    alt="Usuário"
                     className="w-full h-full object-contain"
                   />
                 </button>
-                
+
                 {showTooltip && (
                   <div className="absolute right-0 top-10 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
                     {/* Nome do usuário */}
@@ -448,7 +520,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                         Admin
                       </div>
                     </div>
-                    
+
                     {/* Select de clientes */}
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -457,9 +529,8 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                       <select
                         value={selectedCliente}
                         onChange={(e) => handleClienteChange(e.target.value)}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${
-                          clienteFromUrl ? 'bg-gray-100 cursor-not-allowed' : ''
-                        }`}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${clienteFromUrl ? 'bg-gray-100 cursor-not-allowed' : ''
+                          }`}
                         disabled={loadingClientes || (clienteFromUrl && !window.location.hostname.includes('localhost'))}
                         title={clienteFromUrl && !window.location.hostname.includes('localhost') ? 'Cliente definido via URL - não é possível alterar' : ''}
                       >
@@ -473,7 +544,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                         ))}
                       </select>
                     </div>
-                    
+
                     {/* Versão do sistema */}
                     <div className="mb-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -483,7 +554,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                         v{APP_VERSION}
                       </div>
                     </div>
-                    
+
                     {/* Botão para fechar */}
                     <div className="flex justify-end pt-2 border-t border-gray-100">
                       <button
