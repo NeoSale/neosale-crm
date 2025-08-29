@@ -1,5 +1,4 @@
 import { toast } from 'react-hot-toast';
-import { getRuntimeConfig } from '../utils/runtime-config';
 import { getValidatedApiUrl } from '@/utils/api-config';
 import { getCurrentClienteId } from '@/utils/cliente-utils';
 

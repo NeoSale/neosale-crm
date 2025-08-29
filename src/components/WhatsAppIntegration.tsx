@@ -791,9 +791,10 @@ const WhatsAppIntegration: React.FC = () => {
                         {instance.followup ? (
                           <input
                             type="number"
-                            value={instance.qtd_envios_diarios || 50}
+                            min="0"
+                            value={instance.qtd_envios_diarios || 0}
                             onChange={(e) => {
-                              const newValue = parseInt(e.target.value) || 50;
+                              const newValue = Math.max(0, parseInt(e.target.value) || 0);
 
                               // Atualizar o estado local imediatamente para feedback visual
                               setInstances(prev => prev.map(inst =>
@@ -822,7 +823,7 @@ const WhatsAppIntegration: React.FC = () => {
                                   // Reverter o valor em caso de erro
                                   setInstances(prev => prev.map(inst =>
                                     inst.instance.instanceId === instance.instanceId
-                                      ? { ...inst, instance: { ...inst.instance, qtd_envios_diarios: instance.qtd_envios_diarios || 50 } }
+                                      ? { ...inst, instance: { ...inst.instance, qtd_envios_diarios: instance.qtd_envios_diarios || 0 } }
                                       : inst
                                   ));
                                 }
@@ -1100,14 +1101,15 @@ const WhatsAppIntegration: React.FC = () => {
                 </label>
                 <input
                   type="number"
+                  min="0"
                   value={localFormData.qtd_envios_diarios}
                   onChange={(e) => {
-                    const value = parseInt(e.target.value) || 50;
+                    const value = Math.max(0, parseInt(e.target.value) || 0);
                     setLocalFormData({ ...localFormData, qtd_envios_diarios: value });
                   }}
                   className={`w-16 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-center ${!localFormData.followup ? 'bg-gray-100 cursor-not-allowed' : ''
                     }`}
-                  placeholder="50"
+                  placeholder="0"
                   disabled={!localFormData.followup}
                 />
               </div>
