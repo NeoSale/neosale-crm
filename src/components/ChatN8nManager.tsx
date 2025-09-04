@@ -14,7 +14,7 @@ import {
   DocumentDuplicateIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
-import { chatApi, ChatCliente, ChatMessage } from '../services/chatApi-old';
+import { chatApi, ChatCliente, ChatMessage } from '../services/chatN8nApi';
 import { leadsApi, Lead } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 import { formatPhone, copyPhone } from '../utils/phone-utils';
