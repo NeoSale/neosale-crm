@@ -25,6 +25,7 @@ export interface ChatMessage {
   mensagem: string;
   status: string;
   tipo: 'human' | 'ai';
+  source: string;
   created_at: string;
 }
 
@@ -56,6 +57,7 @@ export interface SendMessageRequest {
   lead_id: string;
   mensagem: string;
   tipo: 'ai' | 'human';
+  source: string;
 }
 
 class ChatApi {

@@ -101,7 +101,6 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
     try {
       const response = await chatApi.getChats(page, 500);
-      console.log('response', response);
       if (response.success) {
         if (append) {
           setLeads(prev => [...prev, ...response.data]);
@@ -138,7 +137,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
           // Scroll para o final quando carregar mensagens pela primeira vez
           setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-          }, 100);
+          }, 300);
         }
         setHasMoreMessages(page < response.pagination.totalPages);
       }
@@ -177,6 +176,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
         lead_id: selectedLead.id,
         mensagem: contentWithLineBreaks,
         tipo: 'ai',
+        source: 'crm',
       });
 
       setMessageText('');
@@ -209,6 +209,11 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     setMessageText(''); // Limpar campo de mensagem ao selecionar conversa
     await loadMessages(lead.id);
     await loadLeadInfo(lead.id);
+    
+    // Garantir que a rolagem ocorra após selecionar um lead
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 500);
   };
 
   // Scroll infinito para leads
@@ -238,23 +243,37 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
 
   // Formatação de data
-  const formatTime = (dateString: string) => {
-    const [hours, minutes] = dateString.split('T')[1].split(':');
-    return `${hours}:${minutes}`;
+  const formatTime = (dateString: string | null) => {
+    if (!dateString) return '--:--';
+    
+    try {
+      const [hours, minutes] = dateString.split('T')[1].split(':');
+      return `${hours}:${minutes}`;
+    } catch (error) {
+      console.error('Erro ao formatar hora:', error, dateString);
+      return '--:--';
+    }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString.replace('+00:00', ''));
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '--';
+    
+    try {
+      const date = new Date(dateString.replace('+00:00', ''));
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) {
-      return 'Hoje';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Ontem';
-    } else {
-      return date.toLocaleDateString('pt-BR');
+      if (date.toDateString() === today.toDateString()) {
+        return 'Hoje';
+      } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'Ontem';
+      } else {
+        return date.toLocaleDateString('pt-BR');
+      }
+    } catch (error) {
+      console.error('Erro ao formatar data:', error, dateString);
+      return '--';
     }
   };
 
@@ -492,6 +511,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         </div>
                         <p className={`text-xs mt-2 ${message.tipo === 'human' ? 'text-left text-gray-600' : 'text-right text-gray-100'}`}>
                           {formatDate(message.created_at)} - {formatTime(message.created_at)}
+                          {message.source && <span className="ml-2">| {message.source}</span>}
                         </p>
                       </div>
                     </div>
