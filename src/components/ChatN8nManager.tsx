@@ -14,7 +14,7 @@ import {
   DocumentDuplicateIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
-import { chatApi, Chat, ChatMessage } from '../services/chatApi';
+import { chatApi, ChatCliente, ChatMessage } from '../services/chatApi-old';
 import { leadsApi, Lead } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 import { formatPhone, copyPhone } from '../utils/phone-utils';
@@ -25,26 +25,26 @@ interface ChatManagerProps {
   initialLeadId?: string | null;
 }
 
-const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
+const ChatManagerOld: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   // Função para formatar texto com quebras de linha e links clicáveis
   const formatMessageContent = (content: string, messageType: 'human' | 'ai') => {
     if (!content) return 'Mensagem sem conteúdo';
-
+    
     // Regex para detectar URLs
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-
+    
     // Dividir o texto por quebras de linha
     const lines = content.split(/\\n|\n/);
-
+    
     // Definir classes de cor baseadas no tipo de mensagem
-    const linkClasses = messageType === 'human'
+    const linkClasses = messageType === 'human' 
       ? 'text-blue-500 underline hover:no-underline hover:text-blue-700'
       : 'text-white underline hover:no-underline hover:text-gray-200';
-
+    
     return lines.map((line, lineIndex) => {
       // Dividir cada linha por URLs
       const parts = line.split(urlRegex);
-
+      
       return (
         <React.Fragment key={lineIndex}>
           {parts.map((part, partIndex) => {
@@ -52,14 +52,14 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             if (urlRegex.test(part)) {
               return (
                 <a
-                  key={partIndex}
-                  href={part}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={linkClasses}
-                >
-                  {part}
-                </a>
+                   key={partIndex}
+                   href={part}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className={linkClasses}
+                 >
+                   {part}
+                 </a>
               );
             }
             return part;
@@ -69,16 +69,16 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       );
     });
   };
-  const [leads, setLeads] = useState<Chat[]>([]);
-  const [selectedLead, setSelectedLead] = useState<Chat | null>(null);
+  const [clientes, setClientes] = useState<ChatCliente[]>([]);
+  const [selectedCliente, setSelectedCliente] = useState<ChatCliente | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [loadingMoreLeads, setLoadingMoreLeads] = useState(false);
+  const [loadingMoreClientes, setLoadingMoreClientes] = useState(false);
   const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [messagesPage, setMessagesPage] = useState(1);
-  const [hasMoreLeads, setHasMoreLeads] = useState(true);
+  const [hasMoreClientes, setHasMoreClientes] = useState(true);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [showLeadInfo, setShowLeadInfo] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -87,40 +87,39 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const leadsListRef = useRef<HTMLDivElement>(null);
+  const clientesListRef = useRef<HTMLDivElement>(null);
   const messagesListRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Carregar leads
-  const loadLeads = async (page: number = 1, append: boolean = false) => {
+  // Carregar clientes
+  const loadClientes = async (page: number = 1, append: boolean = false) => {
     if (page === 1) {
       setLoading(true);
     } else {
-      setLoadingMoreLeads(true);
+      setLoadingMoreClientes(true);
     }
 
     try {
-      const response = await chatApi.getChats(page, 500);
-      console.log('response', response);
+      const response = await chatApi.getClientes(page, 500);
       if (response.success) {
         if (append) {
-          setLeads(prev => [...prev, ...response.data]);
+          setClientes(prev => [...prev, ...response.data]);
         } else {
-          setLeads(response.data);
+          setClientes(response.data);
         }
-        setHasMoreLeads(page < response.pagination.totalPages);
+        setHasMoreClientes(page < response.pagination.totalPages);
       }
     } catch (error) {
-      console.error('Erro ao carregar leads:', error);
-      toast.error('Erro ao carregar leads');
+      console.error('Erro ao carregar clientes:', error);
+      toast.error('Erro ao carregar clientes');
     } finally {
       setLoading(false);
-      setLoadingMoreLeads(false);
+      setLoadingMoreClientes(false);
     }
   };
 
   // Carregar mensagens
-  const loadMessages = async (id: string, page: number = 1, append: boolean = false) => {
+  const loadMessages = async (sessionId: string, page: number = 1, append: boolean = false) => {
     if (page === 1) {
       setLoadingMessages(true);
     } else {
@@ -128,7 +127,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
 
     try {
-      const response = await chatApi.getMessages(id, page, 50);
+      const response = await chatApi.getMessages(sessionId, page, 50);
       if (response.success) {
         if (append) {
           // Adicionar no início da lista (mensagens mais antigas)
@@ -166,22 +165,28 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
   // Enviar mensagem
   const sendMessage = async () => {
-    if (!messageText.trim() || !selectedLead || sending) return;
+    if (!messageText.trim() || !selectedCliente || sending) return;
 
     setSending(true);
     try {
       // Converter quebras de linha para \n
       const contentWithLineBreaks = messageText.trim().replace(/\n/g, '\n');
-
+      
       await chatApi.sendMessage({
-        lead_id: selectedLead.id,
-        mensagem: contentWithLineBreaks,
-        tipo: 'ai',
+        session_id: selectedCliente.session_id,
+        message: {
+          type: 'ai',
+          content: contentWithLineBreaks,
+          tool_calls: [],
+          additional_kwargs: {},
+          response_metadata: {},
+          invalid_tool_calls: [],
+        },
       });
 
       setMessageText('');
       // Recarregar mensagens
-      await loadMessages(selectedLead.id);
+      await loadMessages(selectedCliente.session_id);
       toast.success('Mensagem enviada com sucesso!');
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -200,26 +205,26 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     // Shift + Enter permite quebra de linha naturalmente
   };
 
-  // Selecionar lead
-  const selectLead = async (lead: Chat) => {
-    setSelectedLead(lead);
+  // Selecionar cliente
+  const selectCliente = async (cliente: ChatCliente) => {
+    setSelectedCliente(cliente);
     setMessages([]);
     setMessagesPage(1);
     setHasMoreMessages(true);
     setMessageText(''); // Limpar campo de mensagem ao selecionar conversa
-    await loadMessages(lead.id);
-    await loadLeadInfo(lead.id);
+    await loadMessages(cliente.session_id);
+    await loadLeadInfo(cliente.id);
   };
 
-  // Scroll infinito para leads
-  const handleLeadsScroll = () => {
-    if (!leadsListRef.current || loadingMoreLeads || !hasMoreLeads) return;
+  // Scroll infinito para clientes
+  const handleClientesScroll = () => {
+    if (!clientesListRef.current || loadingMoreClientes || !hasMoreClientes) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = leadsListRef.current;
+    const { scrollTop, scrollHeight, clientHeight } = clientesListRef.current;
     if (scrollTop + clientHeight >= scrollHeight - 5) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
-      loadLeads(nextPage, true);
+      loadClientes(nextPage, true);
     }
   };
 
@@ -231,7 +236,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     if (scrollTop <= 5) {
       const nextPage = messagesPage + 1;
       setMessagesPage(nextPage);
-      loadMessages(selectedLead!.id, nextPage, true);
+      loadMessages(selectedCliente!.session_id, nextPage, true);
     }
   };
 
@@ -244,7 +249,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString.replace('+00:00', ''));
+    const date = new Date(dateString);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -258,30 +263,30 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
   };
 
-  // Carregar leads iniciais
+  // Carregar clientes iniciais
   useEffect(() => {
-    loadLeads();
+    loadClientes();
   }, []);
 
-  // Processar initialLeadId para selecionar automaticamente o lead
+  // Processar initialLeadId para selecionar automaticamente o cliente
   useEffect(() => {
-    if (initialLeadId && leads.length > 0) {
-      // Buscar o lead correspondente ao leadId
-      const leadCorrespondente = leads.find(lead => lead.id === initialLeadId);
-      if (leadCorrespondente) {
-        selectLead(leadCorrespondente);
+    if (initialLeadId && clientes.length > 0) {
+      // Buscar o cliente correspondente ao leadId
+      const clienteCorrespondente = clientes.find(cliente => cliente.id === initialLeadId);
+      if (clienteCorrespondente) {
+        selectCliente(clienteCorrespondente);
       }
     }
-  }, [initialLeadId, leads]);
+  }, [initialLeadId, clientes]);
 
   return (
     <div className="flex bg-gray-50" style={{ height: 'calc(87vh)' }}>
-      {/* Lista de Leads */}
+      {/* Lista de Clientes */}
       <div className="w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col rounded-l-xl overflow-hidden">
         {/* Header da lista */}
         <div className="p-6 shadow-lg">
           <h2 className="text-xl font-bold">Conversas</h2>
-
+          
           {/* Campo de busca */}
           <div className="relative mt-4">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -295,79 +300,79 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
           </div>
         </div>
 
-        {/* Lista de leads */}
+        {/* Lista de clientes */}
         <div
-          ref={leadsListRef}
+          ref={clientesListRef}
           className="flex-1 overflow-y-auto"
-          onScroll={handleLeadsScroll}
+          onScroll={handleClientesScroll}
         >
-          {loading && leads.length === 0 ? (
+          {loading && clientes.length === 0 ? (
             <div className="flex justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
             <>
               {(() => {
-                // Filtrar leads baseado no termo de busca
-                const filteredLeads = searchTerm.trim() === ''
-                  ? leads
-                  : leads.filter(lead => {
-                    const searchLower = searchTerm.toLowerCase();
-                    return (
-                      lead.nome.toLowerCase().includes(searchLower) ||
-                      (lead.telefone && lead.telefone.includes(searchTerm)) ||
-                      (lead.ultima_mensagem && typeof lead.ultima_mensagem === 'string' && lead.ultima_mensagem.toLowerCase().includes(searchLower))
-                    );
-                  });
-
-                return filteredLeads.map((lead) => (
-                  <div
-                    key={lead.id}
-                    onClick={() => selectLead(lead)}
-                    className={`p-4 mx-2 my-1 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${selectedLead?.id === lead.id
+                // Filtrar clientes baseado no termo de busca
+                const filteredClientes = searchTerm.trim() === '' 
+                  ? clientes 
+                  : clientes.filter(cliente => {
+                      const searchLower = searchTerm.toLowerCase();
+                      return (
+                        cliente.nome.toLowerCase().includes(searchLower) ||
+                        (cliente.telefone && cliente.telefone.includes(searchTerm)) ||
+                        (cliente.ultima_mensagem && typeof cliente.ultima_mensagem.content === 'string' && cliente.ultima_mensagem.content.toLowerCase().includes(searchLower))
+                      );
+                    });
+                
+                return filteredClientes.map((cliente) => (
+                <div
+                  key={cliente.id}
+                  onClick={() => selectCliente(cliente)}
+                  className={`p-4 mx-2 my-1 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${selectedCliente?.id === cliente.id
                       ? 'bg-gray-50 border-l-4 border-[#403CCF] shadow-lg'
                       : 'bg-white hover:bg-gray-50 border border-gray-100'
-                      }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden">
-                        {lead.profile_picture_url ? (
-                          <img
-                            src={lead.profile_picture_url}
-                            alt={`Foto de ${lead.nome}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                        ) : null}
-                        <UserIcon className={`w-6 h-6 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h3 className="text-sm font-semibold text-gray-900 truncate">
-                            {typeof lead.nome === 'string' ? lead.nome : JSON.stringify(lead.nome)}
-                          </h3>
-                          <div className="flex items-center space-x-1 text-xs text-gray-600 ml-2">
-                            <span>{formatDate(lead.data_ultima_mensagem)}</span>
-                            <span>-</span>
-                            <span>{formatTime(lead.data_ultima_mensagem)}</span>
-                          </div>
+                    }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                      {cliente.profile_picture_url ? (
+                        <img 
+                          src={cliente.profile_picture_url} 
+                          alt={`Foto de ${cliente.nome}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <UserIcon className={`w-6 h-6 text-white ${cliente.profile_picture_url ? 'hidden' : ''}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                          {typeof cliente.nome === 'string' ? cliente.nome : JSON.stringify(cliente.nome)}
+                        </h3>
+                        <div className="flex items-center space-x-1 text-xs text-gray-600 ml-2">
+                          <span>{formatDate(cliente.data_ultima_mensagem)}</span>
+                          <span>-</span>
+                          <span>{formatTime(cliente.data_ultima_mensagem)}</span>
                         </div>
-                        <p className="text-sm text-gray-500 truncate mt-1">
-                          {lead.ultima_mensagem && lead.ultima_mensagem ?
-                            (typeof lead.ultima_mensagem === 'string' ? lead.ultima_mensagem : JSON.stringify(lead.ultima_mensagem))
-                            : 'Sem mensagens'
-                          }
-                        </p>
                       </div>
+                      <p className="text-sm text-gray-500 truncate mt-1">
+                        {cliente.ultima_mensagem && cliente.ultima_mensagem.content ? 
+                          (typeof cliente.ultima_mensagem.content === 'string' ? cliente.ultima_mensagem.content : JSON.stringify(cliente.ultima_mensagem.content))
+                          : 'Sem mensagens'
+                        }
+                      </p>
                     </div>
                   </div>
-                ));
+                </div>
+              ));
               })()}
 
-              {loadingMoreLeads && (
+              {loadingMoreClientes && (
                 <div className="flex justify-center items-center p-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                 </div>
@@ -379,16 +384,16 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
       {/* Área de Chat */}
       <div className="flex-1 flex flex-col border-b border-gray-200 shadow">
-        {selectedLead ? (
+        {selectedCliente ? (
           <>
             {/* Header do chat */}
             <div className="p-6 bg-white border-b border-gray-200 flex items-center justify-between shadow-sm">
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 bg-[#403CCF] rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-                  {selectedLead.profile_picture_url ? (
-                    <img
-                      src={selectedLead.profile_picture_url}
-                      alt={`Foto de ${selectedLead.nome}`}
+                  {selectedCliente.profile_picture_url ? (
+                    <img 
+                      src={selectedCliente.profile_picture_url} 
+                      alt={`Foto de ${selectedCliente.nome}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
@@ -396,10 +401,10 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       }}
                     />
                   ) : null}
-                  <UserIcon className={`w-6 h-6 text-white ${selectedLead.profile_picture_url ? 'hidden' : ''}`} />
+                  <UserIcon className={`w-6 h-6 text-white ${selectedCliente.profile_picture_url ? 'hidden' : ''}`} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">{typeof selectedLead.nome === 'string' ? selectedLead.nome : JSON.stringify(selectedLead.nome)}</h3>
+                  <h3 className="text-xl font-bold text-gray-900">{typeof selectedCliente.nome === 'string' ? selectedCliente.nome : JSON.stringify(selectedCliente.nome)}</h3>
                   {leadInfo?.telefone ? (
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-gray-500">{formatPhone(leadInfo.telefone || '')}</span>
@@ -417,7 +422,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                {/* Toggle Agente AI */}
+                {/* Toggle AI Agent */}
                 <div className="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-xl">
                   <span className="text-sm">Agente</span>
                   <button
@@ -425,26 +430,26 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       if (!leadInfo?.id) return;
                       try {
                         const newValue = !leadInfo.ai_habilitada;
-                        const lead_id = getClienteId();
-                        const response = await leadsApi.updateAiHabilitada(leadInfo.id, newValue, lead_id);
+                        const cliente_id = getClienteId();
+                        const response = await leadsApi.updateAiHabilitada(leadInfo.id, newValue, cliente_id);
                         if (response.success) {
                           setLeadInfo({ ...leadInfo, ai_habilitada: newValue });
-                          toast.success(`Agente AI ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
+                          toast.success(`AI Agent ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
                         }
                       } catch (error) {
-                        console.error('Erro ao atualizar Agente AI:', error);
-                        toast.error('Erro ao atualizar Agente AI');
+                        console.error('Erro ao atualizar AI Agent:', error);
+                        toast.error('Erro ao atualizar AI Agent');
                       }
                     }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 shadow-md ${leadInfo?.ai_habilitada ? 'bg-[#403CCF]' : 'bg-gray-300'}`}
-                    title={`Agente AI ${leadInfo?.ai_habilitada ? 'ativo' : 'inativo'}`}
+                    title={`AI Agent ${leadInfo?.ai_habilitada ? 'ativo' : 'inativo'}`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${leadInfo?.ai_habilitada ? 'translate-x-6' : 'translate-x-1'}`}
                     />
                   </button>
                 </div>
-
+                
                 <button
                   onClick={() => setShowLeadInfo(true)}
                   className="p-3 text-[#403CCF] hover:text-white hover:bg-[#403CCF] bg-gray-50 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
@@ -476,21 +481,21 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   {messages.slice().reverse().map((message) => (
                     <div
                       key={message.id}
-                      className={`flex ${message.tipo === 'human' ? 'justify-start' : 'justify-end'} mb-4`}
+                      className={`flex ${message.message?.type === 'human' ? 'justify-start' : 'justify-end'} mb-4`}
                     >
                       <div
-                        className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-md ${message.tipo === 'human'
-                          ? 'bg-white border border-gray-200'
-                          : 'bg-[#403CCF]'
+                        className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-md ${message.message?.type === 'human'
+                            ? 'bg-white border border-gray-200'
+                            : 'bg-[#403CCF]'
                           }`}
                       >
-                        <div className={`text-sm leading-relaxed ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
-                          {message.mensagem && message.mensagem ?
-                            (typeof message.mensagem === 'string' ? formatMessageContent(message.mensagem, message.tipo || 'ai') : JSON.stringify(message.mensagem))
+                        <div className={`text-sm leading-relaxed ${message.message?.type === 'human' ? 'text-gray-800' : 'text-white'}`}>
+                          {message.message && message.message.content ? 
+                            (typeof message.message.content === 'string' ? formatMessageContent(message.message.content, message.message.type || 'ai') : JSON.stringify(message.message.content))
                             : 'Mensagem sem conteúdo'
                           }
                         </div>
-                        <p className={`text-xs mt-2 ${message.tipo === 'human' ? 'text-left text-gray-600' : 'text-right text-gray-100'}`}>
+                        <p className={`text-xs mt-2 ${message.message?.type === 'human' ? 'text-left text-gray-600' : 'text-right text-gray-100'}`}>
                           {formatDate(message.created_at)} - {formatTime(message.created_at)}
                         </p>
                       </div>
@@ -563,14 +568,14 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
               <>
                 {/* Avatar e nome */}
                 <div className="text-center">
-                  <div
+                  <div 
                     className={`w-16 h-16 bg-[#403CCF] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden ${leadInfo.profile_picture_url ? 'cursor-pointer hover:shadow-xl transition-shadow' : ''}`}
                     onClick={() => leadInfo.profile_picture_url && setShowPhotoModal(true)}
                   >
                     {leadInfo.profile_picture_url ? (
-                      <img
-                        src={leadInfo.profile_picture_url}
-                        alt="Foto do lead"
+                      <img 
+                        src={leadInfo.profile_picture_url} 
+                        alt="Foto do lead" 
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
@@ -581,10 +586,10 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                     <UserIcon className={`w-8 h-8 text-white ${leadInfo.profile_picture_url ? 'hidden' : ''}`} />
                   </div>
                   <h4 className="text-lg font-bold text-gray-900 truncate">
-                    {typeof leadInfo.nome === 'string'
-                      ? leadInfo.nome
-                      : typeof leadInfo.nome === 'object' && leadInfo.nome && 'nome' in leadInfo.nome
-                        ? (leadInfo.nome as any).nome
+                    {typeof leadInfo.nome === 'string' 
+                      ? leadInfo.nome 
+                      : typeof leadInfo.nome === 'object' && leadInfo.nome && 'nome' in leadInfo.nome 
+                        ? (leadInfo.nome as any).nome 
                         : 'Nome não disponível'
                     }
                   </h4>
@@ -601,13 +606,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-gray-600">Telefone</p>
                         <p className="text-sm font-semibold text-gray-900 truncate">
-                          {typeof leadInfo.telefone === 'string'
-                            ? leadInfo.telefone
-                            : typeof leadInfo.telefone === 'object' && leadInfo.telefone && 'nome' in leadInfo.telefone
-                              ? (leadInfo.telefone as any).nome
-                              : 'N/A'
-                          }
-                        </p>
+                           {typeof leadInfo.telefone === 'string' 
+                             ? leadInfo.telefone 
+                             : typeof leadInfo.telefone === 'object' && leadInfo.telefone && 'nome' in leadInfo.telefone 
+                               ? (leadInfo.telefone as any).nome 
+                               : 'N/A'
+                           }
+                         </p>
                       </div>
                     </div>
                   </div>
@@ -620,13 +625,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-gray-600">Email</p>
                         <p className="text-sm font-semibold text-gray-900 truncate">
-                          {typeof leadInfo.email === 'string'
-                            ? leadInfo.email
-                            : typeof leadInfo.email === 'object' && leadInfo.email && 'nome' in leadInfo.email
-                              ? (leadInfo.email as any).nome
-                              : 'N/A'
-                          }
-                        </p>
+                           {typeof leadInfo.email === 'string' 
+                             ? leadInfo.email 
+                             : typeof leadInfo.email === 'object' && leadInfo.email && 'nome' in leadInfo.email 
+                               ? (leadInfo.email as any).nome 
+                               : 'N/A'
+                           }
+                         </p>
                       </div>
                     </div>
                   </div>
@@ -653,24 +658,24 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-gray-600">Origem</p>
                         <p className="text-sm font-semibold text-gray-900 truncate">
-                          {typeof leadInfo.origem === 'string'
-                            ? leadInfo.origem
-                            : typeof leadInfo.origem === 'object' && leadInfo.origem && 'nome' in leadInfo.origem
-                              ? (leadInfo.origem as any).nome
-                              : 'N/A'
-                          }
-                        </p>
+                           {typeof leadInfo.origem === 'string' 
+                             ? leadInfo.origem 
+                             : typeof leadInfo.origem === 'object' && leadInfo.origem && 'nome' in leadInfo.origem 
+                               ? (leadInfo.origem as any).nome 
+                               : 'N/A'
+                           }
+                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Status Agente AI compacto */}
+                {/* Status AI Agent compacto */}
                 <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <span className="text-sm">🤖</span>
-                      <span className="text-sm font-semibold text-gray-900">Agente AI</span>
+                      <span className="text-sm font-semibold text-gray-900">AI Agent</span>
                     </div>
                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${leadInfo?.ai_habilitada ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {leadInfo?.ai_habilitada ? 'Ativo' : 'Inativo'}
@@ -710,4 +715,4 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   );
 };
 
-export default ChatManager;
+export default ChatManagerOld;

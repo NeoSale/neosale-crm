@@ -10,28 +10,40 @@ try {
   API_BASE_URL = '';
 }
 
-export interface Chat {
+export interface ChatCliente {
   id: string;
+  session_id: string;
   nome: string;
-  telefone: string;
+  telefone?: string;
   profile_picture_url?: string;
-  ultima_mensagem: string;
+  ultima_mensagem: {
+    type: 'human' | 'ai';
+    content: string;
+    additional_kwargs: any;
+    response_metadata: any;
+  };
   data_ultima_mensagem: string;
 }
 
 export interface ChatMessage {
-  id: string;
-  lead_id: string;
-  mensagem: string;
-  status: string;
-  tipo: 'human' | 'ai';
+  id: number;
+  session_id: string;
+  message: {
+    type: 'human' | 'ai';
+    content: string;
+    tool_calls: any[];
+    additional_kwargs: any;
+    response_metadata: any;
+    invalid_tool_calls: any[];
+  };
   created_at: string;
+  updated_at: string;
 }
 
-export interface ChatResponse {
+export interface ChatClientesResponse {
   success: boolean;
   message: string;
-  data: Chat[];
+  data: ChatCliente[];
   pagination: {
     total: number;
     page: number;
@@ -53,9 +65,15 @@ export interface ChatMessagesResponse {
 }
 
 export interface SendMessageRequest {
-  lead_id: string;
-  mensagem: string;
-  tipo: 'ai' | 'human';
+  session_id: string;
+  message: {
+    type: 'ai';
+    content: string;
+    tool_calls: any[];
+    additional_kwargs: any;
+    response_metadata: any;
+    invalid_tool_calls: any[];
+  };
 }
 
 class ChatApi {
@@ -67,8 +85,8 @@ class ChatApi {
     };
   }
 
-  async getChats(page: number, limit: number): Promise<ChatResponse> {
-    const response = await fetch(`${API_BASE_URL}/chat?page=${page}&limit=${limit}`, {
+  async getClientes(page: number = 1, limit: number = 50): Promise<ChatClientesResponse> {
+    const response = await fetch(`${API_BASE_URL}/chat/cliente?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: this.getHeaders(),
     });
@@ -80,8 +98,8 @@ class ChatApi {
     return response.json();
   }
 
-  async getMessages(id: string, page: number = 1, limit: number = 50): Promise<ChatMessagesResponse> {
-    const response = await fetch(`${API_BASE_URL}/chat/lead/${id}?page=${page}&limit=${limit}`, {
+  async getMessages(sessionId: string, page: number = 1, limit: number = 50): Promise<ChatMessagesResponse> {
+    const response = await fetch(`${API_BASE_URL}/chat/session/${sessionId}?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: this.getHeaders(),
     });

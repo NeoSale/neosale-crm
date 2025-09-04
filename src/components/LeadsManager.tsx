@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Users, Database, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2 } from 'lucide-react';
-import { ChatBubbleLeftRightIcon, UserIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -45,6 +45,8 @@ const LeadsManager: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState<boolean>(false);
+  const [showPhotoModal, setShowPhotoModal] = useState<boolean>(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   // Estado para controlar se estamos no cliente
   const [isClient, setIsClient] = React.useState(false);
@@ -74,6 +76,10 @@ const LeadsManager: React.FC = () => {
         }
         if (showBulkDeleteModal) {
           setShowBulkDeleteModal(false);
+        }
+        if (showPhotoModal) {
+          setShowPhotoModal(false);
+          setSelectedPhoto(null);
         }
       }
     };
@@ -713,7 +719,15 @@ const LeadsManager: React.FC = () => {
                             // Coluna Picture com profile_picture_url ou UserIcon
                             if (header === 'picture') {
                               return (
-                                <div className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                                <div 
+                                  className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
+                                  onClick={() => {
+                                    if (lead.profile_picture_url) {
+                                      setSelectedPhoto(lead.profile_picture_url);
+                                      setShowPhotoModal(true);
+                                    }
+                                  }}
+                                >
                                   {lead.profile_picture_url ? (
                                     <img 
                                       src={lead.profile_picture_url} 
@@ -1530,6 +1544,26 @@ const LeadsManager: React.FC = () => {
                 Fechar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal da foto ampliada */}
+      {showPhotoModal && selectedPhoto && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setShowPhotoModal(false)}>
+          <div className="relative max-w-4xl max-h-4xl p-4">
+            <button
+              onClick={() => setShowPhotoModal(false)}
+              className="absolute top-2 right-2 text-white hover:text-gray-300 z-10"
+            >
+              <XMarkIcon className="w-8 h-8" />
+            </button>
+            <img
+              src={selectedPhoto}
+              alt="Foto do lead"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
       )}
