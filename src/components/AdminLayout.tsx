@@ -41,6 +41,13 @@ const navigation: MenuItem[] = [
   { name: 'Documentos', icon: DocumentTextIcon },
   { name: 'Agentes', href: '/agentes', icon: Bot },
   {
+    name: 'Integrações',
+    icon: LinkIcon,
+    children: [
+      { name: 'WhatsApp', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
+    ]
+  },
+  {
     name: 'Follow Up',
     icon: SpeakerWaveIcon,
     children: [
@@ -56,20 +63,13 @@ const navigation: MenuItem[] = [
       { name: 'Configurações', icon: CogIcon },
     ]
   },
-  {
-    name: 'Integrações',
-    icon: LinkIcon,
-    children: [
-      { name: 'WhatsApp', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
-    ]
-  },
-  {
-    name: 'Relatórios',
-    icon: ChartBarIcon,
-    children: [
-      { name: 'Vendas', icon: ChartBarIcon },
-    ]
-  },
+  // {
+  //   name: 'Relatórios',
+  //   icon: ChartBarIcon,
+  //   children: [
+  //     { name: 'Vendas', icon: ChartBarIcon },
+  //   ]
+  // },
   {
     name: 'Configurações',
     icon: CogIcon,

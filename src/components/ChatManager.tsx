@@ -13,11 +13,14 @@ import {
   TagIcon,
   DocumentDuplicateIcon,
   MagnifyingGlassIcon,
+  ExclamationCircleIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { chatApi, Chat, ChatMessage } from '../services/chatApi';
 import { leadsApi, Lead } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 import { formatPhone, copyPhone } from '../utils/phone-utils';
+import { ErrorHandler } from '../utils/error-handler';
 
 
 
@@ -209,7 +212,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     setMessageText(''); // Limpar campo de mensagem ao selecionar conversa
     await loadMessages(lead.id);
     await loadLeadInfo(lead.id);
-    
+
     // Garantir que a rolagem ocorra após selecionar um lead
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -245,7 +248,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   // Formatação de data
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '--:--';
-    
+
     try {
       const [hours, minutes] = dateString.split('T')[1].split(':');
       return `${hours}:${minutes}`;
@@ -257,7 +260,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '--';
-    
+
     try {
       const date = new Date(dateString.replace('+00:00', ''));
       const today = new Date();
@@ -299,7 +302,20 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       <div className="w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col rounded-l-xl overflow-hidden">
         {/* Header da lista */}
         <div className="p-6 shadow-lg">
-          <h2 className="text-xl font-bold">Conversas</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Conversas</h2>
+            <button
+              onClick={() => {
+                setCurrentPage(1);
+                loadLeads(1, false);
+              }}
+              className="p-2 text-[#403CCF] hover:text-white hover:bg-[#403CCF] bg-gray-50 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+              title="Atualizar conversas"
+              disabled={loading}
+            >
+              <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
 
           {/* Campo de busca */}
           <div className="relative mt-4">
@@ -320,7 +336,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
           className="flex-1 overflow-y-auto"
           onScroll={handleLeadsScroll}
         >
-          {loading && leads.length === 0 ? (
+          {loading ? (
             <div className="flex justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
@@ -465,6 +481,18 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 </div>
 
                 <button
+                  onClick={() => {
+                    setMessagesPage(1);
+                    loadMessages(selectedLead.id, 1, false);
+                  }}
+                  className="p-3 text-[#403CCF] hover:text-white hover:bg-[#403CCF] bg-gray-50 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                  title="Atualizar mensagens"
+                  disabled={loadingMessages}
+                >
+                  <ArrowPathIcon className={`w-6 h-6 ${loadingMessages ? 'animate-spin' : ''}`} />
+                </button>
+                
+                <button
                   onClick={() => setShowLeadInfo(true)}
                   className="p-3 text-[#403CCF] hover:text-white hover:bg-[#403CCF] bg-gray-50 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
                   title="Ver informações do lead"
@@ -486,22 +514,30 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 </div>
               )}
 
-              {loadingMessages && messages.length === 0 ? (
+              {loadingMessages ? (
                 <div className="flex justify-center items-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               ) : (
                 <>
-                  {messages.slice().reverse().map((message) => (
+                  {messages.slice().reverse().map((message, index) => (
                     <div
-                      key={message.id}
+                      key={`${message.id}-${index}`}
                       className={`flex ${message.tipo === 'human' ? 'justify-start' : 'justify-end'} mb-4`}
                     >
+                      {(message.status === 'erro' && message.erro && message.tipo === 'ai') && (
+                        <div
+                          className={`relative group flex items-center m-1`}
+                          title={ErrorHandler.handleError(message.erro)}
+                        >
+                          <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+                        </div>
+                      )}
                       <div
-                        className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-md ${message.tipo === 'human'
-                          ? 'bg-white border border-gray-200'
-                          : 'bg-[#403CCF]'
-                          }`}
+                        className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-md 
+                          ${message.tipo === 'human' ? 'bg-white border border-gray-200' : 'bg-[#403CCF]'}
+                          ${message.status === 'erro' && message.erro ? 'opacity-75' : ''}
+                          `}
                       >
                         <div className={`text-sm leading-relaxed ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
                           {message.mensagem && message.mensagem ?
@@ -509,11 +545,21 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                             : 'Mensagem sem conteúdo'
                           }
                         </div>
-                        <p className={`text-xs mt-2 ${message.tipo === 'human' ? 'text-left text-gray-600' : 'text-right text-gray-100'}`}>
-                          {formatDate(message.created_at)} - {formatTime(message.created_at)}
-                          {message.source && <span className="ml-2">| {message.source}</span>}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className={`text-xs mt-2 ${message.tipo === 'human' ? 'text-left text-gray-600' : 'text-right text-gray-100'}`}>
+                            {formatDate(message.created_at)} - {formatTime(message.created_at)}
+                            {message.source && <span> - {message.source}</span>}
+                          </p>
+                        </div>
                       </div>
+                      {(message.status === 'erro' && message.erro && message.tipo === 'human') && (
+                        <div
+                          className={`relative group flex items-center m-1`}
+                          title={ErrorHandler.handleError(message.erro)}
+                        >
+                          <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+                        </div>
+                      )}
                     </div>
                   ))}
                   <div ref={messagesEndRef} />

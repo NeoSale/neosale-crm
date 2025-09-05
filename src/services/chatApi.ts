@@ -27,6 +27,7 @@ export interface ChatMessage {
   tipo: 'human' | 'ai';
   source: string;
   created_at: string;
+  erro?: string;
 }
 
 export interface ChatResponse {
