@@ -45,6 +45,7 @@ const navigation: MenuItem[] = [
     icon: LinkIcon,
     children: [
       { name: 'WhatsApp', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
+      { name: 'WhatsApp V2', href: '/integracoes/whatsapp-v2', icon: PaperAirplaneIcon },
     ]
   },
   {
