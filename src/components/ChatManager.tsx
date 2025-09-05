@@ -103,7 +103,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
 
     try {
-      const response = await chatApi.getChats(page, 500);
+      const response = await chatApi.getChats(page, 50);
       if (response.success) {
         if (append) {
           setLeads(prev => [...prev, ...response.data]);
