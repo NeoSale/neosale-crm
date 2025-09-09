@@ -97,21 +97,21 @@ class TipoAgentesApiService {
 
   // Buscar todos os tipos de agentes
   async getTipoAgentes(): Promise<ApiResponse<TipoAgente[]>> {
-    return this.request<TipoAgente[]>('/tipo-agentes', {
+    return this.request<TipoAgente[]>('/tipos-agente', {
       method: 'GET',
     });
   }
 
   // Buscar tipo de agente por ID
   async getTipoAgenteById(id: string): Promise<ApiResponse<TipoAgente>> {
-    return this.request<TipoAgente>(`/tipo-agentes/${id}`, {
+    return this.request<TipoAgente>(`/tipos-agente/${id}`, {
       method: 'GET',
     });
   }
 
   // Criar novo tipo de agente
   async createTipoAgente(tipoAgente: Omit<TipoAgente, 'id'>): Promise<ApiResponse<TipoAgente>> {
-    return this.request<TipoAgente>('/tipo-agentes', {
+    return this.request<TipoAgente>('/tipos-agente', {
       method: 'POST',
       body: JSON.stringify(tipoAgente),
     }, {
@@ -122,7 +122,7 @@ class TipoAgentesApiService {
 
   // Atualizar tipo de agente
   async updateTipoAgente(id: string, tipoAgente: Partial<TipoAgente>): Promise<ApiResponse<TipoAgente>> {
-    return this.request<TipoAgente>(`/tipo-agentes/${id}`, {
+    return this.request<TipoAgente>(`/tipos-agente/${id}`, {
       method: 'PUT',
       body: JSON.stringify(tipoAgente),
     }, {
@@ -133,7 +133,7 @@ class TipoAgentesApiService {
 
   // Excluir tipo de agente
   async deleteTipoAgente(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/tipo-agentes/${id}`, {
+    return this.request<void>(`/tipos-agente/${id}`, {
       method: 'DELETE',
     }, {
       showSuccess: true,
@@ -143,7 +143,7 @@ class TipoAgentesApiService {
 
   // Ativar/Inativar tipo de agente
   async toggleTipoAgenteAtivo(id: string, ativo: boolean): Promise<ApiResponse<TipoAgente>> {
-    return this.request<TipoAgente>(`/tipo-agentes/${id}`, {
+    return this.request<TipoAgente>(`/tipos-agente/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ ativo }),
     }, {
