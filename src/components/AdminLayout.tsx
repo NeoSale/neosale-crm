@@ -44,8 +44,8 @@ const navigation: MenuItem[] = [
     name: 'Integrações',
     icon: LinkIcon,
     children: [
-      { name: 'WhatsApp', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
-      { name: 'WhatsApp V2', href: '/integracoes/whatsapp-v2', icon: PaperAirplaneIcon },
+      // { name: 'WhatsApp V1', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
+      { name: 'WhatsApp', href: '/integracoes/whatsapp-v2', icon: PaperAirplaneIcon },
     ]
   },
   {
