@@ -1729,8 +1729,6 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
     cnpj?: string;
   }>({});
 
-  console.log('lead.status_agendamento', lead.status_agendamento);
-
   // Função para validar nome
   const validateName = (name: string): string | null => {
     if (!name.trim()) {

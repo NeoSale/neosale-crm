@@ -244,7 +244,6 @@ class LeadsApiService {
     
     return this.request<Lead>(`/leads/${id}`, {
       method: 'PUT',
-      headers,
       body: JSON.stringify(lead),
     }, {
       showSuccess: true,
