@@ -20,7 +20,7 @@ import {
 import { APP_VERSION } from '../utils/app-version';
 import ThemeToggle from './ThemeToggle';
 import { clientesApi, Cliente } from '../services/clientesApi';
-import { Bot } from 'lucide-react';
+import { BookOpenIcon, Bot, DatabaseIcon } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -38,7 +38,6 @@ const navigation: MenuItem[] = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
   { name: 'Chat', href: '/chat', icon: ChatBubbleLeftRightIcon },
   { name: 'Leads', href: '/leads', icon: UsersIcon },
-  { name: 'Documentos', icon: DocumentTextIcon },
   { name: 'Agentes', href: '/agentes', icon: Bot },
   {
     name: 'Integrações',
@@ -46,6 +45,14 @@ const navigation: MenuItem[] = [
     children: [
       // { name: 'WhatsApp V1', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
       { name: 'WhatsApp', href: '/integracoes/whatsapp-v2', icon: PaperAirplaneIcon },
+    ]
+  },
+  {
+    name: 'Conhecimento',
+    icon: BookOpenIcon,
+    children: [
+      { name: 'Base', icon: DatabaseIcon },
+      { name: 'Documentos', icon: DocumentTextIcon },
     ]
   },
   {
@@ -252,7 +259,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            const hasActiveChild = item.children?.some(child => 
+            const hasActiveChild = item.children?.some(child =>
               pathname === child.href || child.children?.some(grandchild => pathname === grandchild.href)
             );
             const isManuallyClosed = manuallyClosedMenus.includes(item.name);
