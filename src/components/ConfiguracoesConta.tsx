@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { clientesApi, Cliente } from '@/services/clientesApi';
+import { validateCNPJForForm, applyCNPJMask } from '@/utils/document-validation';
 import { getCurrentClienteId } from '@/utils/cliente-utils';
 
 interface ClienteCompleto extends Cliente {
@@ -122,11 +123,7 @@ export default function ConfiguracoesConta() {
       case 'telefone':
         return !value || value.trim() === '' ? 'Telefone é obrigatório' : '';
       case 'cnpj':
-        if (value && value.length > 0) {
-          const cnpjRegex = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
-          return !cnpjRegex.test(value) ? 'CNPJ inválido' : '';
-        }
-        return '';
+        return validateCNPJForForm(value) || '';
       case 'cep':
         if (value && value.length > 0) {
           const cepRegex = /^\d{5}-\d{3}$/;
@@ -220,8 +217,7 @@ export default function ConfiguracoesConta() {
   };
 
   const formatCNPJ = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    return applyCNPJMask(value);
   };
 
   const formatCEP = (value: string) => {

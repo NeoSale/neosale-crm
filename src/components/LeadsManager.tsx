@@ -10,16 +10,33 @@ import { useLeads, ImportError } from '../hooks/useLeads';
 import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 import { FormattedPhone } from '../utils/phone-utils';
+import { validateCNPJForForm, applyCNPJMask } from '../utils/document-validation';
 
 const LeadsManager: React.FC = () => {
   const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, addMultipleLeadsWithDetails, updateLead, deleteLead } = useLeads();
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [loadingTable, setLoadingTable] = useState<boolean>(false);
+  const [savingLead, setSavingLead] = useState<boolean>(false);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
+  const [deletingBulk, setDeletingBulk] = useState<boolean>(false);
   const router = useRouter();
 
   // Sincronizar leads do hook com o estado local
   React.useEffect(() => {
     setLeads(hookLeads);
-  }, [hookLeads]);
+    // Se não está mais carregando no hook, desativar carregamento da tabela
+    if (!loading) {
+      setLoadingTable(false);
+    }
+  }, [hookLeads, loading]);
+
+  // Ativar carregamento da tabela quando o hook começar a carregar
+  React.useEffect(() => {
+    if (loading) {
+      setLoadingTable(true);
+    }
+  }, [loading]);
 
   // Função para formatar números com pontos de milhar
   const formatNumber = (num: number): string => {
@@ -356,11 +373,15 @@ const LeadsManager: React.FC = () => {
   };
 
   const handleEditLead = (lead: Lead) => {
+    setEditingLeadId(lead.id || null);
     setEditingLead(lead);
     setShowEditModal(true);
+    // Limpar o estado quando o modal for aberto
+    setTimeout(() => setEditingLeadId(null), 100);
   };
 
   const handleUpdateLead = async (updatedData: Partial<Lead>) => {
+    setSavingLead(true);
     try {
       let success;
 
@@ -389,6 +410,8 @@ const LeadsManager: React.FC = () => {
       console.error('Erro ao salvar lead:', error);
       // Exibir toast de erro para exceções
       toast.error(isCreatingLead ? 'Erro ao criar lead' : 'Erro ao atualizar lead');
+    } finally {
+      setSavingLead(false);
     }
   };
 
@@ -400,15 +423,22 @@ const LeadsManager: React.FC = () => {
   const confirmDeleteLead = async () => {
     if (!deletingLead?.id) return;
 
+    setDeletingLeadId(deletingLead.id);
     try {
       const success = await deleteLead(deletingLead.id);
       if (success) {
         setShowDeleteModal(false);
         setDeletingLead(null);
         await refreshLeads();
+        toast.success('Lead excluído com sucesso!');
+      } else {
+        toast.error('Erro ao excluir lead');
       }
     } catch (error) {
       console.error('Erro ao excluir lead:', error);
+      toast.error('Erro ao excluir lead');
+    } finally {
+      setDeletingLeadId(null);
     }
   };
 
@@ -439,6 +469,7 @@ const LeadsManager: React.FC = () => {
   };
 
   const confirmBulkDelete = async () => {
+    setDeletingBulk(true);
     try {
       const deletePromises = Array.from(selectedLeads).map(leadId => deleteLead(leadId));
       const results = await Promise.all(deletePromises);
@@ -471,6 +502,9 @@ const LeadsManager: React.FC = () => {
       setShowBulkDeleteModal(false);
     } catch (error) {
       console.error('Erro ao excluir leads:', error);
+      toast.error('Erro ao excluir leads');
+    } finally {
+      setDeletingBulk(false);
     }
   };
 
@@ -501,7 +535,12 @@ const LeadsManager: React.FC = () => {
   };
 
   const handleRefresh = async () => {
-    await refreshLeads();
+    setLoadingTable(true);
+    try {
+      await refreshLeads();
+    } finally {
+      setLoadingTable(false);
+    }
   };
 
   // Filtrar leads baseado no termo de busca
@@ -566,10 +605,10 @@ const LeadsManager: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
-                disabled={loading}
+                disabled={loading || loadingTable}
                 className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <RefreshCw size={14} className={`text-white ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw size={14} className={`text-white ${(loading || loadingTable) ? 'animate-spin' : ''}`} />
                 Atualizar
               </button>
               <input
@@ -608,10 +647,15 @@ const LeadsManager: React.FC = () => {
               {selectedLeads.size > 0 && (
                 <button
                   onClick={handleBulkDelete}
-                  className="px-3 py-1.5 bg-primary hover:bg-primary/90 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
+                  disabled={deletingBulk}
+                  className="px-3 py-1.5 bg-primary hover:bg-primary/90 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Trash2 size={14} className="text-white" />
-                  Excluir ({selectedLeads.size})
+                  {deletingBulk ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <Trash2 size={14} className="text-white" />
+                  )}
+                  {deletingBulk ? 'Excluindo...' : `Excluir (${selectedLeads.size})`}
                 </button>
               )}
             </div>
@@ -657,7 +701,16 @@ const LeadsManager: React.FC = () => {
         {paginatedLeads.length > 0 ? (
           <>
             {/* Cabeçalhos específicos das colunas desejadas */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto relative">
+              {/* Loading overlay */}
+              {loadingTable && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <span className="text-sm text-gray-600 font-medium">Carregando leads...</span>
+                  </div>
+                </div>
+              )}
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -669,7 +722,7 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {['picture', 'nome', 'telefone', 'created_at', 'ai_agent'].map((header, index) => (
+                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'created_at', 'ai_agent'].map((header, index) => (
                       <th
                         key={index}
                         className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
@@ -705,7 +758,7 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {['picture', 'nome', 'telefone', 'created_at', 'ai_agent'].map((header, colIndex) => (
+                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'created_at', 'ai_agent'].map((header, colIndex) => (
                         <td
                           key={colIndex}
                           className={`px-3 py-2 text-sm text-gray-700 ${
@@ -807,6 +860,51 @@ const LeadsManager: React.FC = () => {
                               );
                             }
 
+                            // Tratar email com botão de cópia
+                            if (header === 'email' && typeof value === 'string' && value.trim()) {
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-700">{value}</span>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(value);
+                                      toast.success('Email copiado!');
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                    title="Copiar email"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            // Tratar CNPJ com formatação e botão de cópia
+                            if (header === 'cnpj' && typeof value === 'string' && value.trim()) {
+                              const formattedCNPJ = applyCNPJMask(value);
+                              const cleanCNPJ = value.replace(/\D/g, '');
+                              
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-gray-700">{formattedCNPJ}</span>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(cleanCNPJ);
+                                      toast.success('CNPJ copiado!');
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                    title="Copiar CNPJ"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              );
+                            }
+
                             // Tratar datas com hora
                             if (header === 'created_at' && typeof value === 'string') {
                               try {
@@ -846,17 +944,27 @@ const LeadsManager: React.FC = () => {
                           </button>
                           <button
                             onClick={() => handleEditLead(lead)}
-                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                            disabled={editingLeadId === lead.id}
+                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             title="Editar lead"
                           >
-                            <Edit size={18} />
+                            {editingLeadId === lead.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                            ) : (
+                              <Edit size={18} />
+                            )}
                           </button>
                           <button
                             onClick={() => handleDeleteLead(lead)}
-                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                            disabled={deletingLeadId === lead.id}
+                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             title="Excluir lead"
                           >
-                            <Trash2 size={18} />
+                            {deletingLeadId === lead.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                            ) : (
+                              <Trash2 size={18} />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -1011,6 +1119,7 @@ const LeadsManager: React.FC = () => {
                 setEditingLead(null);
                 setIsCreatingLead(false);
               }}
+              saving={savingLead}
             />
           </div>
         </div>
@@ -1464,9 +1573,13 @@ const LeadsManager: React.FC = () => {
               </button>
               <button
                 onClick={confirmBulkDelete}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                disabled={deletingBulk}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Excluir {selectedLeads.size} Lead(s)
+                {deletingBulk && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                {deletingBulk ? 'Excluindo...' : `Excluir ${selectedLeads.size} Lead(s)`}
               </button>
             </div>
           </div>
@@ -1576,9 +1689,10 @@ interface EditLeadFormProps {
   lead: Lead;
   onSave: (data: Partial<Lead>) => void;
   onCancel: () => void;
+  saving?: boolean;
 }
 
-const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) => {
+const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, saving = false }) => {
   // Função para remover o prefixo '55' do telefone para exibição no formulário
   const removePhonePrefix = (phone: string): string => {
     if (!phone) return '';
@@ -1605,6 +1719,8 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
     segmento: lead.segmento || '',
     erp_atual: lead.erp_atual || ''
   });
+
+  const [showAdditionalFields, setShowAdditionalFields] = useState<boolean>(false);
 
   const [errors, setErrors] = useState<{
     nome?: string;
@@ -1698,45 +1814,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
   };
 
   const validateCNPJ = (cnpj: string): string | null => {
-    if (!cnpj.trim()) {
-      return null; // CNPJ não é obrigatório
-    }
-
-    // Remove caracteres não numéricos
-    const cleanCNPJ = cnpj.replace(/\D/g, '');
-
-    // Verifica se tem 14 dígitos
-    if (cleanCNPJ.length !== 14) {
-      return 'CNPJ deve ter 14 dígitos';
-    }
-
-    // Verifica se não são todos os dígitos iguais
-    if (/^(\d)\1{13}$/.test(cleanCNPJ)) {
-      return 'CNPJ inválido';
-    }
-
-    // Validação dos dígitos verificadores
-    let soma = 0;
-    let peso = 2;
-    for (let i = 11; i >= 0; i--) {
-      soma += parseInt(cleanCNPJ.charAt(i)) * peso;
-      peso = peso === 9 ? 2 : peso + 1;
-    }
-    let digito1 = soma % 11 < 2 ? 0 : 11 - (soma % 11);
-
-    soma = 0;
-    peso = 2;
-    for (let i = 12; i >= 0; i--) {
-      soma += parseInt(cleanCNPJ.charAt(i)) * peso;
-      peso = peso === 9 ? 2 : peso + 1;
-    }
-    let digito2 = soma % 11 < 2 ? 0 : 11 - (soma % 11);
-
-    if (parseInt(cleanCNPJ.charAt(12)) !== digito1 || parseInt(cleanCNPJ.charAt(13)) !== digito2) {
-      return 'CNPJ inválido';
-    }
-
-    return null;
+    return validateCNPJForForm(cnpj);
   };
 
   React.useEffect(() => {
@@ -1824,21 +1902,6 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-          <input
-            type="email"
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.email ? 'border-red-500' : 'border-gray-300'
-              }`}
-            value={formData.email || ''}
-            onChange={(e) => handleChange('email', e.target.value)}
-            placeholder="exemplo@email.com"
-          />
-          {errors.email && (
-            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-          )}
-        </div>
-
-        <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Telefone *</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1873,71 +1936,18 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Empresa</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
           <input
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.empresa || ''}
-            onChange={(e) => handleChange('empresa', e.target.value)}
-            placeholder="Nome da empresa"
+            type="email"
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.email ? 'border-red-500' : 'border-gray-300'
+              }`}
+            value={formData.email || ''}
+            onChange={(e) => handleChange('email', e.target.value)}
+            placeholder="exemplo@email.com"
           />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Cargo</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.cargo || ''}
-            onChange={(e) => handleChange('cargo', e.target.value)}
-            placeholder="Cargo ou função"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Agendado</label>
-          <select
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.agendado || ''}
-            onChange={(e) => handleChange('agendado', e.target.value)}
-          >
-            <option value="">Selecione o Agendamento</option>
-            <option value="true">Sim</option>
-            <option value="false">Não</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Contador</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.contador || ''}
-            onChange={(e) => handleChange('contador', e.target.value)}
-            placeholder="Nome do contador responsável"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Escritório</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.escritorio || ''}
-            onChange={(e) => handleChange('escritorio', e.target.value)}
-            placeholder="Nome do escritório de contabilidade"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Responsável</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.responsavel || ''}
-            onChange={(e) => handleChange('responsavel', e.target.value)}
-            placeholder="Responsável pelo lead"
-          />
+          {errors.email && (
+            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+          )}
         </div>
 
         <div>
@@ -1947,34 +1957,13 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.cnpj ? 'border-red-500' : 'border-gray-300'
               }`}
             value={formData.cnpj || ''}
-            onChange={(e) => handleChange('cnpj', e.target.value)}
+            onChange={(e) => handleChange('cnpj', applyCNPJMask(e.target.value))}
             placeholder="00.000.000/0000-00"
+            maxLength={18}
           />
           {errors.cnpj && (
             <p className="text-red-500 text-xs mt-1">{errors.cnpj}</p>
           )}
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Segmento</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.segmento || ''}
-            onChange={(e) => handleChange('segmento', e.target.value)}
-            placeholder="Segmento de atuação da empresa"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">ERP Atual</label>
-          <input
-            type="text"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            value={formData.erp_atual || ''}
-            onChange={(e) => handleChange('erp_atual', e.target.value)}
-            placeholder="Sistema ERP utilizado atualmente"
-          />
         </div>
 
         <div>
@@ -1987,6 +1976,129 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
             placeholder="Observações sobre o lead..."
           />
         </div>
+        
+        {/* Seção de Informações Complementares - Collapse */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowAdditionalFields(!showAdditionalFields)}
+            className="flex items-center justify-between w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200"
+          >
+            <span className="text-sm font-medium text-gray-700">
+              Informações Complementares
+            </span>
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                showAdditionalFields ? 'rotate-180' : ''
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Campos Adicionais - Mostrados apenas quando expandido */}
+        {showAdditionalFields && (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Empresa</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={formData.empresa || ''}
+                onChange={(e) => handleChange('empresa', e.target.value)}
+                placeholder="Nome da empresa"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Cargo</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={formData.cargo || ''}
+                onChange={(e) => handleChange('cargo', e.target.value)}
+                placeholder="Cargo ou função"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Agendado</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={formData.agendado || ''}
+                onChange={(e) => handleChange('agendado', e.target.value)}
+              >
+                <option value="">Selecione o Agendamento</option>
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Contador</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={formData.contador || ''}
+                onChange={(e) => handleChange('contador', e.target.value)}
+                placeholder="Nome do contador responsável"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Escritório</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={formData.escritorio || ''}
+                onChange={(e) => handleChange('escritorio', e.target.value)}
+                placeholder="Nome do escritório de contabilidade"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Responsável</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={formData.responsavel || ''}
+                onChange={(e) => handleChange('responsavel', e.target.value)}
+                placeholder="Responsável pelo lead"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Segmento</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={formData.segmento || ''}
+                onChange={(e) => handleChange('segmento', e.target.value)}
+                placeholder="Segmento de atuação da empresa"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">ERP Atual</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={formData.erp_atual || ''}
+                onChange={(e) => handleChange('erp_atual', e.target.value)}
+                placeholder="Sistema ERP utilizado atualmente"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex justify-end gap-2 pt-3">
@@ -1999,9 +2111,13 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel }) =
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+          disabled={saving}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          Salvar
+          {saving && (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          )}
+          {saving ? 'Salvando...' : 'Salvar'}
         </button>
       </div>
     </form>
