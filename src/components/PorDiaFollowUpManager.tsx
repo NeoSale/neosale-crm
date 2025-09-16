@@ -19,6 +19,7 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ptBR } from 'date-fns/locale';
 import Modal from './Modal';
+import { formatDateTime } from '../utils/date-utils';
 
 // Registrar localização pt-BR para o DatePicker
 registerLocale('pt-BR', ptBR);
@@ -78,24 +79,6 @@ const PorDiaFollowUpManager: React.FC = () => {
       setLoading(false);
     }
   };
-
-  const formatDateTime = (dateTimeString: string) => {
-    const date = new Date(dateTimeString);
-    return {
-      date: date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      }),
-      time: date.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })
-    };
-  };
-
-
 
   // Filtrar detalhes baseado no termo de busca e status
   const filteredDetalhes = useMemo(() => {
@@ -465,7 +448,7 @@ const PorDiaFollowUpManager: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedData.map((item, index) => {
-                  const { date, time } = formatDateTime(item.horario);
+                  const { date, time } = formatDateTime(item.horario, true);
                   return (
                     <tr
                       key={`${item.id_lead}-${index}`}

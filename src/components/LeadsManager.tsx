@@ -11,6 +11,7 @@ import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 import { FormattedPhone } from '../utils/phone-utils';
 import { validateCNPJForForm, applyCNPJMask } from '../utils/document-validation';
+import { formatDateTime } from '../utils/date-utils';
 
 const LeadsManager: React.FC = () => {
   const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, addMultipleLeadsWithDetails, updateLead, deleteLead } = useLeads();
@@ -907,23 +908,16 @@ const LeadsManager: React.FC = () => {
 
                             // Tratar datas com hora
                             if (header === 'created_at' && typeof value === 'string') {
-                              try {
-                                const date = new Date(value);
-                                // Formatação consistente entre servidor e cliente
-                                const day = date.getDate().toString().padStart(2, '0');
-                                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                                const year = date.getFullYear();
-                                const hours = date.getHours().toString().padStart(2, '0');
-                                const minutes = date.getMinutes().toString().padStart(2, '0');
+                              const formattedDateTime = formatDateTime(value);
+                              if (formattedDateTime) {
                                 return (
                                   <div className="flex flex-col">
-                                    <span className="font-medium">{`${day}/${month}/${year}`}</span>
-                                    <span className="text-xs text-gray-500">{`${hours}:${minutes}`}</span>
+                                    <span className="font-medium">{formattedDateTime.date}</span>
+                                    <span className="text-xs text-gray-500">{formattedDateTime.time}</span>
                                   </div>
                                 );
-                              } catch {
-                                return value;
                               }
+                              return value;
                             }
 
                             return value;

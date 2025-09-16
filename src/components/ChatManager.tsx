@@ -21,6 +21,7 @@ import { leadsApi, Lead } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 import { formatPhone, copyPhone } from '../utils/phone-utils';
 import { ErrorHandler } from '../utils/error-handler';
+import { formatTime } from '../utils/date-utils';
 
 
 
@@ -246,17 +247,6 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
 
   // Formatação de data
-  const formatTime = (dateString: string | null) => {
-    if (!dateString) return '--:--';
-
-    try {
-      const [hours, minutes] = dateString.split('T')[1].split(':');
-      return `${hours}:${minutes}`;
-    } catch (error) {
-      console.error('Erro ao formatar hora:', error, dateString);
-      return '--:--';
-    }
-  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '--';
