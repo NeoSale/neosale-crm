@@ -2016,17 +2016,6 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Observação</label>
-          <textarea
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-            rows={6}
-            value={formData.observacao || ''}
-            onChange={(e) => handleChange('observacao', e.target.value)}
-            placeholder="Observações sobre o lead..."
-          />
-        </div>
-
         {/* Seção de Informações Complementares - Collapse */}
         <div>
           <button
@@ -2057,6 +2046,17 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
         {/* Campos Adicionais - Mostrados apenas quando expandido */}
         {showAdditionalFields && (
           <>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Observação</label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                rows={6}
+                value={formData.observacao || ''}
+                onChange={(e) => handleChange('observacao', e.target.value)}
+                placeholder="Observações sobre o lead..."
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Empresa</label>
               <input
