@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Users, Database, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2, Download } from 'lucide-react';
 import { ChatBubbleLeftRightIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
@@ -9,9 +10,85 @@ import toast from 'react-hot-toast';
 import { useLeads, ImportError } from '../hooks/useLeads';
 import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
-import { FormattedPhone, removePhonePrefix, formatPhoneDisplay } from '../utils/phone-utils';
+import { formatPhone, removePhonePrefix, formatPhoneDisplay } from '../utils/phone-utils';
 import { validateCNPJForForm, applyCNPJMask } from '../utils/document-validation';
 import { formatDateTime } from '../utils/date-utils';
+
+// Componente de Tooltip para texto truncado
+interface TruncatedTextProps {
+  text: string;
+  maxLength?: number;
+  className?: string;
+}
+
+const TruncatedText: React.FC<TruncatedTextProps> = ({
+  text,
+  maxLength,
+  className = "text-sm text-gray-700"
+}) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const elementRef = useRef<HTMLDivElement>(null);
+  const shouldTruncate = text.length > maxLength!;
+  const displayText = shouldTruncate ? `${text.substring(0, maxLength)}...` : text;
+
+  const handleMouseEnter = () => {
+    if (shouldTruncate && elementRef.current) {
+      const rect = elementRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.left,
+        y: rect.top - 10
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  const TooltipPortal = () => {
+    if (!showTooltip || !shouldTruncate) return null;
+
+    return createPortal(
+      <div
+        style={{
+          position: 'fixed',
+          left: tooltipPosition.x,
+          top: tooltipPosition.y,
+          transform: 'translateY(-100%)',
+          zIndex: 2147483647,
+          pointerEvents: 'none'
+        }}
+        className="p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl max-w-xs break-words"
+      >
+        <div className="whitespace-pre-wrap">{text}</div>
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: '16px',
+            width: 0,
+            height: 0,
+            borderLeft: '4px solid transparent',
+            borderRight: '4px solid transparent',
+            borderTop: '4px solid #111827'
+          }}
+        ></div>
+      </div>,
+      document.body
+    );
+  };
+
+  return (
+    <div className="relative inline-block">
+      <div
+        ref={elementRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        {displayText}
+      </div>
+      <TooltipPortal />
+    </div>
+  );
+};
 
 const LeadsManager: React.FC = () => {
   const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, addMultipleLeadsWithDetails, updateLead, deleteLead } = useLeads();
@@ -663,7 +740,7 @@ const LeadsManager: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8">
+    <div className="w-full mx-auto space-y-8">
 
 
       {/* Seção de Leads Existentes */}
@@ -804,7 +881,7 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'created_at', 'ai_agent'].map((header, index) => (
+                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'resumo', 'created_at', 'ai_agent'].map((header, index) => (
                       <th
                         key={index}
                         className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
@@ -838,7 +915,7 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'created_at', 'ai_agent'].map((header, colIndex) => (
+                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'resumo', 'created_at', 'ai_agent'].map((header, colIndex) => (
                         <td
                           key={colIndex}
                           className={`px-3 py-2 text-sm text-gray-700 ${header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
@@ -928,11 +1005,18 @@ const LeadsManager: React.FC = () => {
                             // Tratar telefone com formatação e botão de cópia
                             if (header === 'telefone' && typeof value === 'string') {
                               return (
-                                <FormattedPhone
-                                  phone={value}
-                                  className="text-sm text-gray-700"
-                                  copyButtonClassName="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                />
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(value);
+                                      toast.success('Telefone copiado!');
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                    title="Copiar email"
+                                  >
+                                    <span className="text-sm text-gray-700 cursor-pointer">{formatPhone(value)}</span>
+                                  </button>
+                                </div>
                               );
                             }
 
@@ -940,7 +1024,6 @@ const LeadsManager: React.FC = () => {
                             if (header === 'email' && typeof value === 'string' && value.trim()) {
                               return (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-700">{value}</span>
                                   <button
                                     onClick={() => {
                                       navigator.clipboard.writeText(value);
@@ -949,9 +1032,7 @@ const LeadsManager: React.FC = () => {
                                     className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
                                     title="Copiar email"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
+                                    <span className="text-sm text-gray-700 cursor-pointer">{value}</span>
                                   </button>
                                 </div>
                               );
@@ -964,7 +1045,6 @@ const LeadsManager: React.FC = () => {
 
                               return (
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-700">{formattedCNPJ}</span>
                                   <button
                                     onClick={() => {
                                       navigator.clipboard.writeText(cleanCNPJ);
@@ -973,9 +1053,7 @@ const LeadsManager: React.FC = () => {
                                     className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
                                     title="Copiar CNPJ"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                    </svg>
+                                    <span className="text-sm text-gray-700 cursor-pointer">{formattedCNPJ}</span>
                                   </button>
                                 </div>
                               );
@@ -993,6 +1071,23 @@ const LeadsManager: React.FC = () => {
                                 );
                               }
                               return value;
+                            }
+
+                            // Tratar Resumo com texto truncado e tooltip
+                            if (header === 'resumo' && typeof value === 'string' && value.trim()) {
+                              return (
+                                <div className="flex items-center gap-2 cursor-pointer"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(value);
+                                    toast.success('Resumo copiado!');
+                                  }}>
+                                  <TruncatedText
+                                    text={value}
+                                    maxLength={20}
+                                    className="text-sm text-gray-700"
+                                  />
+                                </div>
+                              );
                             }
 
                             return value;
@@ -1952,7 +2047,6 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
                   <circle cx="10" cy="7" r="3" fill="#012169" />
                   <path d="M7,6.5 Q10,5 13,6.5 Q10,8.5 7,6.5" fill="#FEDD00" />
                 </svg>
-                <span className="text-sm font-medium text-gray-600">+55</span>
               </div>
             </div>
             <input

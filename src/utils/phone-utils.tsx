@@ -16,7 +16,7 @@ export const formatPhone = (phone: string): string => {
     const areaCode = cleaned.slice(2, 4);
     const firstPart = cleaned.slice(4, 9);
     const secondPart = cleaned.slice(9, 13);
-    return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
+    return `(${areaCode}) ${firstPart}-${secondPart}`;
   }
 
   // Se tem 12 dígitos e começa com 55, é um número brasileiro (telefone fixo)
@@ -33,7 +33,7 @@ export const formatPhone = (phone: string): string => {
     const areaCode = cleaned.slice(0, 2);
     const firstPart = cleaned.slice(2, 7);
     const secondPart = cleaned.slice(7, 11);
-    return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
+    return `(${areaCode}) ${firstPart}-${secondPart}`;
   }
 
   // Se tem 10 dígitos, assume que é brasileiro sem código do país (telefone fixo)
@@ -41,7 +41,7 @@ export const formatPhone = (phone: string): string => {
     const areaCode = cleaned.slice(0, 2);
     const firstPart = cleaned.slice(2, 6);
     const secondPart = cleaned.slice(6, 10);
-    return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
+    return `(${areaCode}) ${firstPart}-${secondPart}`;
   }
 
   // Retorna o número original se não conseguir formatar
