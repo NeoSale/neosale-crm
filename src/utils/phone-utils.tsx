@@ -25,7 +25,7 @@ export const formatPhone = (phone: string): string => {
     const areaCode = cleaned.slice(2, 4);
     const firstPart = cleaned.slice(4, 8);
     const secondPart = cleaned.slice(8, 12);
-    return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
+    return `(${areaCode}) ${firstPart}-${secondPart}`;
   }
 
   // Se tem 11 dígitos, assume que é brasileiro sem código do país
