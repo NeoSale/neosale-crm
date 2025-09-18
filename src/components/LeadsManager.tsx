@@ -1708,6 +1708,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
     contador: lead.contador || '',
     escritorio: lead.escritorio || '',
     responsavel: lead.responsavel || '',
+    resumo: lead.resumo || '',
     cnpj: lead.cnpj || '',
     observacao: lead.observacao || '',
     segmento: lead.segmento || '',
@@ -1956,6 +1957,17 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
           {errors.cnpj && (
             <p className="text-red-500 text-xs mt-1">{errors.cnpj}</p>
           )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Resumo</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            rows={3}
+            value={formData.resumo || ''}
+            onChange={(e) => handleChange('resumo', e.target.value)}
+            placeholder="Resumo sobre o lead..."
+          />
         </div>
 
         <div>
