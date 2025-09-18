@@ -111,4 +111,33 @@ export const FormattedPhone: React.FC<FormattedPhoneProps> = ({
   );
 };
 
+// Função para remover o prefixo '55' do telefone para exibição no formulário
+export const removePhonePrefix = (phone: string): string => {
+  if (!phone) return '';
+  const cleanPhone = phone.replace(/\D/g, '');
+  // Se começa com 55, remove o prefixo
+  if (cleanPhone.startsWith('55') && cleanPhone.length > 2) {
+    return cleanPhone.substring(2);
+  }
+  return cleanPhone;
+};
+
+// Função para formatar telefone com máscara (99) 99999-9999
+export const formatPhoneDisplay = (phone: string): string => {
+  // Remove todos os caracteres não numéricos
+  const cleanPhone = phone.replace(/\D/g, '');
+
+  // Aplica a máscara baseada no tamanho
+  if (cleanPhone.length <= 2) {
+    return cleanPhone;
+  } else if (cleanPhone.length <= 7) {
+    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2)}`;
+  } else if (cleanPhone.length <= 11) {
+    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}`;
+  }
+
+  // Limita a 11 dígitos
+  return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7, 11)}`;
+};
+
 export default FormattedPhone;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Users, Database, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { Users, Database, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2, Download } from 'lucide-react';
 import { ChatBubbleLeftRightIcon, UserIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { useLeads, ImportError } from '../hooks/useLeads';
 import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
-import { FormattedPhone } from '../utils/phone-utils';
+import { FormattedPhone, removePhonePrefix, formatPhoneDisplay } from '../utils/phone-utils';
 import { validateCNPJForForm, applyCNPJMask } from '../utils/document-validation';
 import { formatDateTime } from '../utils/date-utils';
 
@@ -43,7 +43,6 @@ const LeadsManager: React.FC = () => {
   const formatNumber = (num: number): string => {
     return num.toLocaleString('pt-BR');
   };
-
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [showMappingModal, setShowMappingModal] = useState<boolean>(false);
@@ -111,7 +110,7 @@ const LeadsManager: React.FC = () => {
   const handleImportLeads = async (newLeads: Lead[]) => {
     const totalLeads = newLeads.length;
     let processedLeads = 0;
-    
+
     // Criar toast com progresso
     const toastId = toast.loading(
       <div className="flex flex-col gap-2 min-w-[250px]">
@@ -120,8 +119,8 @@ const LeadsManager: React.FC = () => {
           <span className="text-sm text-gray-500">{processedLeads}/{totalLeads}</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+          <div
+            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${(processedLeads / totalLeads) * 100}%` }}
           ></div>
         </div>
@@ -140,8 +139,8 @@ const LeadsManager: React.FC = () => {
               <span className="text-sm text-gray-500">{processedLeads}/{totalLeads}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(processedLeads / totalLeads) * 100}%` }}
               ></div>
             </div>
@@ -152,11 +151,11 @@ const LeadsManager: React.FC = () => {
 
       // Atualizar progresso em intervalos
       const progressInterval = setInterval(updateProgress, 200);
-      
+
       const result = await addMultipleLeadsWithDetails(newLeads);
-      
+
       clearInterval(progressInterval);
-      
+
       if (result.success) {
         // Mostrar progresso completo
         toast.loading(
@@ -171,9 +170,9 @@ const LeadsManager: React.FC = () => {
           </div>,
           { id: toastId }
         );
-        
+
         await refreshLeads();
-        
+
         // Fechar o toast de progresso e mostrar sucesso
         toast.dismiss(toastId);
         toast.success(`${totalLeads} leads importados com sucesso!`, {
@@ -182,7 +181,7 @@ const LeadsManager: React.FC = () => {
       } else {
         // Fechar o toast "Finalizando" e mostrar erro
         toast.dismiss(toastId);
-        
+
         // Se há erros detalhados, mostrar modal
         if (result.errors && result.errors.length > 0) {
           setImportErrors(result.errors);
@@ -196,6 +195,80 @@ const LeadsManager: React.FC = () => {
       // Fechar o toast "Finalizando" e mostrar erro
       toast.dismiss(toastId);
       toast.error('Erro ao importar leads');
+    }
+  };
+
+  // Função para exportar leads para CSV
+  const handleExportCSV = () => {
+    try {
+      if (leads.length === 0) {
+        toast.error('Não há leads para exportar');
+        return;
+      }
+
+      // Definir cabeçalhos do CSV em português
+      const headers = [
+        'Nome',
+        'Telefone',
+        'Email',
+        'CNPJ',
+        'Resumo',
+        'Observação',
+        'Data de Criação'
+      ];
+
+      // Mapear dados dos leads
+      const csvData = leads.map(lead => {
+        let formattedDate = '';
+        if (lead.created_at) {
+          const dateTime = formatDateTime(lead.created_at);
+          formattedDate = `${dateTime.date} ${dateTime.time}`;
+        }
+
+        return [
+          lead.nome || '',
+          formatPhoneDisplay(removePhonePrefix(lead.telefone!)) || '',
+          lead.email || '',
+          lead.cnpj || '',
+          lead.resumo || '',
+          lead.observacao || '',
+          formattedDate
+        ];
+      });
+
+      // Criar conteúdo CSV
+      const csvContent = [
+        headers.join(';'),
+        ...csvData.map(row =>
+          row.map(field => {
+            // Escapar aspas duplas e envolver campos com vírgulas/quebras de linha em aspas
+            const fieldStr = String(field || '');
+            if (fieldStr.includes(';') || fieldStr.includes('"') || fieldStr.includes('\n')) {
+              return `"${fieldStr.replace(/"/g, '""')}"`;
+            }
+            return fieldStr;
+          }).join(';')
+        )
+      ].join('\n');
+
+      // Criar e baixar arquivo com BOM UTF-8 para corrigir acentuação
+      const BOM = '\uFEFF'; // Byte Order Mark para UTF-8
+      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `leads_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(`${leads.length} leads exportados com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast.error('Erro ao exportar leads para CSV');
     }
   };
 
@@ -400,7 +473,7 @@ const LeadsManager: React.FC = () => {
         setEditingLead(null);
         setIsCreatingLead(false);
         await refreshLeads();
-        
+
         // Exibir toast de sucesso
         toast.success(isCreatingLead ? 'Lead criado com sucesso!' : 'Lead atualizado com sucesso!');
       } else {
@@ -636,14 +709,22 @@ const LeadsManager: React.FC = () => {
                 className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
                 <Plus size={14} className="text-white" />
-                Novo Lead
+                Novo
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
                 <Database size={14} className="text-white" />
-                Importar Leads
+                Importar
+              </button>
+              <button
+                onClick={handleExportCSV}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
+                title="Exportar todos os leads para CSV"
+              >
+                <Download size={14} className="text-white" />
+                Exportar CSV
               </button>
               {selectedLeads.size > 0 && (
                 <button
@@ -726,21 +807,19 @@ const LeadsManager: React.FC = () => {
                     {['picture', 'nome', 'telefone', 'email', 'cnpj', 'created_at', 'ai_agent'].map((header, index) => (
                       <th
                         key={index}
-                        className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                          header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
-                        } ${
-                          header === 'picture' ? 'w-16' : ''
-                        }`}
+                        className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
+                          } ${header === 'picture' ? 'w-16' : ''
+                          }`}
                       >
                         {header === 'picture' ? 'Foto' :
                           header === 'created_at' ? 'Data/Hora' :
-                          header === 'ai_agent' ? 'Agente' :
-                          header === 'status_agendamento' ? 'Agendado' :
-                            header === 'status_negociacao' ? 'Negociação' :
-                              header === 'etapa_funil' ? 'Etapa' :
-                                header === 'erp_atual' ? 'ERP Atual' :
-                                  header === 'observacao' ? 'Observação' :
-                                    header.charAt(0).toUpperCase() + header.slice(1)}
+                            header === 'ai_agent' ? 'Agente' :
+                              header === 'status_agendamento' ? 'Agendado' :
+                                header === 'status_negociacao' ? 'Negociação' :
+                                  header === 'etapa_funil' ? 'Etapa' :
+                                    header === 'erp_atual' ? 'ERP Atual' :
+                                      header === 'observacao' ? 'Observação' :
+                                        header.charAt(0).toUpperCase() + header.slice(1)}
                       </th>
                     ))}
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -762,18 +841,16 @@ const LeadsManager: React.FC = () => {
                       {['picture', 'nome', 'telefone', 'email', 'cnpj', 'created_at', 'ai_agent'].map((header, colIndex) => (
                         <td
                           key={colIndex}
-                          className={`px-3 py-2 text-sm text-gray-700 ${
-                            header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
-                          } ${
-                            header === 'picture' ? 'w-16' : ''
-                          }`}
+                          className={`px-3 py-2 text-sm text-gray-700 ${header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
+                            } ${header === 'picture' ? 'w-16' : ''
+                            }`}
                           title={header === 'nome' || header === 'email' ? String(lead[header] || '') : undefined}
                         >
                           {(() => {
                             // Coluna Picture com profile_picture_url ou UserIcon
                             if (header === 'picture') {
                               return (
-                                <div 
+                                <div
                                   className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
                                   onClick={() => {
                                     if (lead.profile_picture_url) {
@@ -783,8 +860,8 @@ const LeadsManager: React.FC = () => {
                                   }}
                                 >
                                   {lead.profile_picture_url ? (
-                                    <img 
-                                      src={lead.profile_picture_url} 
+                                    <img
+                                      src={lead.profile_picture_url}
                                       alt={`Foto de ${lead.nome}`}
                                       className="w-full h-full object-cover"
                                       onError={(e) => {
@@ -811,7 +888,7 @@ const LeadsManager: React.FC = () => {
                                         const response = await leadsApi.updateAiHabilitada(lead.id, newValue, cliente_id);
                                         if (response.success) {
                                           // Atualizar o lead localmente sem chamar a API novamente
-                                          setLeads(prev => prev.map(l => 
+                                          setLeads(prev => prev.map(l =>
                                             l.id === lead.id ? { ...l, ai_habilitada: newValue } : l
                                           ));
                                           toast.success(`AI Agent ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
@@ -821,15 +898,13 @@ const LeadsManager: React.FC = () => {
                                         toast.error('Erro ao atualizar AI Agent');
                                       }
                                     }}
-                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${
-                                      lead.ai_habilitada ? 'bg-[#403CCF]' : 'bg-gray-300'
-                                    }`}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${lead.ai_habilitada ? 'bg-[#403CCF]' : 'bg-gray-300'
+                                      }`}
                                     title={`AI Agent ${lead.ai_habilitada ? 'ativo' : 'inativo'}`}
                                   >
                                     <span
-                                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${
-                                        lead.ai_habilitada ? 'translate-x-5' : 'translate-x-1'
-                                      }`}
+                                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${lead.ai_habilitada ? 'translate-x-5' : 'translate-x-1'
+                                        }`}
                                     />
                                   </button>
                                 </div>
@@ -853,8 +928,8 @@ const LeadsManager: React.FC = () => {
                             // Tratar telefone com formatação e botão de cópia
                             if (header === 'telefone' && typeof value === 'string') {
                               return (
-                                <FormattedPhone 
-                                  phone={value} 
+                                <FormattedPhone
+                                  phone={value}
                                   className="text-sm text-gray-700"
                                   copyButtonClassName="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
                                 />
@@ -886,7 +961,7 @@ const LeadsManager: React.FC = () => {
                             if (header === 'cnpj' && typeof value === 'string' && value.trim()) {
                               const formattedCNPJ = applyCNPJMask(value);
                               const cleanCNPJ = value.replace(/\D/g, '');
-                              
+
                               return (
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-gray-700">{formattedCNPJ}</span>
@@ -1582,14 +1657,14 @@ const LeadsManager: React.FC = () => {
 
       {/* Modal de Erros de Importação */}
       {showErrorModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 text-gray-700"
           onClick={() => {
             setShowErrorModal(false);
             setImportErrors([]);
           }}
         >
-          <div 
+          <div
             className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1675,8 +1750,8 @@ const LeadsManager: React.FC = () => {
         </div>
       )}
     </div>
-   );
- };
+  );
+};
 
 // Componente para editar lead
 interface EditLeadFormProps {
@@ -1687,17 +1762,6 @@ interface EditLeadFormProps {
 }
 
 const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, saving = false }) => {
-  // Função para remover o prefixo '55' do telefone para exibição no formulário
-  const removePhonePrefix = (phone: string): string => {
-    if (!phone) return '';
-    const cleanPhone = phone.replace(/\D/g, '');
-    // Se começa com 55, remove o prefixo
-    if (cleanPhone.startsWith('55') && cleanPhone.length > 2) {
-      return cleanPhone.substring(2);
-    }
-    return cleanPhone;
-  };
-
   const [formData, setFormData] = useState<Partial<Lead>>({
     nome: lead.nome || '',
     email: lead.email || '',
@@ -1730,24 +1794,6 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
       return 'Nome é obrigatório';
     }
     return null;
-  };
-
-  // Função para formatar telefone com máscara (99) 99999-9999
-  const formatPhoneDisplay = (phone: string): string => {
-    // Remove todos os caracteres não numéricos
-    const cleanPhone = phone.replace(/\D/g, '');
-    
-    // Aplica a máscara baseada no tamanho
-    if (cleanPhone.length <= 2) {
-      return cleanPhone;
-    } else if (cleanPhone.length <= 7) {
-      return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2)}`;
-    } else if (cleanPhone.length <= 11) {
-      return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}`;
-    }
-    
-    // Limita a 11 dígitos
-    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7, 11)}`;
   };
 
   // Função para converter telefone para formato backend (apenas números)
@@ -1857,7 +1903,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
         formData.agendado === 'false' ? false :
           Boolean(formData.agendado)
     };
-    
+
     // Remover o campo 'agendado' do objeto final
     delete processedData.agendado;
 
@@ -1901,10 +1947,10 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
               <div className="flex items-center space-x-1">
                 {/* Bandeira do Brasil SVG */}
                 <svg width="20" height="14" viewBox="0 0 20 14" className="rounded-sm">
-                  <rect width="20" height="14" fill="#009739"/>
-                  <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00"/>
-                  <circle cx="10" cy="7" r="3" fill="#012169"/>
-                  <path d="M7,6.5 Q10,5 13,6.5 Q10,8.5 7,6.5" fill="#FEDD00"/>
+                  <rect width="20" height="14" fill="#009739" />
+                  <polygon points="10,2 18,7 10,12 2,7" fill="#FEDD00" />
+                  <circle cx="10" cy="7" r="3" fill="#012169" />
+                  <path d="M7,6.5 Q10,5 13,6.5 Q10,8.5 7,6.5" fill="#FEDD00" />
                 </svg>
                 <span className="text-sm font-medium text-gray-600">+55</span>
               </div>
@@ -1980,7 +2026,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
             placeholder="Observações sobre o lead..."
           />
         </div>
-        
+
         {/* Seção de Informações Complementares - Collapse */}
         <div>
           <button
@@ -1992,9 +2038,8 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
               Informações Complementares
             </span>
             <svg
-              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
-                showAdditionalFields ? 'rotate-180' : ''
-              }`}
+              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showAdditionalFields ? 'rotate-180' : ''
+                }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
