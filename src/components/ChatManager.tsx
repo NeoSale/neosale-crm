@@ -15,6 +15,8 @@ import {
   MagnifyingGlassIcon,
   ExclamationCircleIcon,
   ArrowPathIcon,
+  PhotoIcon,
+  MicrophoneIcon,
 } from '@heroicons/react/24/outline';
 import { chatApi, Chat, ChatMessage } from '../services/chatApi';
 import { leadsApi, Lead } from '../services/leadsApi';
@@ -22,14 +24,217 @@ import { getClienteId } from '../utils/cliente-utils';
 import { formatPhone, copyPhone } from '../utils/phone-utils';
 import { ErrorHandler } from '../utils/error-handler';
 import { formatTime } from '../utils/date-utils';
-
-
+import Modal from './Modal';
 
 interface ChatManagerProps {
   initialLeadId?: string | null;
 }
 
 const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
+  // Função para verificar se uma string é base64 válida
+  const isBase64 = (str: string): boolean => {
+    try {
+      // Verificar se é uma data URL
+      if (str.startsWith('data:')) {
+        return true;
+      }
+
+      // Verificar se é base64 puro (sem prefixo data:)
+      const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+      if (str.length % 4 === 0 && base64Regex.test(str)) {
+        // Tentar decodificar para verificar se é válido
+        atob(str);
+        return true;
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  // Função para detectar o tipo de mídia em dados base64
+  const detectMediaType = (content: string): 'image' | 'audio' | 'text' => {
+    if (!content) return 'text';
+
+    // Verificar se é uma data URL
+    if (content.startsWith('data:')) {
+      if (content.startsWith('data:image/')) {
+        return 'image';
+      }
+      if (content.startsWith('data:audio/')) {
+        return 'audio';
+      }
+    }
+
+    // Verificar se é base64 puro e tentar detectar pelo conteúdo
+    if (isBase64(content)) {
+      try {
+        // Decodificar os primeiros bytes para verificar assinaturas de arquivo
+        const decoded = atob(content.substring(0, 100));
+        const bytes = new Uint8Array(decoded.length);
+        for (let i = 0; i < decoded.length; i++) {
+          bytes[i] = decoded.charCodeAt(i);
+        }
+
+        // Verificar assinaturas de imagem
+        if (bytes[0] === 0xFF && bytes[1] === 0xD8) return 'image'; // JPEG
+        if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return 'image'; // PNG
+        if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'image'; // GIF
+        if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) return 'audio'; // WAV
+        if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return 'audio'; // MP3
+        if (bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) return 'audio'; // OGG
+      } catch {
+        // Se falhar ao decodificar, tratar como texto
+      }
+    }
+
+    return 'text';
+  };
+
+  // Função para detectar tipo de mídia na última mensagem
+  const getLastMessageType = (ultimaMensagem: any): 'image' | 'audio' | 'text' => {
+    if (!ultimaMensagem) return 'text';
+
+    const messageContent = typeof ultimaMensagem === 'string' ? ultimaMensagem : JSON.stringify(ultimaMensagem);
+    return detectMediaType(messageContent);
+  };
+
+  // Componente para renderizar imagem base64
+  const Base64Image: React.FC<{ content: string }> = ({ content }) => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+
+    const imageUrl = content.startsWith('data:') ? content : `data:image/jpeg;base64,${content}`;
+
+    return (
+      <>
+        <div className="max-w-xs">
+          {loading && (
+            <div className="flex items-center justify-center h-32 bg-gray-100 rounded-lg">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+          {error ? (
+            <div className="flex items-center justify-center h-32 bg-gray-100 rounded-lg">
+              <span className="text-gray-500 text-sm">Erro ao carregar imagem</span>
+            </div>
+          ) : (
+            <img
+              src={imageUrl}
+              alt="Imagem enviada"
+              className={`max-w-full h-auto rounded-lg shadow-md cursor-pointer hover:opacity-80 transition-opacity ${loading ? 'hidden' : ''}`}
+              onLoad={() => setLoading(false)}
+              onError={() => {
+                setLoading(false);
+                setError(true);
+              }}
+              onClick={() => setShowModal(true)}
+            />
+          )}
+        </div>
+
+        {/* Modal para exibir imagem em tamanho full */}
+        <Modal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title="Visualizar Imagem"
+          size="6xl"
+          className="p-0"
+        >
+          <div className="flex items-center justify-center">
+            <img
+              src={imageUrl}
+              alt="Imagem em tamanho full"
+              className="max-w-full max-h-[80vh] object-contain rounded-lg border border-gray-200"
+            />
+          </div>
+        </Modal>
+      </>
+    );
+  };
+
+  // Componente para renderizar áudio base64
+  const Base64Audio: React.FC<{ content: string }> = ({ content }) => {
+    const [error, setError] = useState(false);
+
+    const audioUrl = content.startsWith('data:') ? content : `data:audio/mpeg;base64,${content}`;
+
+    if (error) {
+      return (
+        <div className="flex items-center space-x-2 p-3 bg-gray-100 rounded-lg">
+          <ExclamationCircleIcon className="w-5 h-5 text-red-500" />
+          <span className="text-gray-500 text-sm">Erro ao carregar áudio</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-xs">
+        <audio
+          controls
+          className="w-full"
+          onError={() => setError(true)}
+        >
+          <source src={audioUrl} type="audio/mpeg" />
+          <source src={audioUrl} type="audio/wav" />
+          <source src={audioUrl} type="audio/ogg" />
+          Seu navegador não suporta o elemento de áudio.
+        </audio>
+      </div>
+    );
+  };
+
+  // Componente para exibir última mensagem com ícone
+  const LastMessageDisplay: React.FC<{ ultimaMensagem: any }> = ({ ultimaMensagem }) => {
+    if (!ultimaMensagem) {
+      return <span className="text-gray-500">Sem mensagens</span>;
+    }
+
+    const messageType = getLastMessageType(ultimaMensagem);
+    const messageContent = typeof ultimaMensagem === 'string' ? ultimaMensagem : JSON.stringify(ultimaMensagem);
+
+    switch (messageType) {
+      case 'image':
+        return (
+          <div className="flex items-center space-x-2">
+            <PhotoIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            <span className="text-gray-500 truncate">Imagem</span>
+          </div>
+        );
+      case 'audio':
+        return (
+          <div className="flex items-center space-x-2">
+            <MicrophoneIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            <span className="text-gray-500 truncate">Áudio</span>
+          </div>
+        );
+      default:
+        return (
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-500 truncate">{messageContent}</span>
+          </div>
+        )
+    }
+  };
+
+  // Função para renderizar conteúdo da mensagem com suporte a base64
+  const renderMessageContent = (content: string, messageType: 'human' | 'ai') => {
+    if (!content) return 'Mensagem sem conteúdo';
+
+    const mediaType = detectMediaType(content);
+
+    switch (mediaType) {
+      case 'image':
+        return <Base64Image content={content} />;
+      case 'audio':
+        return <Base64Audio content={content} />;
+      default:
+        return formatMessageContent(content, messageType);
+    }
+  };
+
   // Função para formatar texto com quebras de linha e links clicáveis
   const formatMessageContent = (content: string, messageType: 'human' | 'ai') => {
     if (!content) return 'Mensagem sem conteúdo';
@@ -244,10 +449,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
   };
 
-
-
   // Formatação de data
-
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '--';
 
@@ -380,12 +582,9 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                             <span>{formatTime(lead.data_ultima_mensagem)}</span>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-500 truncate mt-1">
-                          {lead.ultima_mensagem && lead.ultima_mensagem ?
-                            (typeof lead.ultima_mensagem === 'string' ? lead.ultima_mensagem : JSON.stringify(lead.ultima_mensagem))
-                            : 'Sem mensagens'
-                          }
-                        </p>
+                        <div className="text-sm mt-1">
+                          <LastMessageDisplay ultimaMensagem={lead.ultima_mensagem} />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -481,7 +680,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 >
                   <ArrowPathIcon className={`w-6 h-6 ${loadingMessages ? 'animate-spin' : ''}`} />
                 </button>
-                
+
                 <button
                   onClick={() => setShowLeadInfo(true)}
                   className="p-3 text-[#403CCF] hover:text-white hover:bg-[#403CCF] bg-gray-50 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
@@ -531,7 +730,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       >
                         <div className={`text-sm leading-relaxed ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
                           {message.mensagem && message.mensagem ?
-                            (typeof message.mensagem === 'string' ? formatMessageContent(message.mensagem, message.tipo || 'ai') : JSON.stringify(message.mensagem))
+                            (typeof message.mensagem === 'string' ? renderMessageContent(message.mensagem, message.tipo || 'ai') : JSON.stringify(message.mensagem))
                             : 'Mensagem sem conteúdo'
                           }
                         </div>
@@ -555,6 +754,8 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   <div ref={messagesEndRef} />
                 </>
               )}
+
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input de mensagem */}
