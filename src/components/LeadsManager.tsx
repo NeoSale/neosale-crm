@@ -90,6 +90,29 @@ const TruncatedText: React.FC<TruncatedTextProps> = ({
   );
 };
 
+// Função para mapear qualificação para emoji e cor
+const getQualificacaoDisplay = (qualificacao: any) => {
+  console.log('qualificacao: ', qualificacao);
+  if (!qualificacao) return { emoji: '', text: '-', color: 'text-gray-500' };
+
+  const qualificacaoLower = qualificacao.nome.toLowerCase().trim();
+  
+  const mapping: { [key: string]: { emoji: string; text: string; color: string } } = {
+    'novo': { emoji: '🆕', text: 'Novo', color: 'text-blue-600' },
+    'curioso': { emoji: '👀', text: 'Curioso', color: 'text-purple-600' },
+    'indeciso': { emoji: '🤔', text: 'Indeciso', color: 'text-yellow-600' },
+    'engajado': { emoji: '🔥', text: 'Engajado', color: 'text-orange-600' },
+    'decidido': { emoji: '✅', text: 'Decidido', color: 'text-green-600' },
+    'frustrado': { emoji: '😠', text: 'Frustrado', color: 'text-red-600' },
+    'desinteressado': { emoji: '🚫', text: 'Desinteressado', color: 'text-gray-600' },
+    'atendimento': { emoji: '💬', text: 'Atendimento', color: 'text-cyan-600' },
+    'problema': { emoji: '⚠️', text: 'Problema', color: 'text-amber-600' },
+    'satisfeito': { emoji: '🎉', text: 'Satisfeito', color: 'text-emerald-600' }
+  };
+
+  return mapping[qualificacaoLower] || { emoji: '', text: qualificacao, color: 'text-gray-700' };
+};
+
 const LeadsManager: React.FC = () => {
   const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, addMultipleLeadsWithDetails, updateLead, deleteLead } = useLeads();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -289,6 +312,7 @@ const LeadsManager: React.FC = () => {
         'Telefone',
         'Email',
         'CNPJ',
+        'Qualificacao',
         'Resumo',
         'Observação',
         'Data de Criação'
@@ -307,6 +331,7 @@ const LeadsManager: React.FC = () => {
           formatPhoneDisplay(removePhonePrefix(lead.telefone!)) || '',
           lead.email || '',
           lead.cnpj || '',
+          lead.qualificacao.nome || '',
           lead.resumo || '',
           lead.observacao || '',
           formattedDate
@@ -881,7 +906,7 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'resumo', 'created_at', 'ai_agent'].map((header, index) => (
+                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificação', 'resumo', 'created_at', 'ai_agent'].map((header, index) => (
                       <th
                         key={index}
                         className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
@@ -915,7 +940,7 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'resumo', 'created_at', 'ai_agent'].map((header, colIndex) => (
+                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificacao', 'resumo', 'created_at', 'ai_agent'].map((header, colIndex) => (
                         <td
                           key={colIndex}
                           className={`px-3 py-2 text-sm text-gray-700 ${header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
@@ -990,6 +1015,21 @@ const LeadsManager: React.FC = () => {
 
                             const value = lead[header];
                             if (value === null || value === undefined) return '-';
+
+                            
+                            console.log('header: ', header)
+                            // Tratar qualificação com emoji e cor
+                            if (header === 'qualificacao') {
+                              const qualificacaoDisplay = getQualificacaoDisplay(value);
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">{qualificacaoDisplay.emoji}</span>
+                                  <span className={`text-sm font-medium ${qualificacaoDisplay.color}`}>
+                                    {qualificacaoDisplay.text}
+                                  </span>
+                                </div>
+                              );
+                            }
 
                             // Tratar booleanos
                             if (typeof value === 'boolean') {

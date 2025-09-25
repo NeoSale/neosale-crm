@@ -336,7 +336,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
 
     try {
-      const response = await chatApi.getMessages(id, page, 10);
+      const response = await chatApi.getMessages(id, page, 50);
       if (response.success) {
         if (append) {
           // Adicionar no início da lista (mensagens mais antigas)
