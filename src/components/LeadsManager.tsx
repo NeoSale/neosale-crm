@@ -92,7 +92,6 @@ const TruncatedText: React.FC<TruncatedTextProps> = ({
 
 // Função para mapear qualificação para emoji e cor
 const getQualificacaoDisplay = (qualificacao: any) => {
-  console.log('qualificacao: ', qualificacao);
   if (!qualificacao) return { emoji: '', text: '-', color: 'text-gray-500' };
 
   const qualificacaoLower = qualificacao.nome.toLowerCase().trim();
@@ -1016,8 +1015,6 @@ const LeadsManager: React.FC = () => {
                             const value = lead[header];
                             if (value === null || value === undefined) return '-';
 
-                            
-                            console.log('header: ', header)
                             // Tratar qualificação com emoji e cor
                             if (header === 'qualificacao') {
                               const qualificacaoDisplay = getQualificacaoDisplay(value);
@@ -2041,9 +2038,6 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
 
     // Remover o campo 'agendado' do objeto final
     delete processedData.agendado;
-
-    console.log('FormData antes do processamento:', formData);
-    console.log('ProcessedData após processamento (telefone: apenas números):', processedData);
 
     onSave(processedData);
   };
