@@ -90,6 +90,105 @@ const TruncatedText: React.FC<TruncatedTextProps> = ({
   );
 };
 
+// Componente de Tooltip para Qualificação
+interface QualificacaoTooltipProps {
+  qualificacao: any;
+  children: React.ReactNode;
+}
+
+const QualificacaoTooltip: React.FC<QualificacaoTooltipProps> = ({ qualificacao, children }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const elementRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const hasDescription = qualificacao && qualificacao.descricao && qualificacao.descricao.trim() !== '';
+
+  const handleMouseEnter = () => {
+    if (!hasDescription) return;
+    
+    // Atraso de 500ms para melhor UX
+    timeoutRef.current = setTimeout(() => {
+      if (elementRef.current) {
+        const rect = elementRef.current.getBoundingClientRect();
+        setTooltipPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top - 10
+        });
+        setShowTooltip(true);
+      }
+    }, 500);
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setShowTooltip(false);
+  };
+
+  // Limpar timeout ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const TooltipPortal = () => {
+    if (!showTooltip || !hasDescription) return null;
+
+    return createPortal(
+      <div
+        style={{
+          position: 'fixed',
+          left: tooltipPosition.x,
+          top: tooltipPosition.y,
+          transform: 'translate(-50%, -100%)',
+          zIndex: 2147483647,
+          pointerEvents: 'none'
+        }}
+        className="p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl max-w-xs break-words"
+        role="tooltip"
+        aria-live="polite"
+      >
+        <div className="whitespace-pre-wrap">{qualificacao.descricao}</div>
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '4px solid transparent',
+            borderRight: '4px solid transparent',
+            borderTop: '4px solid #111827'
+          }}
+        ></div>
+      </div>,
+      document.body
+    );
+  };
+
+  return (
+    <div className="relative inline-block">
+      <div
+        ref={elementRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={hasDescription ? 'cursor-help' : ''}
+        aria-describedby={hasDescription ? `tooltip-${qualificacao.id || 'qualificacao'}` : undefined}
+      >
+        {children}
+      </div>
+      <TooltipPortal />
+    </div>
+  );
+};
+
 // Função para mapear qualificação para emoji e cor
 const getQualificacaoDisplay = (qualificacao: any) => {
   if (!qualificacao) return { emoji: '', text: '-', color: 'text-gray-500' };
@@ -1015,12 +1114,14 @@ const LeadsManager: React.FC = () => {
                             if (header === 'qualificacao') {
                               const qualificacaoDisplay = getQualificacaoDisplay(value);
                               return (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg">{qualificacaoDisplay.emoji}</span>
-                                  <span className={`text-sm font-medium ${qualificacaoDisplay.color}`}>
-                                    {qualificacaoDisplay.text}
-                                  </span>
-                                </div>
+                                <QualificacaoTooltip qualificacao={value}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{qualificacaoDisplay.emoji}</span>
+                                    <span className={`text-sm font-medium ${qualificacaoDisplay.color}`}>
+                                      {qualificacaoDisplay.text}
+                                    </span>
+                                  </div>
+                                </QualificacaoTooltip>
                               );
                             }
 
