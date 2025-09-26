@@ -445,15 +445,22 @@ const LeadsManager: React.FC = () => {
         'Qualificacao',
         'Descrição',
         'Observação',
-        'Data de Criação'
+        'Data de Criação',
+        'Data de Atualização',
       ];
 
       // Mapear dados dos leads
       const csvData = leads.map(lead => {
-        let formattedDate = '';
+        let formattedCreatedAt = '';
         if (lead.created_at) {
           const dateTime = formatDateTime(lead.created_at);
-          formattedDate = `${dateTime.date} ${dateTime.time}`;
+          formattedCreatedAt = `${dateTime.date} ${dateTime.time}`;
+        }
+
+        let formattedUpdatedAt = '';
+        if (lead.updated_at) {
+          const dateTime = formatDateTime(lead.updated_at);
+          formattedUpdatedAt = `${dateTime.date} ${dateTime.time}`;
         }
 
         return [
@@ -465,7 +472,8 @@ const LeadsManager: React.FC = () => {
           lead.qualificacao?.nome || '',
           lead.qualificacao?.descricao || '',
           lead.observacao || '',
-          formattedDate
+          formattedCreatedAt || '',
+          formattedUpdatedAt || ''
         ];
       });
 
@@ -1081,7 +1089,7 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificação', 'resumo', 'created_at', 'ai_agent'].map((header, index) => (
+                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificação', 'resumo', 'ai_agent', 'created_at', 'updated_at'].map((header, index) => (
                       <th
                         key={index}
                         className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
@@ -1089,14 +1097,15 @@ const LeadsManager: React.FC = () => {
                           }`}
                       >
                         {header === 'picture' ? 'Foto' :
-                          header === 'created_at' ? 'Data/Hora' :
-                            header === 'ai_agent' ? 'Agente' :
-                              header === 'status_agendamento' ? 'Agendado' :
-                                header === 'status_negociacao' ? 'Negociação' :
-                                  header === 'etapa_funil' ? 'Etapa' :
-                                    header === 'erp_atual' ? 'ERP Atual' :
-                                      header === 'observacao' ? 'Observação' :
-                                        header.charAt(0).toUpperCase() + header.slice(1)}
+                          header === 'created_at' ? 'Cadastro' :
+                            header === 'updated_at' ? 'Atualizado' :
+                              header === 'ai_agent' ? 'Agente' :
+                                header === 'status_agendamento' ? 'Agendado' :
+                                  header === 'status_negociacao' ? 'Negociação' :
+                                    header === 'etapa_funil' ? 'Etapa' :
+                                      header === 'erp_atual' ? 'ERP Atual' :
+                                        header === 'observacao' ? 'Observação' :
+                                          header.charAt(0).toUpperCase() + header.slice(1)}
                       </th>
                     ))}
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1115,10 +1124,10 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificacao', 'resumo', 'created_at', 'ai_agent'].map((header, colIndex) => (
+                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificacao', 'resumo', 'ai_agent', 'created_at', 'updated_at'].map((header, colIndex) => (
                         <td
                           key={colIndex}
-                          className={`px-3 py-2 text-sm text-gray-700 ${header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
+                          className={`px-3 py-2 text-sm text-gray-700 truncate ${header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
                             } ${header === 'picture' ? 'w-16' : ''
                             }`}
                           title={header === 'nome' || header === 'email' ? String(lead[header] || '') : undefined}
@@ -1275,7 +1284,7 @@ const LeadsManager: React.FC = () => {
                             }
 
                             // Tratar datas com hora
-                            if (header === 'created_at' && typeof value === 'string') {
+                            if (['created_at', 'updated_at'].includes(header) && typeof value === 'string') {
                               const formattedDateTime = formatDateTime(value);
                               if (formattedDateTime) {
                                 return (
