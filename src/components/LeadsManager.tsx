@@ -997,7 +997,7 @@ const LeadsManager: React.FC = () => {
         {Array.isArray(leads) && leads.length > 0 && (
           <div className="bg-secondary bg-gray-50 px-2 py-2 border-b border-gray-200">
             {/* Estatísticas por Qualificação */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 min-w-[48rem]">
               {calculateQualificacaoStats(leads).map((stat, index) => (
                 <div
                   key={index}

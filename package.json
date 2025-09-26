@@ -1,6 +1,6 @@
 {
   "name": "neosale-crm",
-  "version": "1.10.16",
+  "version": "1.10.17",
   "private": true,
   "scripts": {
     "dev": "node scripts/update-version.js && next dev --turbopack",
