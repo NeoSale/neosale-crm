@@ -330,7 +330,7 @@ const LeadsManager: React.FC = () => {
           formatPhoneDisplay(removePhonePrefix(lead.telefone!)) || '',
           lead.email || '',
           lead.cnpj || '',
-          lead.qualificacao.nome || '',
+          lead.qualificacao?.nome || '',
           lead.resumo || '',
           lead.observacao || '',
           formattedDate
@@ -574,9 +574,6 @@ const LeadsManager: React.FC = () => {
         setEditingLead(null);
         setIsCreatingLead(false);
         await refreshLeads();
-
-        // Exibir toast de sucesso
-        toast.success(isCreatingLead ? 'Lead criado com sucesso!' : 'Lead atualizado com sucesso!');
       } else {
         // Exibir toast de erro quando success é false
         toast.error(isCreatingLead ? 'Erro ao criar lead' : 'Erro ao atualizar lead');
@@ -605,7 +602,6 @@ const LeadsManager: React.FC = () => {
         setShowDeleteModal(false);
         setDeletingLead(null);
         await refreshLeads();
-        toast.success('Lead excluído com sucesso!');
       } else {
         toast.error('Erro ao excluir lead');
       }

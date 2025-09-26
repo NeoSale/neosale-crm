@@ -27,6 +27,13 @@ const AgentesManager: React.FC = () => {
   const [showInstanceModal, setShowInstanceModal] = useState<boolean>(false);
   const [selectedAgenteForInstances, setSelectedAgenteForInstances] = useState<Agente | null>(null);
 
+  // Estados de loading específicos para cada ação
+  const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // ID do agente sendo excluído
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState<boolean>(false);
+  const [toggleAtivoLoading, setToggleAtivoLoading] = useState<string | null>(null); // ID do agente sendo alterado
+  const [toggleAgendamentoLoading, setToggleAgendamentoLoading] = useState<string | null>(null); // ID do agente sendo alterado
+
   const [isClient, setIsClient] = useState(false);
 
   // Verificar se estamos no lado do cliente
@@ -102,7 +109,12 @@ const AgentesManager: React.FC = () => {
   };
 
   const handleRefresh = async () => {
-    await loadData();
+    try {
+      setRefreshLoading(true);
+      await loadData();
+    } finally {
+      setRefreshLoading(false);
+    }
   };
 
   const handleCreateAgente = () => {
@@ -160,6 +172,7 @@ const AgentesManager: React.FC = () => {
     if (!deletingAgente?.id) return;
 
     try {
+      setDeleteLoading(deletingAgente.id);
       const response = await agentesApi.deleteAgente(deletingAgente.id);
       if (response.success) {
         setShowDeleteModal(false);
@@ -168,6 +181,8 @@ const AgentesManager: React.FC = () => {
       }
     } catch (error) {
       console.error('Erro ao excluir agente:', error);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -175,12 +190,15 @@ const AgentesManager: React.FC = () => {
     if (!agente.id) return;
 
     try {
+      setToggleAtivoLoading(agente.id);
       const response = await agentesApi.toggleAgenteAtivo(agente.id, !agente.ativo);
       if (response.success) {
         await loadData();
       }
     } catch (error) {
       console.error('Erro ao alterar status do agente:', error);
+    } finally {
+      setToggleAtivoLoading(null);
     }
   };
 
@@ -188,12 +206,15 @@ const AgentesManager: React.FC = () => {
     if (!agente.id) return;
 
     try {
+      setToggleAgendamentoLoading(agente.id);
       const response = await agentesApi.toggleAgenteAgendamento(agente.id, !agente.agendamento);
       if (response.success) {
         await loadData();
       }
     } catch (error) {
       console.error('Erro ao alterar agendamento do agente:', error);
+    } finally {
+      setToggleAgendamentoLoading(null);
     }
   };
 
@@ -225,6 +246,7 @@ const AgentesManager: React.FC = () => {
 
   const confirmBulkDelete = async () => {
     try {
+      setBulkDeleteLoading(true);
       const deletePromises = Array.from(selectedAgentes).map(agenteId => 
         agentesApi.deleteAgente(agenteId)
       );
@@ -257,6 +279,8 @@ const AgentesManager: React.FC = () => {
       setShowBulkDeleteModal(false);
     } catch (error) {
       console.error('Erro ao excluir agentes:', error);
+    } finally {
+      setBulkDeleteLoading(false);
     }
   };
 
@@ -347,11 +371,11 @@ const AgentesManager: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
-                disabled={loading}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
+                disabled={refreshLoading || loading}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 text-white"
               >
-                <RefreshCw size={14} className={`text-white ${loading ? 'animate-spin' : ''}`} />
-                Atualizar
+                <RefreshCw size={14} className={`text-white ${refreshLoading || loading ? 'animate-spin' : ''}`} />
+                {refreshLoading ? 'Atualizando...' : 'Atualizar'}
               </button>
               <button
                 onClick={handleCreateAgente}
@@ -387,10 +411,15 @@ const AgentesManager: React.FC = () => {
               </span>
               <button
                 onClick={handleBulkDelete}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
+                disabled={bulkDeleteLoading}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
               >
-                <Trash2 size={14} />
-                Excluir Selecionados
+                {bulkDeleteLoading ? (
+                  <div className="w-3.5 h-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
+                {bulkDeleteLoading ? 'Excluindo...' : 'Excluir Selecionados'}
               </button>
             </div>
           </div>
@@ -538,31 +567,41 @@ const AgentesManager: React.FC = () => {
                   <td className="px-3 py-3">
                     <button
                       onClick={() => handleToggleAgendamento(agente)}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      disabled={toggleAgendamentoLoading === agente.id}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                         agente.agendamento ? 'bg-[#403CCF]' : 'bg-gray-300'
                       }`}
-                      title={`${agente.agendamento ? 'Desativar' : 'Ativar'} agendamento`}
+                      title={toggleAgendamentoLoading === agente.id ? 'Alterando...' : `${agente.agendamento ? 'Desativar' : 'Ativar'} agendamento`}
                     >
-                      <span
-                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                          agente.agendamento ? 'translate-x-5' : 'translate-x-1'
-                        }`}
-                      />
+                      {toggleAgendamentoLoading === agente.id ? (
+                        <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent mx-auto" />
+                      ) : (
+                        <span
+                          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                            agente.agendamento ? 'translate-x-5' : 'translate-x-1'
+                          }`}
+                        />
+                      )}
                     </button>
                   </td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => handleToggleAtivo(agente)}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      disabled={toggleAtivoLoading === agente.id}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                         agente.ativo ? 'bg-primary' : 'bg-gray-300'
                       }`}
-                      title={`${agente.ativo ? 'Inativar' : 'Ativar'} agente`}
+                      title={toggleAtivoLoading === agente.id ? 'Alterando...' : `${agente.ativo ? 'Inativar' : 'Ativar'} agente`}
                     >
-                      <span
-                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                          agente.ativo ? 'translate-x-5' : 'translate-x-1'
-                        }`}
-                      />
+                      {toggleAtivoLoading === agente.id ? (
+                        <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent mx-auto" />
+                      ) : (
+                        <span
+                          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                            agente.ativo ? 'translate-x-5' : 'translate-x-1'
+                          }`}
+                        />
+                      )}
                     </button>
                   </td>
                   <td className="px-3 py-3">
@@ -576,10 +615,15 @@ const AgentesManager: React.FC = () => {
                       </button>
                       <button
                         onClick={() => handleDeleteAgente(agente)}
-                        className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer"
-                        title="Excluir agente"
+                        disabled={deleteLoading === agente.id}
+                        className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
+                        title={deleteLoading === agente.id ? "Excluindo..." : "Excluir agente"}
                       >
-                        <Trash2 size={18} />
+                        {deleteLoading === agente.id ? (
+                          <div className="w-4.5 h-4.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        ) : (
+                          <Trash2 size={18} />
+                        )}
                       </button>
                     </div>
                   </td>
@@ -844,9 +888,17 @@ const AgentesManager: React.FC = () => {
             </button>
             <button
               onClick={confirmDeleteAgente}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              disabled={deleteLoading === deletingAgente?.id}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
             >
-              Excluir
+              {deleteLoading === deletingAgente?.id ? (
+                <>
+                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Excluindo...
+                </>
+              ) : (
+                'Excluir'
+              )}
             </button>
           </div>
         </div>
@@ -879,9 +931,17 @@ const AgentesManager: React.FC = () => {
             </button>
             <button
               onClick={confirmBulkDelete}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              disabled={bulkDeleteLoading}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
             >
-              Excluir Todos
+              {bulkDeleteLoading ? (
+                <>
+                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Excluindo...
+                </>
+              ) : (
+                'Excluir Todos'
+              )}
             </button>
           </div>
         </div>
