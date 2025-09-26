@@ -106,7 +106,7 @@ const QualificacaoTooltip: React.FC<QualificacaoTooltipProps> = ({ qualificacao,
 
   const handleMouseEnter = () => {
     if (!hasDescription) return;
-    
+
     // Atraso de 500ms para melhor UX
     timeoutRef.current = setTimeout(() => {
       if (elementRef.current) {
@@ -194,7 +194,7 @@ const getQualificacaoDisplay = (qualificacao: any) => {
   if (!qualificacao) return { emoji: '', text: '-', color: 'text-gray-500' };
 
   const qualificacaoLower = qualificacao.nome.toLowerCase().trim();
-  
+
   const mapping: { [key: string]: { emoji: string; text: string; color: string } } = {
     'novo': { emoji: '🆕', text: 'Novo', color: 'text-blue-600' },
     'curioso': { emoji: '👀', text: 'Curioso', color: 'text-purple-600' },
@@ -240,6 +240,37 @@ const LeadsManager: React.FC = () => {
   // Função para formatar números com pontos de milhar
   const formatNumber = (num: number): string => {
     return num.toLocaleString('pt-BR');
+  };
+
+  // Função para calcular estatísticas por qualificação
+  const calculateQualificacaoStats = (leads: Lead[]) => {
+    const stats: { [key: string]: { count: number; qualificacao: any } } = {};
+
+    leads.forEach(lead => {
+      if (lead.qualificacao) {
+        const key = lead.qualificacao.id || 'sem-qualificacao';
+        if (!stats[key]) {
+          stats[key] = {
+            count: 0,
+            qualificacao: lead.qualificacao
+          };
+        }
+        stats[key].count++;
+      } else {
+        // Leads sem qualificação
+        if (!stats['sem-qualificacao']) {
+          stats['sem-qualificacao'] = {
+            count: 0,
+            qualificacao: { nome: 'Sem Quali.', emoji: '❓' }
+          };
+        }
+        stats['sem-qualificacao'].count++;
+      }
+    });
+
+    // Converter para array e ordenar por quantidade (decrescente)
+    console.log(stats);
+    return Object.values(stats).sort((a, b) => b.count - a.count);
   };
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -410,8 +441,9 @@ const LeadsManager: React.FC = () => {
         'Telefone',
         'Email',
         'CNPJ',
-        'Qualificacao',
         'Resumo',
+        'Qualificacao',
+        'Descrição',
         'Observação',
         'Data de Criação'
       ];
@@ -429,8 +461,9 @@ const LeadsManager: React.FC = () => {
           formatPhoneDisplay(removePhonePrefix(lead.telefone!)) || '',
           lead.email || '',
           lead.cnpj || '',
-          lead.qualificacao?.nome || '',
           lead.resumo || '',
+          lead.qualificacao?.nome || '',
+          lead.qualificacao?.descricao || '',
           lead.observacao || '',
           formattedDate
         ];
@@ -817,8 +850,28 @@ const LeadsManager: React.FC = () => {
   const filteredLeads = Array.isArray(leads) ? leads.filter(lead => {
     if (!searchTerm) return true;
 
-    return Object.values(lead).some(value =>
-      value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    return Object.values(lead).some(value => {
+      if (!value) return false;
+
+      // Se o valor é um objeto, verificar se tem campo 'nome' e buscar nele também
+      if (typeof value === 'object' && value !== null) {
+        // Buscar pelo ID do objeto (se existir)
+        if (value.id && value.id.toString().toLowerCase().includes(searchTerm.toLowerCase())) {
+          return true;
+        }
+        // Buscar pelo campo 'nome' do objeto (se existir)
+        if (value.nome && value.nome.toString().toLowerCase().includes(searchTerm.toLowerCase())) {
+          return true;
+        }
+        // Buscar por outros campos do objeto convertidos para string
+        return Object.values(value).some(nestedValue =>
+          nestedValue && nestedValue.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      // Para valores primitivos, buscar normalmente
+      return value.toString().toLowerCase().includes(searchTerm.toLowerCase());
+    }
     );
   }) : [];
 
@@ -942,28 +995,56 @@ const LeadsManager: React.FC = () => {
 
         {/* Estatísticas */}
         {Array.isArray(leads) && leads.length > 0 && (
-          <div className="bg-secondary px-4 py-3 border-b">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-center">
-              <div>
-                <div className="text-2xl font-bold text-primary">
-                  {formatNumber(totalFromApi || 0)}
+          <div className="bg-secondary bg-gray-50 px-2 py-2 border-b border-gray-200">
+            {/* Estatísticas por Qualificação */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              {calculateQualificacaoStats(leads).map((stat, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg">
+                        {getQualificacaoDisplay(stat.qualificacao).emoji || '❓'}
+                      </span>
+                      <div>
+                        <TruncatedText
+                          text={stat.qualificacao.nome || 'Sem Qualificação'}
+                          maxLength={8}
+                          className="text-sm font-medium text-gray-800"
+                        />
+                        <div className="text-xs text-gray-500">
+                          {((stat.count / leads.length) * 100).toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-primary">
+                        {formatNumber(stat.count)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barra de progresso visual */}
+                  <div className="mt-2">
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(stat.count / leads.length) * 100}%`
+                        }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">Total de Leads</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-primary">
-                  {formatNumber(leads.filter(lead =>
-                    lead.email && lead.email.trim() !== '' && lead.email.includes('@')
-                  ).length)}
-                </div>
-                <div className="text-sm text-gray-600">Com Email</div>
-              </div>
+              ))}
             </div>
           </div>
         )}
 
         {/* Barra de Busca */}
-        <div className="p-3 bg-gray-50 border-b">
+        <div className="p-3 border-b border-gray-200">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
             <input
