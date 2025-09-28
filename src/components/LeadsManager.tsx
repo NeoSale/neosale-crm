@@ -2220,7 +2220,8 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
       telefone: formData.telefone ? formatPhoneForBackend(formData.telefone) : '',
       status_agendamento: formData.agendado === 'true' ? true :
         formData.agendado === 'false' ? false :
-          Boolean(formData.agendado)
+          Boolean(formData.agendado),
+      origem: formData.origem || 'CRM',
     };
 
     // Remover o campo 'agendado' do objeto final
