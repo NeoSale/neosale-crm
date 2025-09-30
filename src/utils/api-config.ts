@@ -12,6 +12,11 @@ import { getApiUrl } from "./runtime-config";
 export function getValidatedApiUrl(): string {
   const apiUrl = getApiUrl();
   
+  // Em desenvolvimento, usar URL relativa para aproveitar o rewrite do Next.js
+  if (process.env.NODE_ENV === 'development') {
+    return '/api';
+  }
+  
   // Verificar se a variável está definida
   if (!apiUrl) {
     const errorMsg = '❌ NEXT_PUBLIC_API_URL não está configurada. Verifique suas variáveis de ambiente.';

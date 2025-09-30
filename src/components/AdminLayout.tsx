@@ -20,7 +20,7 @@ import {
 import { APP_VERSION } from '../utils/app-version';
 import ThemeToggle from './ThemeToggle';
 import { clientesApi, Cliente } from '../services/clientesApi';
-import { BookOpenIcon, Bot, DatabaseIcon } from 'lucide-react';
+import { BookOpenIcon, Bot, CalendarIcon, DatabaseIcon } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -45,6 +45,7 @@ const navigation: MenuItem[] = [
     children: [
       // { name: 'WhatsApp V1', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
       { name: 'WhatsApp', href: '/integracoes/whatsapp-v2', icon: PaperAirplaneIcon },
+      { name: 'Google Calendar', href: '/integracoes/google-calendar', icon: CalendarIcon },
     ]
   },
   {
