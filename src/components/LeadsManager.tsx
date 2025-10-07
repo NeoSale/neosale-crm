@@ -1089,7 +1089,7 @@ const LeadsManager: React.FC = () => {
                         className="rounded border-gray-300 text-primary focus:ring-primary"
                       />
                     </th>
-                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificação', 'resumo', 'ai_agent', 'created_at', 'updated_at'].map((header, index) => (
+                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificação', 'resumo', 'origem', 'created_at', 'updated_at', 'ai_agent'].map((header, index) => (
                       <th
                         key={index}
                         className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
@@ -1124,7 +1124,7 @@ const LeadsManager: React.FC = () => {
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                         />
                       </td>
-                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificacao', 'resumo', 'ai_agent', 'created_at', 'updated_at'].map((header, colIndex) => (
+                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificacao', 'resumo', 'origem', 'created_at', 'updated_at', 'ai_agent'].map((header, colIndex) => (
                         <td
                           key={colIndex}
                           className={`px-3 py-2 text-sm text-gray-700 truncate ${header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
@@ -1213,6 +1213,18 @@ const LeadsManager: React.FC = () => {
                                   </div>
                                 </QualificacaoTooltip>
                               );
+                            }
+
+                            // Tratar origem
+                            if (header === 'origem') {
+                              if (typeof value === 'object' && value !== null && value.nome) {
+                                return (
+                                  <span className="text-sm text-gray-700">
+                                    {value.nome}
+                                  </span>
+                                );
+                              }
+                              return '-';
                             }
 
                             // Tratar booleanos
