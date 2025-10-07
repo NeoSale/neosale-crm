@@ -225,7 +225,6 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <div
         className={classNames(
-          sidebarOpen ? 'w-64' : 'w-16',
           'bg-white shadow-lg transition-all duration-300 ease-in-out flex flex-col'
         )}
       >

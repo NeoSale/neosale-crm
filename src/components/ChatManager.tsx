@@ -239,8 +239,8 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const formatMessageContent = (content: string, messageType: 'human' | 'ai') => {
     if (!content) return 'Mensagem sem conteúdo';
 
-    // Regex para detectar URLs
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    // Regex para detectar URLs (removendo barras invertidas)
+    const urlRegex = /(https?:\/\/[^\s\\]+)/g;
 
     // Dividir o texto por quebras de linha
     const lines = content.split(/\\n|\n/);
@@ -259,15 +259,49 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
           {parts.map((part, partIndex) => {
             // Verificar se a parte é uma URL
             if (urlRegex.test(part)) {
+              // Função para limpar e formatar o URL para exibição
+              const formatUrlDisplay = (url: string) => {
+                try {
+                  // Remover barras invertidas do URL
+                  const cleanUrl = url.replace(/\\/g, '');
+                  const urlObj = new URL(cleanUrl);
+                  let displayText = urlObj.hostname + urlObj.pathname;
+                  
+                  // Remover www. se presente
+                  if (displayText.startsWith('www.')) {
+                    displayText = displayText.substring(4);
+                  }
+                  
+                  // Remover barra final se presente
+                  if (displayText.endsWith('/')) {
+                    displayText = displayText.slice(0, -1);
+                  }
+                  
+                  // Limitar o tamanho se muito longo
+                  if (displayText.length > 40) {
+                    displayText = displayText.substring(0, 37) + '...';
+                  }
+                  
+                  return displayText;
+                } catch {
+                  // Se não conseguir fazer parse, retorna o URL original
+                  return part;
+                }
+              };
+
+              // Limpar barras invertidas do URL original também
+              const cleanOriginalUrl = part.replace(/\\/g, '');
+              
               return (
                 <a
                   key={partIndex}
-                  href={part}
+                  href={cleanOriginalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={linkClasses}
+                  className={`${linkClasses} break-words`}
+                  title={cleanOriginalUrl} // Mostra o URL completo limpo no hover
                 >
-                  {part}
+                  🔗 {formatUrlDisplay(part)}
                 </a>
               );
             }
@@ -299,6 +333,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const leadsListRef = useRef<HTMLDivElement>(null);
   const messagesListRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const leadItemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Carregar leads
   const loadLeads = async (page: number = 1, append: boolean = false) => {
@@ -309,7 +344,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
 
     try {
-      const response = await chatApi.getChats(page, 50);
+      const response = await chatApi.getChats();
       if (response.success) {
         if (append) {
           setLeads(prev => [...prev, ...response.data]);
@@ -372,6 +407,30 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
   };
 
+  // Scroll infinito para leads
+  const handleLeadsScroll = () => {
+    if (!leadsListRef.current || loadingMoreLeads || !hasMoreLeads) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = leadsListRef.current;
+    if (scrollTop + clientHeight >= scrollHeight - 5) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadLeads(nextPage, true);
+    }
+  };
+
+  // Scroll automático para o lead específico
+  const scrollToLead = (leadId: string) => {
+    const leadElement = leadItemRefs.current[leadId];
+    if (leadElement && leadsListRef.current) {
+      leadElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
+    }
+  };
+
   // Enviar mensagem
   const sendMessage = async () => {
     if (!messageText.trim() || !selectedLead || sending) return;
@@ -425,18 +484,6 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }, 500);
   };
 
-  // Scroll infinito para leads
-  const handleLeadsScroll = () => {
-    if (!leadsListRef.current || loadingMoreLeads || !hasMoreLeads) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = leadsListRef.current;
-    if (scrollTop + clientHeight >= scrollHeight - 5) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      loadLeads(nextPage, true);
-    }
-  };
-
   // Scroll infinito para mensagens (carregar mensagens mais antigas)
   const handleMessagesScroll = () => {
     if (!messagesListRef.current || loadingMoreMessages || !hasMoreMessages) return;
@@ -484,6 +531,10 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       const leadCorrespondente = leads.find(lead => lead.id === initialLeadId);
       if (leadCorrespondente) {
         selectLead(leadCorrespondente);
+        // Fazer scroll automático até o lead após um pequeno delay para garantir que o elemento foi renderizado
+        setTimeout(() => {
+          scrollToLead(initialLeadId);
+        }, 300);
       }
     }
   }, [initialLeadId, leads]);
@@ -493,9 +544,9 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       {/* Lista de Leads */}
       <div className="w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col rounded-l-xl overflow-hidden">
         {/* Header da lista */}
-        <div className="p-6 shadow-lg">
+        <div className="p-4 shadow-lg">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Conversas</h2>
+            <h2 className="text-lg font-bold">Conversas</h2>
             <button
               onClick={() => {
                 setCurrentPage(1);
@@ -550,14 +601,17 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 return filteredLeads.map((lead) => (
                   <div
                     key={lead.id}
+                    ref={(el) => {
+                      leadItemRefs.current[lead.id] = el;
+                    }}
                     onClick={() => selectLead(lead)}
-                    className={`p-4 mx-2 my-1 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${selectedLead?.id === lead.id
+                    className={`p-3 mx-2 my-1 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${selectedLead?.id === lead.id
                       ? 'bg-gray-50 border-l-4 border-[#403CCF] shadow-lg'
                       : 'bg-white hover:bg-gray-50 border border-gray-100'
                       }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden">
                         {lead.profile_picture_url ? (
                           <img
                             src={lead.profile_picture_url}
@@ -569,7 +623,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                             }}
                           />
                         ) : null}
-                        <UserIcon className={`w-6 h-6 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
+                        <UserIcon className={`w-5 h-5 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
@@ -606,9 +660,9 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
         {selectedLead ? (
           <>
             {/* Header do chat */}
-            <div className="p-6 bg-white border-b border-gray-200 flex items-center justify-between shadow-sm">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-[#403CCF] rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+            <div className="p-4 bg-white border-b border-gray-200 flex items-center justify-between shadow-sm">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                   {selectedLead.profile_picture_url ? (
                     <img
                       src={selectedLead.profile_picture_url}
@@ -620,10 +674,10 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       }}
                     />
                   ) : null}
-                  <UserIcon className={`w-6 h-6 text-white ${selectedLead.profile_picture_url ? 'hidden' : ''}`} />
+                  <UserIcon className={`w-5 h-5 text-white ${selectedLead.profile_picture_url ? 'hidden' : ''}`} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">{typeof selectedLead.nome === 'string' ? selectedLead.nome : JSON.stringify(selectedLead.nome)}</h3>
+                  <h3 className="text-lg font-bold text-gray-900">{typeof selectedLead.nome === 'string' ? selectedLead.nome : JSON.stringify(selectedLead.nome)}</h3>
                   {leadInfo?.telefone ? (
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-gray-500">{formatPhone(leadInfo.telefone || '')}</span>
@@ -680,21 +734,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 >
                   <ArrowPathIcon className={`w-6 h-6 ${loadingMessages ? 'animate-spin' : ''}`} />
                 </button>
-
-                <button
-                  onClick={() => setShowLeadInfo(true)}
-                  className="p-3 text-[#403CCF] hover:text-white hover:bg-[#403CCF] bg-gray-50 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
-                  title="Ver informações do lead"
-                >
-                  <InformationCircleIcon className="w-6 h-6" />
-                </button>
               </div>
             </div>
 
             {/* Mensagens */}
             <div
               ref={messagesListRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 shadow-md"
+              className="flex-1 overflow-y-auto p-3 space-y-3 shadow-md"
               onScroll={handleMessagesScroll}
             >
               {loadingMoreMessages && (
@@ -723,7 +769,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         </div>
                       )}
                       <div
-                        className={`max-w-xs lg:max-w-md px-5 py-3 rounded-2xl shadow-md 
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-md 
                           ${message.tipo === 'human' ? 'bg-white border border-gray-200' : 'bg-[#403CCF]'}
                           ${message.status === 'erro' && message.erro ? 'opacity-75' : ''}
                           `}
@@ -734,8 +780,8 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                             : 'Mensagem sem conteúdo'
                           }
                         </div>
-                        <div className="flex items-center justify-between">
-                          <p className={`text-xs mt-2 ${message.tipo === 'human' ? 'text-left text-gray-600' : 'text-right text-gray-100'}`}>
+                        <div className="flex justify-end">
+                          <p className={`text-[12px] mt-1 ${message.tipo === 'human' ? 'text-gray-600' : 'text-gray-100'}`}>
                             {formatDate(message.created_at)} - {formatTime(message.created_at)}
                             {message.source && <span> - {message.source}</span>}
                           </p>
@@ -759,21 +805,21 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             </div>
 
             {/* Input de mensagem */}
-            <div className="p-6 bg-gray-50 border-t border-gray-200">
+            <div className="p-4 bg-gray-50 border-t border-gray-200">
               <div className="flex space-x-3">
                 <textarea
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={leadInfo?.ai_habilitada ? "🤖 Desabilite o agente para enviar mensagem manualmente" : "✍️ Digite sua mensagem... (Shift+Enter para quebrar linha)"}
-                  className={`flex-1 px-6 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 shadow-sm hover:shadow-md resize-none min-h-[56px] max-h-32 ${leadInfo?.ai_habilitada ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                  className={`flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 shadow-sm hover:shadow-md resize-none min-h-[48px] max-h-32 ${leadInfo?.ai_habilitada ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                   disabled={sending || leadInfo?.ai_habilitada}
                   rows={1}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageText.trim() || sending || leadInfo?.ai_habilitada}
-                  className="px-6 py-4 bg-[#403CCF] text-white rounded-2xl hover:bg-[#3530B8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="px-4 py-3 bg-[#403CCF] text-white rounded-2xl hover:bg-[#3530B8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   {sending ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -787,12 +833,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
         ) : (
           <div className="flex-1 flex items-center justify-center bg-white shadow-lg">
             <div className="text-center p-8">
-              <div className="w-24 h-24 bg-[#403CCF] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <UserIcon className="w-12 h-12 text-white" />
+              <div className="w-20 h-20 bg-[#403CCF] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <UserIcon className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">💬 Selecione uma conversa</h3>
-              <p className="text-gray-500 text-lg">Escolha uma conversa da lista para começar a visualizar as mensagens</p>
-              <div className="mt-6 text-4xl">👈</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">💬 Selecione uma conversa</h3>
+              <p className="text-gray-500 text-base">Escolha uma conversa da lista para começar a visualizar as mensagens</p>
+              <div className="mt-6 text-3xl">👈</div>
             </div>
           </div>
         )}
@@ -802,9 +848,9 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       {showLeadInfo && (
         <div className="w-80 bg-white border-l border-gray-200 flex flex-col rounded-r-xl overflow-hidden shadow-lg">
           {/* Header do painel */}
-          <div className="p-6 flex items-center justify-between border-b border-gray-200 ">
+          <div className="p-4 flex items-center justify-between border-b border-gray-200 ">
             <div>
-              <h3 className="text-xl font-bold">Informações do Lead</h3>
+              <h3 className="text-lg font-bold">Informações do Lead</h3>
             </div>
             <button
               onClick={() => setShowLeadInfo(false)}
@@ -821,7 +867,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 {/* Avatar e nome */}
                 <div className="text-center">
                   <div
-                    className={`w-16 h-16 bg-[#403CCF] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden ${leadInfo.profile_picture_url ? 'cursor-pointer hover:shadow-xl transition-shadow' : ''}`}
+                    className={`w-14 h-14 bg-[#403CCF] rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg overflow-hidden ${leadInfo.profile_picture_url ? 'cursor-pointer hover:shadow-xl transition-shadow' : ''}`}
                     onClick={() => leadInfo.profile_picture_url && setShowPhotoModal(true)}
                   >
                     {leadInfo.profile_picture_url ? (
@@ -835,9 +881,9 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         }}
                       />
                     ) : null}
-                    <UserIcon className={`w-8 h-8 text-white ${leadInfo.profile_picture_url ? 'hidden' : ''}`} />
+                    <UserIcon className={`w-7 h-7 text-white ${leadInfo.profile_picture_url ? 'hidden' : ''}`} />
                   </div>
-                  <h4 className="text-lg font-bold text-gray-900 truncate">
+                  <h4 className="text-base font-bold text-gray-900 truncate">
                     {typeof leadInfo.nome === 'string'
                       ? leadInfo.nome
                       : typeof leadInfo.nome === 'object' && leadInfo.nome && 'nome' in leadInfo.nome
