@@ -235,12 +235,26 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
   };
 
-  // Função para formatar texto com quebras de linha e links clicáveis
+  // Função para formatar texto com quebras de linha, links clicáveis e formatação WhatsApp
   const formatMessageContent = (content: string, messageType: 'human' | 'ai') => {
     if (!content) return 'Mensagem sem conteúdo';
 
-    // Regex para detectar URLs (removendo barras invertidas)
-    const urlRegex = /(https?:\/\/[^\s\\]+)/g;
+    // Regex para detectar URLs e formatação
+    // Removido flag global do URL para evitar problemas com lastIndex em .test()
+    const urlRegex = /(https?:\/\/[^\s\\]+)/;
+    // Simplificados sem lookbehind para garantir compatibilidade ampla
+    const boldRegex = /\*([^*\n]+)\*/g;
+    const italicRegex = /_([^_\n]+)_/g;
+    const strikeRegex = /~([^~\n]+)~/g;
+    const monoRegex = /`([^`\n]+)`/g;
+
+    // Utilitário: escapar HTML para evitar XSS quando usamos dangerouslySetInnerHTML
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, '&amp;')
+       .replace(/</g, '&lt;')
+       .replace(/>/g, '&gt;')
+       .replace(/\"/g, '&quot;')
+       .replace(/'/g, '&#039;');
 
     // Dividir o texto por quebras de linha
     const lines = content.split(/\\n|\n/);
@@ -249,6 +263,19 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     const linkClasses = messageType === 'human'
       ? 'text-blue-500 underline hover:no-underline hover:text-blue-700'
       : 'text-white underline hover:no-underline hover:text-gray-200';
+
+    // Função para processar formatação de texto
+    const processFormatting = (text: string) => {
+      const safe = escapeHtml(text);
+      // Processar na ordem correta
+      return safe
+        // Primeiro código monoespaçado para evitar conflitos
+        .replace(monoRegex, (_, content) => `<span class="font-mono bg-gray-100 rounded px-1">${content}</span>`)
+        // Depois as outras formatações
+        .replace(boldRegex, (_, content) => `<span class="font-bold">${content}</span>`)
+        .replace(italicRegex, (_, content) => `<span class="italic">${content}</span>`)
+        .replace(strikeRegex, (_, content) => `<span class="line-through">${content}</span>`);
+    };
 
     return lines.map((line, lineIndex) => {
       // Dividir cada linha por URLs
@@ -305,7 +332,22 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                 </a>
               );
             }
-            return part;
+            // Processar formatação de texto para partes não-URL
+            const formattedText = processFormatting(part);
+            
+            // Se o texto contém tags HTML (foi formatado), usar dangerouslySetInnerHTML
+            if (formattedText.includes('<span')) {
+              return (
+                <span
+                  key={partIndex}
+                  dangerouslySetInnerHTML={{ __html: formattedText }}
+                  className="whitespace-pre-wrap"
+                />
+              );
+            }
+            
+            // Se não tem formatação, retornar o texto normal
+            return <span key={partIndex} className="whitespace-pre-wrap">{part}</span>;
           })}
           {lineIndex < lines.length - 1 && <br />}
         </React.Fragment>
@@ -378,9 +420,11 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
           setMessages(prev => [...response.data, ...prev]);
         } else {
           setMessages(response.data);
-          // Scroll para o final quando carregar mensagens pela primeira vez
+          // Garantir que o scroll fique no final sem animação
           setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            if (messagesListRef.current) {
+              messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
+            }
           }, 300);
         }
         setHasMoreMessages(page < response.pagination.totalPages);
@@ -478,9 +522,11 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     await loadMessages(lead.id);
     await loadLeadInfo(lead.id);
 
-    // Garantir que a rolagem ocorra após selecionar um lead
+    // Garantir que a rolagem fique no final após selecionar um lead (sem animação)
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      if (messagesListRef.current) {
+        messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
+      }
     }, 500);
   };
 
@@ -774,7 +820,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                           ${message.status === 'erro' && message.erro ? 'opacity-75' : ''}
                           `}
                       >
-                        <div className={`text-sm leading-relaxed ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
+                        <div className={`text-xs leading-relaxed font-normal ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
                           {message.mensagem && message.mensagem ?
                             (typeof message.mensagem === 'string' ? renderMessageContent(message.mensagem, message.tipo || 'ai') : JSON.stringify(message.mensagem))
                             : 'Mensagem sem conteúdo'

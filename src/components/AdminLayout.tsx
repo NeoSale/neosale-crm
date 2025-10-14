@@ -52,8 +52,8 @@ const navigation: MenuItem[] = [
     name: 'Conhecimento',
     icon: BookOpenIcon,
     children: [
-      { name: 'Base', icon: DatabaseIcon },
-      { name: 'Documentos', icon: DocumentTextIcon },
+      { name: 'Base', href: '/conhecimento/base', icon: DatabaseIcon },
+      { name: 'Documentos', href: '/conhecimento/documentos', icon: DocumentTextIcon },
     ]
   },
   {
@@ -488,16 +488,19 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                   pathname === '/leads' ? 'Leads' :
                     pathname === '/chat' ? 'Chat' :
                       pathname === '/agentes' ? 'Agentes' :
-                        pathname === '/followup/configuracoes' ? 'Follow Up - Configurações' :
-                          pathname === '/followup/mensagens' ? 'Follow Up - Mensagens' :
-                            pathname === '/followup/agendamento' ? 'Follow Up - Agendamento' :
-                              pathname.startsWith('/followup') ? 'Follow Up' :
-                                pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
-                                  pathname.startsWith('/integracoes') ? 'Integrações' :
-                                    pathname === '/reports' ? 'Relatórios' :
-                                      pathname === '/documents' ? 'Documentos' :
-                                        pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
-                                          pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
+                        pathname === '/conhecimento/base' ? 'Base de Conhecimento' :
+                          pathname === '/conhecimento/documentos' ? 'Documentos' :
+                            pathname.startsWith('/conhecimento') ? 'Conhecimento' :
+                              pathname === '/followup/configuracoes' ? 'Follow Up - Configurações' :
+                                pathname === '/followup/mensagens' ? 'Follow Up - Mensagens' :
+                                  pathname === '/followup/agendamento' ? 'Follow Up - Agendamento' :
+                                    pathname.startsWith('/followup') ? 'Follow Up' :
+                                      pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
+                                        pathname.startsWith('/integracoes') ? 'Integrações' :
+                                          pathname === '/reports' ? 'Relatórios' :
+                                            pathname === '/documents' ? 'Documentos' :
+                                              pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
+                                                pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
               </h2>
             </div>
             <div className="flex items-center gap-4">

@@ -1,25 +1,31 @@
-// Serviço para integração com a API de Bases
+// Serviço para integração com a API de Documentos
 
 import ToastInterceptor, { ToastConfig } from './toastInterceptor';
 import { getValidatedApiUrl } from '../utils/api-config';
 import { getClienteId } from '../utils/cliente-utils';
 
-export interface Base {
+export interface Documento {
   id?: string;
   nome: string;
   descricao?: string;
-  cliente_id: string;
+  nome_arquivo: string;
+  cliente_id?: string;
+  base_id?: string | string[];
+  base64?: string;
+  embedding?: number[];
   created_at?: string;
   updated_at?: string;
+  deletado?: boolean;
+  similarity?: number;
 }
 
 export interface PaginationData {
-  page: number;
-  limit: number;
-  total: number;
+  currentPage: number;
   totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
+  totalItems: number;
+  itemsPerPage: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 export interface ApiResponse<T> {
@@ -30,10 +36,15 @@ export interface ApiResponse<T> {
   errors?: any[];
 }
 
-export interface ListBasesParams {
+export interface ListDocumentosParams {
   page?: number;
   limit?: number;
   search?: string;
+}
+
+export interface BuscarSimilaresParams {
+  texto: string;
+  limite?: number;
 }
 
 // Validar e obter URL da API de forma segura
@@ -41,12 +52,12 @@ let API_BASE_URL: string;
 try {
   API_BASE_URL = getValidatedApiUrl();
 } catch (error) {
-  console.error('Erro na configuração da API de Bases:', error);
+  console.error('Erro na configuração da API de Documentos:', error);
   // Em caso de erro, usar uma URL que causará erro explícito
   API_BASE_URL = '';
 }
 
-class BasesApiService {
+class DocumentosApiService {
   private getHeaders(): Record<string, string> {
     const clienteId = getClienteId();
     const headers: Record<string, string> = {
@@ -122,62 +133,68 @@ class BasesApiService {
     }
   }
 
-  // Buscar todas as bases com paginação e busca
-  async getBases(params?: ListBasesParams): Promise<ApiResponse<{ bases: Base[]; pagination: PaginationData }>> {
+  // Listar documentos com paginação e busca
+  async getDocumentos(params?: ListDocumentosParams): Promise<ApiResponse<{ documentos: Documento[]; pagination: PaginationData }>> {
     const queryParams = new URLSearchParams();
     
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.search) queryParams.append('search', params.search);
 
-    const endpoint = `/base${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const endpoint = `/documentos${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
-    return this.request<{ bases: Base[]; pagination: PaginationData }>(endpoint, {
+    return this.request<{ documentos: Documento[]; pagination: PaginationData }>(endpoint, {
       method: 'GET',
     });
   }
 
-  // Buscar base por ID
-  async getBaseById(id: string): Promise<ApiResponse<Base>> {
-    return this.request<Base>(`/base/${id}`, {
+  // Buscar documento por ID
+  async getDocumentoById(id: string): Promise<ApiResponse<Documento>> {
+    return this.request<Documento>(`/documentos/${id}`, {
       method: 'GET',
     });
   }
 
-  // Criar nova base
-  async createBase(base: Omit<Base, 'id'>): Promise<ApiResponse<Base>> {
-    return this.request<Base>('/base', {
+  // Criar novo documento
+  async createDocumento(documento: Omit<Documento, 'id'>): Promise<ApiResponse<Documento>> {
+    return this.request<Documento>('/documentos', {
       method: 'POST',
-      body: JSON.stringify(base),
+      body: JSON.stringify(documento),
     }, {
       showSuccess: true,
-      successMessage: 'Base criada com sucesso!'
+      successMessage: 'Documento criado com sucesso!'
     });
   }
 
-  // Atualizar base
-  async updateBase(id: string, base: Partial<Base>): Promise<ApiResponse<Base>> {
-    const { nome, descricao, cliente_id } = base;
-    const baseData = { nome, descricao, cliente_id };
-    return this.request<Base>(`/base/${id}`, {
+  // Atualizar documento
+  async updateDocumento(id: string, documento: Partial<Documento>): Promise<ApiResponse<Documento>> {
+    return this.request<Documento>(`/documentos/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(baseData),
+      body: JSON.stringify(documento),
     }, {
       showSuccess: true,
-      successMessage: 'Base atualizada com sucesso!'
+      successMessage: 'Documento atualizado com sucesso!'
     });
   }
 
-  // Excluir base
-  async deleteBase(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/base/${id}`, {
+  // Excluir documento (soft delete)
+  async deleteDocumento(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/documentos/${id}`, {
       method: 'DELETE',
     }, {
       showSuccess: true,
-      successMessage: 'Base excluída com sucesso!'
+      successMessage: 'Documento excluído com sucesso!'
+    });
+  }
+
+  // Buscar documentos similares
+  async buscarSimilares(params: BuscarSimilaresParams): Promise<ApiResponse<Documento[]>> {
+    return this.request<Documento[]>('/documentos/buscar-similares', {
+      method: 'POST',
+      body: JSON.stringify(params),
     });
   }
 }
 
-export const baseApi = new BasesApiService();
-export default baseApi;
+export const documentosApi = new DocumentosApiService();
+export default documentosApi;
