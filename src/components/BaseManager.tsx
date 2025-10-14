@@ -51,11 +51,12 @@ const BaseManager: React.FC = () => {
         try {
             const response = await baseApi.getBases();
             if (response.success && response.data) {
-                setBases(response.data.sort((a, b) => {
+                const sortedBases = [...response.data.bases].sort((a, b) => {
                     const dateA = a.created_at || '';
                     const dateB = b.created_at || '';
                     return dateB.localeCompare(dateA); // Mais recentes primeiro
-                }));
+                });
+                setBases(sortedBases);
             }
         } catch (error) {
             console.error('Erro ao carregar bases:', error);
