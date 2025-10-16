@@ -18,6 +18,7 @@ import { documentosApi, Documento } from '../services/documentosApi';
 import { baseApi, Base } from '../services/baseApi';
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
+import { Table, TableColumn, TableActionButton, TableText, TableBadge } from './Table';
 
 const DocumentosConhecimento: React.FC = () => {
     const [documentos, setDocumentos] = useState<Documento[]>([]);
@@ -460,86 +461,78 @@ const DocumentosConhecimento: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Nome
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Arquivo
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Base
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Descrição
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Criado em
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Ações
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {documentos.map((documento) => (
-                                    <tr key={documento.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {documento.nome}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900">
-                                                {documento.nome_arquivo}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">
-                                                {getBaseName(documento.base_id)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-900 max-w-md truncate">
-                                                {documento.descricao || '-'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">
-                                                {formatDate(documento.created_at)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex items-center space-x-2">
-                                                <button
-                                                    onClick={() => handleDownload(documento)}
-                                                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                                    title="Baixar arquivo"
-                                                >
-                                                    <ArrowDownTrayIcon className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleEdit(documento)}
-                                                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                                                    title="Editar"
-                                                >
-                                                    <PencilIcon className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(documento.id!)}
-                                                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                                                    title="Excluir"
-                                                >
-                                                    <TrashIcon className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <Table
+                            columns={[
+                                {
+                                    key: 'nome',
+                                    header: 'Nome',
+                                    render: (doc) => <TableText>{doc.nome}</TableText>,
+                                },
+                                {
+                                    key: 'arquivo',
+                                    header: 'Arquivo',
+                                    render: (doc) => <TableText>{doc.nome_arquivo}</TableText>,
+                                },
+                                {
+                                    key: 'base',
+                                    header: 'Base',
+                                    render: (doc) => (
+                                        <TableBadge variant="purple">
+                                            {getBaseName(doc.base_id)}
+                                        </TableBadge>
+                                    ),
+                                },
+                                {
+                                    key: 'descricao',
+                                    header: 'Descrição',
+                                    render: (doc) => (
+                                        <TableText truncate maxWidth="max-w-md">
+                                            {doc.descricao || '-'}
+                                        </TableText>
+                                    ),
+                                },
+                                {
+                                    key: 'created_at',
+                                    header: 'Criado em',
+                                    render: (doc) => (
+                                        <TableText>
+                                            <span className="text-gray-500">{formatDate(doc.created_at)}</span>
+                                        </TableText>
+                                    ),
+                                },
+                                {
+                                    key: 'acoes',
+                                    header: 'Ações',
+                                    width: 'w-28',
+                                    render: (doc) => (
+                                        <div className="flex items-center gap-0.5">
+                                            <TableActionButton
+                                                onClick={() => handleDownload(doc)}
+                                                icon={<ArrowDownTrayIcon className="h-4 w-4" />}
+                                                title="Baixar arquivo"
+                                                variant="primary"
+                                            />
+                                            <TableActionButton
+                                                onClick={() => handleEdit(doc)}
+                                                icon={<PencilIcon className="h-4 w-4" />}
+                                                title="Editar"
+                                                variant="primary"
+                                            />
+                                            <TableActionButton
+                                                onClick={() => handleDelete(doc.id!)}
+                                                icon={<TrashIcon className="h-4 w-4" />}
+                                                title="Excluir"
+                                                variant="danger"
+                                            />
+                                        </div>
+                                    ),
+                                },
+                            ]}
+                            data={documentos}
+                            keyExtractor={(doc) => doc.id || ''}
+                            emptyMessage="Nenhum documento encontrado"
+                            compact
+                        />
                     )}
                 </div>
 

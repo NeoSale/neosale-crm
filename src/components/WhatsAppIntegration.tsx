@@ -840,7 +840,7 @@ const WhatsAppIntegration: React.FC = () => {
                           {(instance.status || 'close') !== 'open' ? (
                             <button
                               onClick={() => handleConnect(instance.instanceId, instance.instanceName)}
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                              className="inline-flex items-center px-3 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                               title="Conectar"
                             >
                               <QrCodeIcon className="h-4 w-4 mr-1" />
@@ -848,7 +848,7 @@ const WhatsAppIntegration: React.FC = () => {
                           ) : (
                             <button
                               onClick={() => handleDisconnect(instance.instanceId)}
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              className="inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                               title="Desconectar"
                             >
                               <PowerIcon className="h-4 w-4 mr-1" />
@@ -863,7 +863,7 @@ const WhatsAppIntegration: React.FC = () => {
                           </button>
                           <button
                             onClick={() => handleEdit(item)}
-                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                            className="inline-flex items-center px-3 py-1.5 border border-primary text-xs font-medium rounded text-primary bg-white hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                             title="Editar"
                           >
                             <PencilIcon className="h-4 w-4 mr-1" />
@@ -873,7 +873,7 @@ const WhatsAppIntegration: React.FC = () => {
                             disabled={instance.status === 'open'}
                             className={`inline-flex items-center px-3 py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${instance.status === 'open'
                               ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'
-                              : 'border-gray-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500'
+                              : 'border-red-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500'
                               }`}
                             title={instance.status === 'open' ? 'Não é possível excluir instância conectada' : 'Excluir'}
                           >

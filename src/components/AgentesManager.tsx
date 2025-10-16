@@ -2,16 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { Users, Database, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2, Bot } from 'lucide-react';
-import { DocumentDuplicateIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 import { Agente, agentesApi } from '../services/agentesApi';
 import { TipoAgente, tipoAgentesApi } from '../services/tipoAgentesApi';
+import { Base, baseApi } from '../services/baseApi';
 import Modal from './Modal';
+import { Table, TableColumn, TableBadge, TableToggle, TableActionButton, TableText } from './Table';
 
 const AgentesManager: React.FC = () => {
   const [agentes, setAgentes] = useState<Agente[]>([]);
   const [tipoAgentes, setTipoAgentes] = useState<TipoAgente[]>([]);
+  const [bases, setBases] = useState<Base[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -24,11 +27,12 @@ const AgentesManager: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [selectedAgentes, setSelectedAgentes] = useState<Set<string>>(new Set());
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState<boolean>(false);
-  const [showInstanceModal, setShowInstanceModal] = useState<boolean>(false);
-  const [selectedAgenteForInstances, setSelectedAgenteForInstances] = useState<Agente | null>(null);
+  const [selectedBases, setSelectedBases] = useState<string[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
 
   // Estados de loading específicos para cada ação
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
+  const [saveLoading, setSaveLoading] = useState<boolean>(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // ID do agente sendo excluído
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState<boolean>(false);
   const [toggleAtivoLoading, setToggleAtivoLoading] = useState<string | null>(null); // ID do agente sendo alterado
@@ -66,8 +70,8 @@ const AgentesManager: React.FC = () => {
         if (showBulkDeleteModal) {
           setShowBulkDeleteModal(false);
         }
-        if (showInstanceModal) {
-          handleCloseInstanceModal();
+        if (isDropdownOpen) {
+          setIsDropdownOpen(false);
         }
       }
     };
@@ -76,16 +80,17 @@ const AgentesManager: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isClient, showEditModal, showDeleteModal, showBulkDeleteModal, showInstanceModal]);
+  }, [isClient, showEditModal, showDeleteModal, showBulkDeleteModal, isDropdownOpen]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const [agentesResponse, tipoAgentesResponse] = await Promise.all([
+      const [agentesResponse, tipoAgentesResponse, basesResponse] = await Promise.all([
         agentesApi.getAgentes(),
-        tipoAgentesApi.getTipoAgentes()
+        tipoAgentesApi.getTipoAgentes(),
+        baseApi.getBases({ limit: 100 })
       ]);
 
       if (agentesResponse.success) {
@@ -98,6 +103,12 @@ const AgentesManager: React.FC = () => {
         setTipoAgentes(tipoAgentesResponse.data || []);
       } else {
         throw new Error(tipoAgentesResponse.message || 'Erro ao carregar tipos de agentes');
+      }
+
+      if (basesResponse.success && basesResponse.data) {
+        setBases(basesResponse.data.bases || []);
+      } else {
+        console.error('Erro ao carregar bases:', basesResponse.message);
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -112,6 +123,9 @@ const AgentesManager: React.FC = () => {
     try {
       setRefreshLoading(true);
       await loadData();
+      toast.success('Dados atualizados com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao atualizar dados');
     } finally {
       setRefreshLoading(false);
     }
@@ -124,42 +138,56 @@ const AgentesManager: React.FC = () => {
       prompt: '',
       agendamento: false,
       prompt_agendamento: '',
-      ativo: true
+      ativo: true,
+      base_id: []
     };
     setEditingAgente(newAgente);
+    setSelectedBases([]);
     setIsCreatingAgente(true);
     setShowEditModal(true);
   };
 
   const handleEditAgente = (agente: Agente) => {
     setEditingAgente(agente);
+    setSelectedBases(agente.base_id || []);
     setIsCreatingAgente(false);
     setShowEditModal(true);
   };
 
   const handleUpdateAgente = async (updatedData: Partial<Agente>) => {
     try {
-      let success;
+      setSaveLoading(true);
+      // Adicionar base_id aos dados
+      const dataWithBases = {
+        ...updatedData,
+        base_id: selectedBases
+      };
+
+      let response;
 
       if (isCreatingAgente) {
         // Criar novo agente
-        const response = await agentesApi.createAgente(updatedData as Omit<Agente, 'id'>);
-        success = response.success;
+        response = await agentesApi.createAgente(dataWithBases as Omit<Agente, 'id'>);
       } else {
         // Atualizar agente existente
         if (!editingAgente?.id) return;
-        const response = await agentesApi.updateAgente(editingAgente.id, updatedData);
-        success = response.success;
+        response = await agentesApi.updateAgente(editingAgente.id, dataWithBases);
       }
 
-      if (success) {
+      if (response.success) {
         setShowEditModal(false);
         setEditingAgente(null);
+        setSelectedBases([]);
         setIsCreatingAgente(false);
         await loadData();
+      } else {
+        toast.error(response.message || 'Erro ao salvar agente');
       }
     } catch (error) {
       console.error('Erro ao salvar agente:', error);
+      toast.error('Erro ao salvar agente');
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -175,9 +203,22 @@ const AgentesManager: React.FC = () => {
       setDeleteLoading(deletingAgente.id);
       const response = await agentesApi.deleteAgente(deletingAgente.id);
       if (response.success) {
+        toast.success('Agente excluído com sucesso!', {
+          style: {
+            background: '#10B981',
+            color: '#fff',
+            fontWeight: '500',
+          },
+          iconTheme: {
+            primary: '#fff',
+            secondary: '#10B981',
+          },
+        });
         setShowDeleteModal(false);
         setDeletingAgente(null);
         await loadData();
+      } else {
+        toast.error(response.message || 'Erro ao excluir agente');
       }
     } catch (error) {
       console.error('Erro ao excluir agente:', error);
@@ -193,10 +234,14 @@ const AgentesManager: React.FC = () => {
       setToggleAtivoLoading(agente.id);
       const response = await agentesApi.toggleAgenteAtivo(agente.id, !agente.ativo);
       if (response.success) {
+        toast.success(`Agente ${!agente.ativo ? 'ativado' : 'inativado'} com sucesso!`);
         await loadData();
+      } else {
+        toast.error(response.message || 'Erro ao alterar status do agente');
       }
     } catch (error) {
       console.error('Erro ao alterar status do agente:', error);
+      toast.error('Erro ao alterar status do agente');
     } finally {
       setToggleAtivoLoading(null);
     }
@@ -209,10 +254,14 @@ const AgentesManager: React.FC = () => {
       setToggleAgendamentoLoading(agente.id);
       const response = await agentesApi.toggleAgenteAgendamento(agente.id, !agente.agendamento);
       if (response.success) {
+        toast.success(`Agendamento ${!agente.agendamento ? 'ativado' : 'desativado'} com sucesso!`);
         await loadData();
+      } else {
+        toast.error(response.message || 'Erro ao alterar agendamento');
       }
     } catch (error) {
       console.error('Erro ao alterar agendamento do agente:', error);
+      toast.error('Erro ao alterar agendamento do agente');
     } finally {
       setToggleAgendamentoLoading(null);
     }
@@ -328,15 +377,152 @@ const AgentesManager: React.FC = () => {
     return tipo?.nome || 'Tipo não encontrado';
   };
 
-  const handleOpenInstanceModal = (agente: Agente) => {
-    setSelectedAgenteForInstances(agente);
-    setShowInstanceModal(true);
+  // Funções para gerenciar seleção de bases
+  const toggleBaseSelection = (baseId: string) => {
+    setSelectedBases(prev => {
+      if (prev.includes(baseId)) {
+        return prev.filter(id => id !== baseId);
+      } else {
+        return [...prev, baseId];
+      }
+    });
   };
 
-  const handleCloseInstanceModal = () => {
-    setShowInstanceModal(false);
-    setSelectedAgenteForInstances(null);
+  const removeBase = (baseId: string) => {
+    setSelectedBases(prev => prev.filter(id => id !== baseId));
   };
+
+  // Definição das colunas da tabela
+  const columns: TableColumn<Agente>[] = [
+    {
+      key: 'nome',
+      header: 'Nome',
+      render: (agente) => <TableText>{agente.nome}</TableText>,
+    },
+    {
+      key: 'tipo',
+      header: 'Tipo',
+      render: (agente) => (
+        <TableBadge variant="blue">{getTipoAgenteNome(agente.tipo_agente_id)}</TableBadge>
+      ),
+    },
+    {
+      key: 'prompt',
+      header: 'Prompt',
+      render: (agente) => (
+        <TableText truncate maxWidth="max-w-[200px]" title={agente.prompt}>
+          {agente.prompt || '-'}
+        </TableText>
+      ),
+    },
+    {
+      key: 'whatsapp',
+      header: 'WhatsApp',
+      render: (agente) => {
+        if (agente.instancias_evolution_api && agente.instancias_evolution_api.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-0.5">
+              {agente.instancias_evolution_api.slice(0, 1).map((instancia, index) => (
+                <TableBadge
+                  key={instancia.id || index}
+                  variant="green"
+                  compact
+                >
+                  <span title={`Instância: ${instancia.instance_name || 'N/A'}\nFollowup: ${instancia.followup ? 'Sim' : 'Não'}\nEnvios diários: ${instancia.qtd_envios_diarios || 0}`}>
+                    {instancia.instance_name || 'N/A'}
+                  </span>
+                </TableBadge>
+              ))}
+              {agente.instancias_evolution_api.length > 1 && (
+                <TableBadge variant="gray" compact>
+                  +{agente.instancias_evolution_api.length - 1}
+                </TableBadge>
+              )}
+            </div>
+          );
+        }
+        return <TableText>-</TableText>;
+      },
+    },
+    {
+      key: 'bases',
+      header: 'Bases',
+      render: (agente) => {
+        if (agente.base_id && agente.base_id.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-0.5">
+              {agente.base_id.slice(0, 1).map(baseId => {
+                const base = bases.find(b => b.id === baseId);
+                return (
+                  <TableBadge key={baseId} variant="purple" compact>
+                    <span title={base?.nome || baseId}>
+                      {base?.nome || baseId}
+                    </span>
+                  </TableBadge>
+                );
+              })}
+              {agente.base_id.length > 1 && (
+                <TableBadge variant="gray" compact>
+                  +{agente.base_id.length - 1}
+                </TableBadge>
+              )}
+            </div>
+          );
+        }
+        return <TableText>-</TableText>;
+      },
+    },
+    {
+      key: 'agendamento',
+      header: 'Agend.',
+      align: 'center',
+      render: (agente) => (
+        <TableToggle
+          checked={agente.agendamento || false}
+          onChange={() => handleToggleAgendamento(agente)}
+          disabled={toggleAgendamentoLoading === agente.id}
+          color="bg-[#403CCF]"
+          title={toggleAgendamentoLoading === agente.id ? 'Alterando...' : `${agente.agendamento ? 'Desativar' : 'Ativar'} agendamento`}
+        />
+      ),
+    },
+    {
+      key: 'ativo',
+      header: 'Ativo',
+      align: 'center',
+      render: (agente) => (
+        <TableToggle
+          checked={agente.ativo !== false}
+          onChange={() => handleToggleAtivo(agente)}
+          disabled={toggleAtivoLoading === agente.id}
+          title={toggleAtivoLoading === agente.id ? 'Alterando...' : `${agente.ativo ? 'Inativar' : 'Ativar'} agente`}
+        />
+      ),
+    },
+    {
+      key: 'acoes',
+      header: 'Ações',
+      width: 'w-16',
+      render: (agente) => (
+        <div className="flex items-center gap-0.5">
+          <TableActionButton
+            onClick={() => handleEditAgente(agente)}
+            icon={<Edit size={14} />}
+            title="Editar agente"
+            variant="primary"
+          />
+          <TableActionButton
+            onClick={() => handleDeleteAgente(agente)}
+            icon={<Trash2 size={14} />}
+            title={deleteLoading === agente.id ? "Excluindo..." : "Excluir agente"}
+            variant="danger"
+            disabled={deleteLoading === agente.id}
+            loading={deleteLoading === agente.id}
+          />
+        </div>
+      ),
+    },
+  ];
 
   if (loading && (!Array.isArray(agentes) || agentes.length === 0)) {
     return (
@@ -363,9 +549,6 @@ const AgentesManager: React.FC = () => {
               <Bot size={24} className="text-white" />
               <div>
                 <h2 className="text-lg font-bold text-white !text-white">Agentes IA</h2>
-                <p className="text-sm text-white/80">
-                  {totalItems} agente{totalItems !== 1 ? 's' : ''} encontrado{totalItems !== 1 ? 's' : ''}
-                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -462,176 +645,17 @@ const AgentesManager: React.FC = () => {
         ) : (
           <>
             {/* Tabela */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-                      <input
-                        type="checkbox"
-                        checked={paginatedAgentes.length > 0 && selectedAgentes.size === paginatedAgentes.length}
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nome
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tipo
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Prompt
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      WhatsApp
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Agendamento
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ATIVO
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedAgentes.map((agente) => (
-                <tr key={agente.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedAgentes.has(agente.id || '')}
-                      onChange={() => handleSelectAgente(agente.id || '')}
-                      className="rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="text-sm font-medium text-gray-900">{agente.nome}</div>
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {getTipoAgenteNome(agente.tipo_agente_id)}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="max-w-xs">
-                      {agente.prompt ? (
-                        <div 
-                          className="text-sm text-gray-900 truncate"
-                          title={agente.prompt}
-                        >
-                          {agente.prompt.length > 50 ? `${agente.prompt.substring(0, 50)}...` : agente.prompt}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">-</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3">
-                    {agente.instancias_evolution_api && agente.instancias_evolution_api.length > 0 ? (
-                      <div className="flex items-center gap-2">
-                         <div className="flex items-center">
-                           {agente.instancias_evolution_api.slice(0, 4).map((instancia, index) => (
-                             <span
-                                key={index}
-                                className={`w-2 h-2 rounded-full ${
-                                  instancia.status?.toLowerCase() === 'open'
-                                    ? 'bg-green-500'
-                                    : instancia.status?.toLowerCase() === 'close'
-                                    ? 'bg-red-500'
-                                    : 'bg-gray-400'
-                                }`}
-                              ></span>
-                           ))}
-                           {agente.instancias_evolution_api.length > 4 && (
-                              <span className="text-xs text-gray-400 ml-1">+{agente.instancias_evolution_api.length - 4}</span>
-                            )}
-                         </div>
-                        <button
-                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors cursor-pointer"
-                          onClick={() => handleOpenInstanceModal(agente)}
-                        >
-                          {agente.instancias_evolution_api.length} instância{agente.instancias_evolution_api.length > 1 ? 's' : ''}
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="inline-flex items-center text-xs text-gray-500">
-                        <span className="w-2 h-2 bg-gray-300 rounded-full mr-2"></span>
-                        Nenhuma instância
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3">
-                    <button
-                      onClick={() => handleToggleAgendamento(agente)}
-                      disabled={toggleAgendamentoLoading === agente.id}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                        agente.agendamento ? 'bg-[#403CCF]' : 'bg-gray-300'
-                      }`}
-                      title={toggleAgendamentoLoading === agente.id ? 'Alterando...' : `${agente.agendamento ? 'Desativar' : 'Ativar'} agendamento`}
-                    >
-                      {toggleAgendamentoLoading === agente.id ? (
-                        <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent mx-auto" />
-                      ) : (
-                        <span
-                          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                            agente.agendamento ? 'translate-x-5' : 'translate-x-1'
-                          }`}
-                        />
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleToggleAtivo(agente)}
-                      disabled={toggleAtivoLoading === agente.id}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                        agente.ativo ? 'bg-primary' : 'bg-gray-300'
-                      }`}
-                      title={toggleAtivoLoading === agente.id ? 'Alterando...' : `${agente.ativo ? 'Inativar' : 'Ativar'} agente`}
-                    >
-                      {toggleAtivoLoading === agente.id ? (
-                        <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent mx-auto" />
-                      ) : (
-                        <span
-                          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                            agente.ativo ? 'translate-x-5' : 'translate-x-1'
-                          }`}
-                        />
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleEditAgente(agente)}
-                        className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer"
-                        title="Editar agente"
-                      >
-                        <Edit size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAgente(agente)}
-                        disabled={deleteLoading === agente.id}
-                        className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors cursor-pointer"
-                        title={deleteLoading === agente.id ? "Excluindo..." : "Excluir agente"}
-                      >
-                        {deleteLoading === agente.id ? (
-                          <div className="w-4.5 h-4.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        ) : (
-                          <Trash2 size={18} />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            <Table
+              columns={columns}
+              data={paginatedAgentes}
+              keyExtractor={(agente) => agente.id || ''}
+              selectable
+              selectedItems={selectedAgentes}
+              onSelectItem={handleSelectAgente}
+              onSelectAll={handleSelectAll}
+              emptyMessage="Nenhum agente encontrado"
+              compact
+            />
 
         {/* Controles de Paginação */}
         {totalItems > 0 && (
@@ -732,6 +756,8 @@ const AgentesManager: React.FC = () => {
         onClose={() => {
           setShowEditModal(false);
           setEditingAgente(null);
+          setSelectedBases([]);
+          setIsDropdownOpen(false);
           setIsCreatingAgente(false);
         }}
         title={isCreatingAgente ? 'Novo Agente' : 'Editar Agente'}
@@ -780,6 +806,79 @@ const AgentesManager: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="relative md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bases de Conhecimento
+                  </label>
+                  <div
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm bg-white cursor-pointer min-h-[42px] flex items-center justify-between"
+                  >
+                    <div className="flex-1 flex flex-wrap gap-1">
+                      {selectedBases.length === 0 ? (
+                        <span className="text-gray-400">Selecione as bases</span>
+                      ) : (
+                        selectedBases.map(baseId => {
+                          const base = bases.find(b => b.id === baseId);
+                          return (
+                            <span
+                              key={baseId}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs"
+                            >
+                              {base?.nome || baseId}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeBase(baseId);
+                                }}
+                                className="hover:bg-primary/20 rounded-full p-0.5"
+                              >
+                                <XMarkIcon className="h-3 w-3" />
+                              </button>
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+                    <ChevronDownIcon className={`h-5 w-5 text-gray-400 transition-transform ${
+                      isDropdownOpen ? 'transform rotate-180' : ''
+                    }`} />
+                  </div>
+                  {isDropdownOpen && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {bases.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                          Nenhuma base disponível
+                        </div>
+                      ) : (
+                        <div className="py-1">
+                          {bases.map((base) => (
+                            <label
+                              key={base.id}
+                              className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedBases.includes(base.id!)}
+                                onChange={() => toggleBaseSelection(base.id!)}
+                                className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer"
+                              />
+                              <span className="ml-2 text-sm text-gray-700">{base.nome}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {selectedBases.length > 0 && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      {selectedBases.length} base{selectedBases.length > 1 ? 's' : ''} selecionada{selectedBases.length > 1 ? 's' : ''}
+                    </p>
+                  )}
                   </div>
                 </div>
 
@@ -838,6 +937,8 @@ const AgentesManager: React.FC = () => {
                     onClick={() => {
                       setShowEditModal(false);
                       setEditingAgente(null);
+                      setSelectedBases([]);
+                      setIsDropdownOpen(false);
                       setIsCreatingAgente(false);
                     }}
                     className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
@@ -846,9 +947,17 @@ const AgentesManager: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors"
+                    disabled={saveLoading}
+                    className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
                   >
-                    {isCreatingAgente ? 'Criar Agente' : 'Salvar Alterações'}
+                    {saveLoading ? (
+                      <>
+                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        {isCreatingAgente ? 'Criando...' : 'Salvando...'}
+                      </>
+                    ) : (
+                      <>{isCreatingAgente ? 'Criar Agente' : 'Salvar Alterações'}</>
+                    )}
                   </button>
                 </div>
               </form>
@@ -942,212 +1051,6 @@ const AgentesManager: React.FC = () => {
               ) : (
                 'Excluir Todos'
               )}
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modal de Detalhes das Instâncias */}
-      <Modal
-        isOpen={showInstanceModal && !!selectedAgenteForInstances}
-        onClose={handleCloseInstanceModal}
-        title={`Instâncias WhatsApp - ${selectedAgenteForInstances?.nome}`}
-        size="2xl"
-      >
-        <div>
-          {selectedAgenteForInstances?.instancias_evolution_api && selectedAgenteForInstances.instancias_evolution_api.length > 0 ? (
-            <div className="space-y-4">
-              <div className="text-sm text-gray-600 mb-4">
-                Total de {selectedAgenteForInstances.instancias_evolution_api.length} instância{selectedAgenteForInstances.instancias_evolution_api.length > 1 ? 's' : ''} encontrada{selectedAgenteForInstances.instancias_evolution_api.length > 1 ? 's' : ''}
-              </div>
-              <div className="grid gap-4">
-                 {selectedAgenteForInstances.instancias_evolution_api.map((instancia, index) => {
-                    const isOpen = instancia.status?.toLowerCase() === 'open';
-                    const isClose = instancia.status?.toLowerCase() === 'close';
-                    
-                    // Função para formatar telefone
-                    const formatPhone = (phone: string) => {
-                      if (!phone || phone === 'Não conectado') return 'Não conectado';
-                      const cleaned = phone.replace(/\D/g, '');
-                      if (cleaned.length === 13 && cleaned.startsWith('55')) {
-                        const countryCode = cleaned.slice(0, 2);
-                        const areaCode = cleaned.slice(2, 4);
-                        const firstPart = cleaned.slice(4, 9);
-                        const secondPart = cleaned.slice(9, 13);
-                        return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
-                      }
-                      if (cleaned.length === 12 && cleaned.startsWith('55')) {
-                        const countryCode = cleaned.slice(0, 2);
-                        const areaCode = cleaned.slice(2, 4);
-                        const firstPart = cleaned.slice(4, 8);
-                        const secondPart = cleaned.slice(8, 12);
-                        return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
-                      }
-                      if (cleaned.length === 11) {
-                        const areaCode = cleaned.slice(0, 2);
-                        const firstPart = cleaned.slice(2, 7);
-                        const secondPart = cleaned.slice(7, 11);
-                        return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
-                      }
-                      if (cleaned.length === 10) {
-                        const areaCode = cleaned.slice(0, 2);
-                        const firstPart = cleaned.slice(2, 6);
-                        const secondPart = cleaned.slice(6, 10);
-                        return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
-                      }
-                      return phone;
-                    };
-                    
-                    // Função para copiar telefone para área de transferência
-                    const copyPhoneToClipboard = async (phone: string) => {
-                      if (!phone || phone === 'Não conectado') {
-                        toast.error('Número não disponível para cópia');
-                        return;
-                      }
-
-                      try {
-                        // Verifica se o número tem o padrão @lid
-                        if (phone.includes('@lid')) {
-                          // Se tem @lid, copia o número completo incluindo @lid
-                          await navigator.clipboard.writeText(phone);
-                        } else {
-                          // Remove todos os caracteres não numéricos para copiar apenas os números
-                          const cleanPhone = phone.replace(/\D/g, '');
-                          await navigator.clipboard.writeText(cleanPhone);
-                        }
-                        toast.success('Número copiado para a área de transferência!');
-                      } catch (error) {
-                        console.error('Erro ao copiar número:', error);
-                        toast.error('Erro ao copiar número');
-                      }
-                    };
-                    
-                    return (
-                     <div key={index} className={`border rounded-lg p-4 transition-colors ${
-                       isOpen 
-                         ? 'border-green-200 bg-green-50 hover:bg-green-100'
-                         : isClose
-                         ? 'border-red-200 bg-red-50 hover:bg-red-100'
-                         : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                     }`}>
-                      <div className="flex items-start gap-4">
-                        {/* Foto do perfil */}
-                        <div className="flex-shrink-0">
-                          {instancia.profilePictureUrl ? (
-                            <img
-                              src={instancia.profilePictureUrl}
-                              alt={instancia.profileName || instancia.instanceName}
-                              className="w-12 h-12 rounded-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                target.nextElementSibling?.classList.remove('hidden');
-                              }}
-                            />
-                          ) : null}
-                          <div className={`w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center ${instancia.profilePictureUrl ? 'hidden' : ''}`}>
-                            <span className="text-gray-500 text-sm font-medium">
-                              {(instancia.profileName || instancia.instanceName)?.charAt(0)?.toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Informações principais */}
-                        <div className="flex-1 min-w-0">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Coluna esquerda */}
-                            <div className="space-y-3">
-                              {/* Nome do perfil */}
-                              <div>
-                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Perfil WhatsApp</label>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {instancia.profileName || 'Não conectado'}
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {/* Nome da instância */}
-                              <div>
-                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Instância</label>
-                                <div className="text-sm font-medium text-gray-900 mt-1">
-                                  {instancia.instanceName}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Coluna direita */}
-                            <div className="space-y-3">
-                              {/* Status */}
-                              <div>
-                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Status</label>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className={`w-2 h-2 rounded-full ${
-                                    instancia.status?.toLowerCase() === 'open'
-                                      ? 'bg-green-500'
-                                      : instancia.status?.toLowerCase() === 'close'
-                                      ? 'bg-red-500'
-                                      : 'bg-gray-400'
-                                  }`}></span>
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {instancia.status?.toLowerCase() === 'open' ? 'Conectado' : 
-                                     instancia.status?.toLowerCase() === 'close' ? 'Desconectado' : 
-                                     instancia.status || 'Desconhecido'}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Telefone */}
-                              <div>
-                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Telefone</label>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {formatPhone(instancia.owner || '')}
-                                  </div>
-                                  {instancia.owner && instancia.owner !== 'Não conectado' && (
-                                     <button
-                                       onClick={() => copyPhoneToClipboard(instancia.owner || '')}
-                                       className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                                       title="Copiar número"
-                                     >
-                                       <DocumentDuplicateIcon className="h-4 w-4" />
-                                     </button>
-                                   )}
-                                </div>
-                              </div>
-                              
-                              {/* ID do Agente */}
-                              {instancia.id_agente && (
-                                <div>
-                                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">ID Agente</label>
-                                  <div className="text-sm font-medium text-gray-900 mt-1">
-                                    {instancia.id_agente}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                     </div>
-                   );
-                 })}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
-              </div>
-              <p className="text-gray-500">Nenhuma instância encontrada para este agente.</p>
-            </div>
-          )}
-          <div className="flex justify-end pt-4 border-t border-gray-200 mt-6">
-            <button
-              onClick={handleCloseInstanceModal}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-            >
-              Fechar
             </button>
           </div>
         </div>

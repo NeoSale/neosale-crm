@@ -15,6 +15,7 @@ import {
 import { Search } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatPhone, copyPhone } from '../utils/phone-utils';
+import { Table, TableColumn, TableBadge, TableText } from './Table';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ptBR } from 'date-fns/locale';
@@ -146,6 +147,71 @@ const PorDiaFollowUpManager: React.FC = () => {
   const getStatusText = (status: string) => {
     return status === 'sucesso' ? 'Sucesso' : 'Erro';
   };
+
+  // Definição das colunas da tabela
+  const columns: TableColumn<DetalheFollowUp>[] = [
+    {
+      key: 'nome_lead',
+      header: 'Lead',
+      render: (item) => <TableText truncate maxWidth="max-w-xs" title={item.nome_lead}>{item.nome_lead}</TableText>,
+    },
+    {
+      key: 'telefone_lead',
+      header: 'Telefone',
+      render: (item) => (
+        <div className="flex items-center gap-2">
+          <TableText>{formatPhone(item.telefone_lead)}</TableText>
+          {item.telefone_lead && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                copyPhone(item.telefone_lead);
+              }}
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Copiar telefone"
+            >
+              <DocumentDuplicateIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'horario',
+      header: 'Horário',
+      render: (item) => {
+        const { time } = formatDateTime(item.horario, true);
+        return <TableText>{time}</TableText>;
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (item) => (
+        <TableBadge variant={item.status === 'sucesso' ? 'green' : 'red'}>
+          {getStatusText(item.status)}
+        </TableBadge>
+      ),
+    },
+    {
+      key: 'mensagem_enviada',
+      header: 'Mensagem',
+      render: (item) => <TableText truncate maxWidth="max-w-xs" title={item.mensagem_enviada}>{item.mensagem_enviada}</TableText>,
+    },
+    {
+      key: 'mensagem_erro',
+      header: 'Erro',
+      render: (item) => (
+        item.mensagem_erro ? (
+          <TableText truncate maxWidth="max-w-xs" title={ErrorHandler.handleError(item.mensagem_erro)}>
+            <span className="text-red-600">{ErrorHandler.handleError(item.mensagem_erro)}</span>
+          </TableText>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )
+      ),
+    },
+  ];
 
   // Calcular estatísticas
   const stats = useMemo(() => {
@@ -409,106 +475,14 @@ const PorDiaFollowUpManager: React.FC = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
-        ) : filteredDetalhes.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center m-4">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">{searchTerm ? 'Nenhum resultado encontrado' : 'Nenhuma mensagem encontrada'}</h3>
-            <p className="mt-1 text-sm text-gray-500">{searchTerm ? 'Tente ajustar os termos de busca.' : 'Não há mensagens para a data selecionada.'}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Lead
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Telefone
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Horário
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Mensagem
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Erro
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedData.map((item, index) => {
-                  const { date, time } = formatDateTime(item.horario, true);
-                  return (
-                    <tr
-                      key={`${item.id_lead}-${index}`}
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => openModal(item)}
-                      title="Clique para ver detalhes completos"
-                    >
-                      <td className="px-3 py-2 text-sm font-medium text-gray-900 max-w-xs">
-                        <div className="truncate" title={item.nome_lead}>
-                          {item.nome_lead}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                        <div className="flex items-center gap-2">
-                          <span>{formatPhone(item.telefone_lead)}</span>
-                          {item.telefone_lead && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyPhone(item.telefone_lead);
-                              }}
-                              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                              title="Copiar telefone"
-                            >
-                              <DocumentDuplicateIcon className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                        <div className="flex items-center gap-1">
-                          <span>{time}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(item.status)}`}>
-                          {getStatusText(item.status)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-700 max-w-xs">
-                        <div className="truncate" title={item.mensagem_enviada}>
-                          {item.mensagem_enviada}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-700 max-w-xs">
-                        {item.mensagem_erro ? (
-                          <div className="truncate text-red-600" title={ErrorHandler.handleError(item.mensagem_erro)}>
-                            {ErrorHandler.handleError(item.mensagem_erro)}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <Table
+          columns={columns}
+          data={paginatedData}
+          keyExtractor={(item, index) => `${item.id_lead}-${index}`}
+          onRowClick={(item) => openModal(item)}
+          loading={loading}
+          emptyMessage={searchTerm ? 'Nenhum resultado encontrado' : 'Nenhuma mensagem encontrada'}
+        />
 
         {/* Paginação */}
         {filteredDetalhes.length > 0 && totalPages > 0 && (

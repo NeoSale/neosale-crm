@@ -13,6 +13,7 @@ import { getClienteId } from '../utils/cliente-utils';
 import { formatPhone, removePhonePrefix, formatPhoneDisplay } from '../utils/phone-utils';
 import { validateCNPJForForm, applyCNPJMask } from '../utils/document-validation';
 import { formatDateTime } from '../utils/date-utils';
+import { Table, TableColumn, TableToggle, TableActionButton, TableText, TableBadge } from './Table';
 
 // Componente de Tooltip para texto truncado
 interface TruncatedTextProps {
@@ -904,6 +905,179 @@ const LeadsManager: React.FC = () => {
     setCurrentPage(1);
   };
 
+  // Definição das colunas da tabela
+  const leadsColumns: TableColumn<Lead>[] = [
+    {
+      key: 'picture',
+      header: 'Foto',
+      width: 'w-16',
+      render: (lead) => (
+        <div
+          className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
+          onClick={() => {
+            if (lead.profile_picture_url) {
+              setSelectedPhoto(lead.profile_picture_url);
+              setShowPhotoModal(true);
+            }
+          }}
+        >
+          {lead.profile_picture_url ? (
+            <img
+              src={lead.profile_picture_url}
+              alt={`Foto de ${lead.nome}`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+          ) : null}
+          <UserIcon className={`w-5 h-5 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
+        </div>
+      ),
+    },
+    {
+      key: 'nome',
+      header: 'Nome',
+      render: (lead) => <TableText truncate maxWidth="max-w-[200px]">{lead.nome || '-'}</TableText>,
+    },
+    {
+      key: 'telefone',
+      header: 'Telefone',
+      render: (lead) => <TableText>{formatPhoneDisplay(lead.telefone || '') || '-'}</TableText>,
+    },
+    {
+      key: 'email',
+      header: 'Email',
+      render: (lead) => <TableText truncate maxWidth="max-w-[200px]">{lead.email || '-'}</TableText>,
+    },
+    {
+      key: 'cnpj',
+      header: 'CNPJ',
+      render: (lead) => <TableText>{applyCNPJMask(lead.cnpj || '') || '-'}</TableText>,
+    },
+    {
+      key: 'qualificacao',
+      header: 'Qualificação',
+      render: (lead) => {
+        const qualificacaoDisplay = getQualificacaoDisplay(lead.qualificacao);
+        return (
+          <QualificacaoTooltip qualificacao={lead.qualificacao}>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{qualificacaoDisplay.emoji}</span>
+              <span className={`text-sm font-medium ${qualificacaoDisplay.color}`}>
+                {qualificacaoDisplay.text}
+              </span>
+            </div>
+          </QualificacaoTooltip>
+        );
+      },
+    },
+    {
+      key: 'resumo',
+      header: 'Resumo',
+      render: (lead) => <TableText truncate maxWidth="max-w-[250px]">{lead.resumo || '-'}</TableText>,
+    },
+    {
+      key: 'origem',
+      header: 'Origem',
+      render: (lead) => {
+        if (!lead.origem) return <TableText>-</TableText>;
+        const origemText = typeof lead.origem === 'object' && lead.origem.nome ? lead.origem.nome : String(lead.origem);
+        const origemLower = origemText.toLowerCase();
+        const variant = origemLower.includes('whatsapp') ? 'green' : origemLower.includes('site') ? 'blue' : 'gray';
+        return <TableBadge variant={variant}>{origemText}</TableBadge>;
+      },
+    },
+    {
+      key: 'created_at',
+      header: 'Cadastro',
+      render: (lead) => {
+        const formatted = formatDateTime(lead.created_at || '');
+        return (
+          <TableText>
+            <span className="text-gray-500">
+              {typeof formatted === 'object' ? `${formatted.date} ${formatted.time}` : formatted}
+            </span>
+          </TableText>
+        );
+      },
+    },
+    {
+      key: 'updated_at',
+      header: 'Atualizado',
+      render: (lead) => {
+        const formatted = formatDateTime(lead.updated_at || '');
+        return (
+          <TableText>
+            <span className="text-gray-500">
+              {typeof formatted === 'object' ? `${formatted.date} ${formatted.time}` : formatted}
+            </span>
+          </TableText>
+        );
+      },
+    },
+    {
+      key: 'ai_agent',
+      header: 'Agente',
+      align: 'center',
+      render: (lead) => (
+        <TableToggle
+          checked={lead.ai_habilitada || false}
+          onChange={async () => {
+            if (!lead?.id) return;
+            try {
+              const newValue = !lead.ai_habilitada;
+              const cliente_id = getClienteId();
+              const response = await leadsApi.updateAiHabilitada(lead.id, newValue, cliente_id);
+              if (response.success) {
+                setLeads(prev => prev.map(l =>
+                  l.id === lead.id ? { ...l, ai_habilitada: newValue } : l
+                ));
+                toast.success(`AI Agent ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
+              }
+            } catch (error) {
+              console.error('Erro ao atualizar AI Agent:', error);
+              toast.error('Erro ao atualizar AI Agent');
+            }
+          }}
+          title={`AI Agent ${lead.ai_habilitada ? 'ativo' : 'inativo'}`}
+        />
+      ),
+    },
+    {
+      key: 'acoes',
+      header: 'Ações',
+      width: 'w-28',
+      render: (lead) => (
+        <div className="flex items-center gap-0.5">
+          <TableActionButton
+            onClick={() => router.push(`/chat?leadId=${lead.id}`)}
+            icon={<ChatBubbleLeftRightIcon className="h-4 w-4" />}
+            title="Abrir chat"
+            variant="primary"
+          />
+          <TableActionButton
+            onClick={() => handleEditLead(lead)}
+            icon={<Edit size={14} />}
+            title="Editar lead"
+            loading={editingLeadId === lead.id}
+            disabled={editingLeadId === lead.id}
+            variant="primary"
+          />
+          <TableActionButton
+            onClick={() => handleDeleteLead(lead)}
+            icon={<Trash2 size={14} />}
+            title="Excluir lead"
+            variant="danger"
+            loading={deletingLeadId === lead.id}
+            disabled={deletingLeadId === lead.id}
+          />
+        </div>
+      ),
+    },
+  ];
+
   if (loading && (!Array.isArray(leads) || leads.length === 0)) {
     return (
       <div className="w-full max-w-6xl mx-auto space-y-4">
@@ -1067,8 +1241,8 @@ const LeadsManager: React.FC = () => {
 
         {paginatedLeads.length > 0 ? (
           <>
-            {/* Cabeçalhos específicos das colunas desejadas */}
-            <div className="overflow-x-auto relative">
+            {/* Tabela de Leads */}
+            <div className="relative">
               {/* Loading overlay */}
               {loadingTable && (
                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -1078,300 +1252,17 @@ const LeadsManager: React.FC = () => {
                   </div>
                 </div>
               )}
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-                      <input
-                        type="checkbox"
-                        checked={paginatedLeads.length > 0 && selectedLeads.size === paginatedLeads.length}
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                    </th>
-                    {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificação', 'resumo', 'origem', 'created_at', 'updated_at', 'ai_agent'].map((header, index) => (
-                      <th
-                        key={index}
-                        className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${header === 'nome' || header === 'email' ? 'w-68 max-w-68' : ''
-                          } ${header === 'picture' ? 'w-16' : ''
-                          }`}
-                      >
-                        {header === 'picture' ? 'Foto' :
-                          header === 'created_at' ? 'Cadastro' :
-                            header === 'updated_at' ? 'Atualizado' :
-                              header === 'ai_agent' ? 'Agente' :
-                                header === 'status_agendamento' ? 'Agendado' :
-                                  header === 'status_negociacao' ? 'Negociação' :
-                                    header === 'etapa_funil' ? 'Etapa' :
-                                      header === 'erp_atual' ? 'ERP Atual' :
-                                        header === 'observacao' ? 'Observação' :
-                                          header.charAt(0).toUpperCase() + header.slice(1)}
-                      </th>
-                    ))}
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedLeads.map((lead, rowIndex) => (
-                    <tr key={lead.id || rowIndex} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 whitespace-nowrap text-sm">
-                        <input
-                          type="checkbox"
-                          checked={selectedLeads.has(lead.id || '')}
-                          onChange={() => handleSelectLead(lead.id || '')}
-                          className="rounded border-gray-300 text-primary focus:ring-primary"
-                        />
-                      </td>
-                      {['picture', 'nome', 'telefone', 'email', 'cnpj', 'qualificacao', 'resumo', 'origem', 'created_at', 'updated_at', 'ai_agent'].map((header, colIndex) => (
-                        <td
-                          key={colIndex}
-                          className={`px-3 py-2 text-sm text-gray-700 truncate ${header === 'nome' || header === 'email' ? 'w-68 max-w-68 truncate' : 'whitespace-nowrap'
-                            } ${header === 'picture' ? 'w-16' : ''
-                            }`}
-                          title={header === 'nome' || header === 'email' ? String(lead[header] || '') : undefined}
-                        >
-                          {(() => {
-                            // Coluna Picture com profile_picture_url ou UserIcon
-                            if (header === 'picture') {
-                              return (
-                                <div
-                                  className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
-                                  onClick={() => {
-                                    if (lead.profile_picture_url) {
-                                      setSelectedPhoto(lead.profile_picture_url);
-                                      setShowPhotoModal(true);
-                                    }
-                                  }}
-                                >
-                                  {lead.profile_picture_url ? (
-                                    <img
-                                      src={lead.profile_picture_url}
-                                      alt={`Foto de ${lead.nome}`}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = 'none';
-                                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                                      }}
-                                    />
-                                  ) : null}
-                                  <UserIcon className={`w-5 h-5 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
-                                </div>
-                              );
-                            }
-
-                            // Coluna AI Agent com toggle
-                            if (header === 'ai_agent') {
-                              return (
-                                <div className="flex items-center space-x-2">
-                                  <button
-                                    onClick={async () => {
-                                      if (!lead?.id) return;
-                                      try {
-                                        const newValue = !lead.ai_habilitada;
-                                        const cliente_id = getClienteId();
-                                        const response = await leadsApi.updateAiHabilitada(lead.id, newValue, cliente_id);
-                                        if (response.success) {
-                                          // Atualizar o lead localmente sem chamar a API novamente
-                                          setLeads(prev => prev.map(l =>
-                                            l.id === lead.id ? { ...l, ai_habilitada: newValue } : l
-                                          ));
-                                          toast.success(`AI Agent ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
-                                        }
-                                      } catch (error) {
-                                        console.error('Erro ao atualizar AI Agent:', error);
-                                        toast.error('Erro ao atualizar AI Agent');
-                                      }
-                                    }}
-                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${lead.ai_habilitada ? 'bg-[#403CCF]' : 'bg-gray-300'
-                                      }`}
-                                    title={`AI Agent ${lead.ai_habilitada ? 'ativo' : 'inativo'}`}
-                                  >
-                                    <span
-                                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${lead.ai_habilitada ? 'translate-x-5' : 'translate-x-1'
-                                        }`}
-                                    />
-                                  </button>
-                                </div>
-                              );
-                            }
-
-                            const value = lead[header];
-                            if (value === null || value === undefined) return '-';
-
-                            // Tratar qualificação com emoji e cor
-                            if (header === 'qualificacao') {
-                              const qualificacaoDisplay = getQualificacaoDisplay(value);
-                              return (
-                                <QualificacaoTooltip qualificacao={value}>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-lg">{qualificacaoDisplay.emoji}</span>
-                                    <span className={`text-sm font-medium ${qualificacaoDisplay.color}`}>
-                                      {qualificacaoDisplay.text}
-                                    </span>
-                                  </div>
-                                </QualificacaoTooltip>
-                              );
-                            }
-
-                            // Tratar origem
-                            if (header === 'origem') {
-                              if (typeof value === 'object' && value !== null && value.nome) {
-                                return (
-                                  <span className="text-sm text-gray-700">
-                                    {value.nome}
-                                  </span>
-                                );
-                              }
-                              return '-';
-                            }
-
-                            // Tratar booleanos
-                            if (typeof value === 'boolean') {
-                              return value ? 'Sim' : 'Não';
-                            }
-
-                            // Tratar objetos
-                            if (typeof value === 'object' && value !== null) {
-                              // Se for um objeto, tentar extrair o nome primeiro, depois id
-                              return value.nome || value.id || '-';
-                            }
-
-                            // Tratar telefone com formatação e botão de cópia
-                            if (header === 'telefone' && typeof value === 'string') {
-                              return (
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(value);
-                                      toast.success('Telefone copiado!');
-                                    }}
-                                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                    title="Copiar email"
-                                  >
-                                    <span className="text-sm text-gray-700 cursor-pointer">{formatPhone(value)}</span>
-                                  </button>
-                                </div>
-                              );
-                            }
-
-                            // Tratar email com botão de cópia
-                            if (header === 'email' && typeof value === 'string' && value.trim()) {
-                              return (
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(value);
-                                      toast.success('Email copiado!');
-                                    }}
-                                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                    title="Copiar email"
-                                  >
-                                    <span className="text-sm text-gray-700 cursor-pointer">{value}</span>
-                                  </button>
-                                </div>
-                              );
-                            }
-
-                            // Tratar CNPJ com formatação e botão de cópia
-                            if (header === 'cnpj' && typeof value === 'string' && value.trim()) {
-                              const formattedCNPJ = applyCNPJMask(value);
-                              const cleanCNPJ = value.replace(/\D/g, '');
-
-                              return (
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(cleanCNPJ);
-                                      toast.success('CNPJ copiado!');
-                                    }}
-                                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                    title="Copiar CNPJ"
-                                  >
-                                    <span className="text-sm text-gray-700 cursor-pointer">{formattedCNPJ}</span>
-                                  </button>
-                                </div>
-                              );
-                            }
-
-                            // Tratar datas com hora
-                            if (['created_at', 'updated_at'].includes(header) && typeof value === 'string') {
-                              const formattedDateTime = formatDateTime(value);
-                              if (formattedDateTime) {
-                                return (
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{formattedDateTime.date}</span>
-                                    <span className="text-xs text-gray-500">{formattedDateTime.time}</span>
-                                  </div>
-                                );
-                              }
-                              return value;
-                            }
-
-                            // Tratar Resumo com texto truncado e tooltip
-                            if (header === 'resumo' && typeof value === 'string' && value.trim()) {
-                              return (
-                                <div className="flex items-center gap-2 cursor-pointer"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(value);
-                                    toast.success('Resumo copiado!');
-                                  }}>
-                                  <TruncatedText
-                                    text={value}
-                                    maxLength={20}
-                                    className="text-sm text-gray-700"
-                                  />
-                                </div>
-                              );
-                            }
-
-                            return value;
-                          })()}
-                        </td>
-                      ))}
-                      <td className="px-3 py-2 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              // Navegar para a tela de chat passando o ID do lead
-                              router.push(`/chat?leadId=${lead.id}`);
-                            }}
-                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer"
-                            title="Abrir chat"
-                          >
-                            <ChatBubbleLeftRightIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleEditLead(lead)}
-                            disabled={editingLeadId === lead.id}
-                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                            title="Editar lead"
-                          >
-                            {editingLeadId === lead.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                            ) : (
-                              <Edit size={18} />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteLead(lead)}
-                            disabled={deletingLeadId === lead.id}
-                            className="p-1 text-primary hover:text-primary/70 hover:bg-primary/10 rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                            title="Excluir lead"
-                          >
-                            {deletingLeadId === lead.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                            ) : (
-                              <Trash2 size={18} />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <Table
+                columns={leadsColumns}
+                data={paginatedLeads}
+                keyExtractor={(lead) => lead.id || ''}
+                selectable
+                selectedItems={selectedLeads}
+                onSelectItem={handleSelectLead}
+                onSelectAll={handleSelectAll}
+                emptyMessage="Nenhum lead encontrado"
+                compact
+              />
             </div>
 
             {/* Controles de Paginação */}

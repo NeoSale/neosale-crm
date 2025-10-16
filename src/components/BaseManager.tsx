@@ -18,6 +18,7 @@ import {
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { clientesApi, Cliente } from '@/services/clientesApi';
+import { Table, TableColumn, TableActionButton, TableText } from './Table';
 
 const BaseManager: React.FC = () => {
     const [bases, setBases] = useState<Base[]>([]);
@@ -294,71 +295,64 @@ const BaseManager: React.FC = () => {
                                 )}
                             </div>
                         ) : (
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Nome
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Descrição
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Cliente
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Criado em
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ações
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {currentBases.map((base, index) => (
-                                        <tr key={base.id || `base-${index}`} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900">
-                                                    {base.nome}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-900 max-w-xs truncate">
-                                                    {base.descricao || 'Sem descrição'}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900">
-                                                    {getClienteNome(base.cliente_id)}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-500">
-                                                    {formatDate(base.created_at || '')}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div className="flex items-center space-x-2">
-                                                    <button
-                                                        onClick={() => handleEdit(base)}
-                                                        className="text-primary hover:text-primary-dark transition-colors p-1"
-                                                        title="Editar base"
-                                                    >
-                                                        <PencilIcon className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(base.id!)}
-                                                        className="text-red-600 hover:text-red-900 transition-colors p-1"
-                                                        title="Deletar base"
-                                                    >
-                                                        <TrashIcon className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            <Table
+                                columns={[
+                                    {
+                                        key: 'nome',
+                                        header: 'Nome',
+                                        render: (base) => <TableText>{base.nome}</TableText>,
+                                    },
+                                    {
+                                        key: 'descricao',
+                                        header: 'Descrição',
+                                        render: (base) => (
+                                            <TableText truncate maxWidth="max-w-xs">
+                                                {base.descricao || 'Sem descrição'}
+                                            </TableText>
+                                        ),
+                                    },
+                                    {
+                                        key: 'cliente',
+                                        header: 'Cliente',
+                                        render: (base) => <TableText>{getClienteNome(base.cliente_id)}</TableText>,
+                                    },
+                                    {
+                                        key: 'created_at',
+                                        header: 'Criado em',
+                                        render: (base) => (
+                                            <TableText>
+                                                <span className="text-gray-500">{formatDate(base.created_at || '')}</span>
+                                            </TableText>
+                                        ),
+                                    },
+                                    {
+                                        key: 'acoes',
+                                        header: 'Ações',
+                                        width: 'w-20',
+                                        align: 'right',
+                                        render: (base) => (
+                                            <div className="flex items-center gap-0.5 justify-end">
+                                                <TableActionButton
+                                                    onClick={() => handleEdit(base)}
+                                                    icon={<PencilIcon className="h-4 w-4" />}
+                                                    title="Editar base"
+                                                />
+                                                <button
+                                                    onClick={() => handleDelete(base.id!)}
+                                                    className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                                    title="Deletar base"
+                                                >
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ),
+                                    },
+                                ]}
+                                data={currentBases}
+                                keyExtractor={(base, index) => base.id || `base-${index}`}
+                                emptyMessage="Nenhuma base encontrada"
+                                compact
+                            />
                         )}
                     </div>
 

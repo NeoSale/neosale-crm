@@ -22,7 +22,7 @@ export interface Lead {
   agendado?: string;
   cliente_id?: string;
   created_at?: string;
-  origem?: string;
+  origem?: string | { id?: string; nome?: string; [key: string]: any };
   ai_habilitada?: boolean;
   profile_picture_url?: string;
   [key: string]: any;

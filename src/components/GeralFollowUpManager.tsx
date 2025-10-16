@@ -11,6 +11,7 @@ import {
   ChartBarIcon
 } from '@heroicons/react/24/outline';
 import { Search } from 'lucide-react';
+import { Table, TableColumn, TableBadge, TableText } from './Table';
 
 const GeralFollowUpManager: React.FC = () => {
   const router = useRouter();
@@ -98,6 +99,49 @@ const GeralFollowUpManager: React.FC = () => {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1);
   };
+
+  // Definição das colunas da tabela
+  const columns: TableColumn<EstatisticasPorDia>[] = [
+    {
+      key: 'data',
+      header: 'Data',
+      render: (item) => <TableText>{formatDate(item.data)}</TableText>,
+    },
+    {
+      key: 'qtd_sucesso',
+      header: 'Sucessos',
+      render: (item) => <TableBadge variant="green">{item.qtd_sucesso}</TableBadge>,
+    },
+    {
+      key: 'qtd_erro',
+      header: 'Erros',
+      render: (item) => <TableBadge variant="red">{item.qtd_erro}</TableBadge>,
+    },
+    {
+      key: 'total',
+      header: 'Total',
+      render: (item) => <TableBadge variant="blue">{item.total}</TableBadge>,
+    },
+    {
+      key: 'taxa',
+      header: 'Taxa de Sucesso',
+      render: (item) => (
+        <div className="flex items-center">
+          <div className="flex-1">
+            <div className="flex items-center justify-between text-sm">
+              <span>{calculatePercentage(item.qtd_sucesso, item.total)}%</span>
+            </div>
+            <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${calculatePercentage(item.qtd_sucesso, item.total)}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+  ];
 
   if (loading && estatisticas.length === 0) {
     return (
@@ -214,83 +258,14 @@ const GeralFollowUpManager: React.FC = () => {
           </div>
         </div>
 
-        {filteredEstatisticas.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center m-4">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">{searchTerm ? 'Nenhum resultado encontrado' : 'Nenhum dado encontrado'}</h3>
-            <p className="mt-1 text-sm text-gray-500">{searchTerm ? 'Tente ajustar os termos de busca.' : 'Não há estatísticas de follow-up disponíveis.'}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sucessos
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Erros
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Taxa de Sucesso
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedData.map((item, index) => (
-                  <tr 
-                    key={index} 
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => router.push(`/followup/relatorio/por-dia?data=${item.data}`)}
-                    title="Clique para ver detalhes do dia"
-                  >
-                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatDate(item.data)}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {item.qtd_sucesso}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        {item.qtd_erro}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {item.total}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700">
-                      <div className="flex items-center">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>{calculatePercentage(item.qtd_sucesso, item.total)}%</span>
-                          </div>
-                          <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${calculatePercentage(item.qtd_sucesso, item.total)}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <Table
+          columns={columns}
+          data={paginatedData}
+          keyExtractor={(item, index) => `${item.data}-${index}`}
+          onRowClick={(item) => router.push(`/followup/relatorio/por-dia?data=${item.data}`)}
+          loading={loading}
+          emptyMessage={searchTerm ? 'Nenhum resultado encontrado' : 'Nenhum dado encontrado'}
+        />
 
         {/* Paginação */}
         {filteredEstatisticas.length > 0 && totalPages > 0 && (

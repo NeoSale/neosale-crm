@@ -13,18 +13,15 @@ export interface Agente {
   agendamento?: boolean;
   prompt_agendamento?: string;
   ativo?: boolean;
+  base_id?: string[];
   created_at?: string;
   updated_at?: string;
   // Relacionamento com tipo de agente
   tipo_agente?: TipoAgente;
   // Instâncias do Evolution API associadas ao agente
   instancias_evolution_api?: Array<{
-    instanceName: string;
-    profileName?: string;
-    profilePictureUrl?: string;
-    status?: string;
-    owner?: string;
-    id_agente?: string;
+    id: string;
+    instance_name: string;
     followup?: boolean;
     qtd_envios_diarios?: number;
     [key: string]: any;
@@ -152,8 +149,8 @@ class AgentesApiService {
 
   // Atualizar agente
   async updateAgente(id: string, agente: Partial<Agente>): Promise<ApiResponse<Agente>> {
-    const { agendamento, ativo, nome, prompt, prompt_agendamento, tipo_agente_id, updated_at } = agente;
-    const agenteData = { agendamento, ativo, nome, prompt, prompt_agendamento, tipo_agente_id, updated_at };
+    const { agendamento, ativo, nome, prompt, prompt_agendamento, tipo_agente_id, base_id, updated_at } = agente;
+    const agenteData = { agendamento, ativo, nome, prompt, prompt_agendamento, tipo_agente_id, base_id, updated_at };
     return this.request<Agente>(`/agentes/${id}`, {
       method: 'PUT',
       body: JSON.stringify(agenteData),

@@ -13,6 +13,7 @@ import {
 import { Search } from 'lucide-react';
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
+import { Table, TableColumn, TableText, TableToggle, TableActionButton } from './Table';
 import { googleCalendarApi, GoogleCalendarIntegracao, CreateGoogleCalendarIntegracao } from '../services/googleCalendarApi';
 import { parametrosApi } from '../services/parametrosApi';
 import toast from 'react-hot-toast';
@@ -190,6 +191,94 @@ export default function GoogleCalendarManager({ cliente_id }: GoogleCalendarMana
     setEditingIntegracao(null);
     setCopiedRedirectUri(false);
   };
+
+  // Definição das colunas da tabela
+  const columns: TableColumn<GoogleCalendarIntegracao>[] = [
+    {
+      key: 'nome',
+      header: 'Nome',
+      render: (integracao) => <TableText truncate maxWidth="max-w-[12rem]" title={integracao.nome}>{integracao.nome}</TableText>,
+    },
+    {
+      key: 'client_id',
+      header: 'Client ID',
+      render: (integracao) => (
+        <div 
+          className="text-sm font-medium text-gray-900 truncate max-w-[12rem] cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors flex items-center gap-1" 
+          title={`${integracao.client_id} - Clique para copiar`}
+          onClick={() => copyToClipboard(integracao.client_id, `client_id_${integracao.id}`, 'Client ID')}
+        >
+          <span className="truncate">{integracao.client_id}</span>
+          {copiedFields[`client_id_${integracao.id}`] ? (
+            <svg className="h-3 w-3 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <ClipboardIcon className="h-3 w-3 text-gray-400 flex-shrink-0" />
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'client_secret',
+      header: 'Client Secret',
+      render: (integracao) => (
+        <div className="flex items-center gap-2 max-w-xs">
+          <div 
+            className="text-sm font-medium text-gray-900 flex-1 cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors flex items-center gap-1" 
+            title={`${showClientSecret[integracao.id!] ? integracao.client_secret : maskClientSecret(integracao.client_secret)} - Clique para copiar`}
+            onClick={() => copyToClipboard(integracao.client_secret, `client_secret_${integracao.id}`, 'Client Secret')}
+          >
+            <span className="truncate">
+              {showClientSecret[integracao.id!]
+                ? integracao.client_secret
+                : maskClientSecret(integracao.client_secret)
+              }
+            </span>
+            {copiedFields[`client_secret_${integracao.id}`] ? (
+              <svg className="h-3 w-3 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <ClipboardIcon className="h-3 w-3 text-gray-400 flex-shrink-0" />
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'ativo',
+      header: 'Status',
+      render: (integracao) => (
+        <TableToggle
+          checked={integracao.ativo}
+          onChange={() => toggleAtivo(integracao)}
+          title={`Integração ${integracao.ativo ? 'ativa' : 'inativa'}`}
+          compact={false}
+        />
+      ),
+    },
+    {
+      key: 'acoes',
+      header: 'Ações',
+      render: (integracao) => (
+        <div className="flex items-center space-x-2">
+          <TableActionButton
+            onClick={() => handleEdit(integracao)}
+            icon={<PencilIcon className="h-4 w-4" />}
+            title="Editar"
+            variant="primary"
+          />
+          <TableActionButton
+            onClick={() => handleDeleteConfirm(integracao)}
+            icon={<TrashIcon className="h-4 w-4" />}
+            title="Excluir"
+            variant="danger"
+          />
+        </div>
+      ),
+    },
+  ];
 
   // Abrir modal para criar nova integração
   const handleCreate = async () => {
@@ -414,110 +503,14 @@ export default function GoogleCalendarManager({ cliente_id }: GoogleCalendarMana
               )}
             </div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nome
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client Secret
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {currentConfiguracoes.map((integracao) => (
-                  <tr key={integracao.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 truncate max-w-[12rem]" title={integracao.nome}>
-                        {integracao.nome}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div 
-                        className="text-sm font-medium text-gray-900 truncate max-w-[12rem] cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors flex items-center gap-1" 
-                        title={`${integracao.client_id} - Clique para copiar`}
-                        onClick={() => copyToClipboard(integracao.client_id, `client_id_${integracao.id}`, 'Client ID')}
-                      >
-                        <span className="truncate">{integracao.client_id}</span>
-                        {copiedFields[`client_id_${integracao.id}`] ? (
-                          <svg className="h-3 w-3 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          <ClipboardIcon className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 max-w-xs">
-                        <div 
-                          className="text-sm font-medium text-gray-900 flex-1 cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors flex items-center gap-1" 
-                          title={`${showClientSecret[integracao.id!] ? integracao.client_secret : maskClientSecret(integracao.client_secret)} - Clique para copiar`}
-                          onClick={() => copyToClipboard(integracao.client_secret, `client_secret_${integracao.id}`, 'Client Secret')}
-                        >
-                          <span className="truncate">
-                            {showClientSecret[integracao.id!]
-                              ? integracao.client_secret
-                              : maskClientSecret(integracao.client_secret)
-                            }
-                          </span>
-                          {copiedFields[`client_secret_${integracao.id}`] ? (
-                            <svg className="h-3 w-3 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <ClipboardIcon className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all duration-300 shadow-sm cursor-pointer ${
-                          integracao.ativo ? 'bg-[#403CCF]' : 'bg-gray-300'
-                        }`}
-                        title={`Integração ${integracao.ativo ? 'ativa' : 'inativa'}`}
-                        onClick={() => toggleAtivo(integracao)}
-                      >
-                        <span
-                          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-300 ${
-                            integracao.ativo ? 'translate-x-5' : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleEdit(integracao)}
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                          title="Editar"
-                        >
-                          <PencilIcon className="h-4 w-4 mr-1" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteConfirm(integracao)}
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                          title="Excluir"
-                        >
-                          <TrashIcon className="h-4 w-4 mr-1" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table
+              columns={columns}
+              data={currentConfiguracoes}
+              keyExtractor={(integracao) => integracao.id!}
+              loading={loading}
+              emptyMessage={searchTerm ? 'Nenhum resultado encontrado' : 'Nenhuma integração encontrada'}
+              compact={false}
+            />
           )}
         </div>
 

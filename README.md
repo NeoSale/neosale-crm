@@ -150,6 +150,89 @@ Componente para exibição dos dados importados:
 - Preview limitado
 - Design elegante
 
+### Table (Componente Reutilizável)
+Componente genérico de tabela para uso em toda a aplicação:
+
+**Características:**
+- ✅ TypeScript Generics para tipagem forte
+- ✅ Seleção múltipla com checkboxes
+- ✅ Modo compacto para melhor aproveitamento de espaço
+- ✅ Estados de loading e empty
+- ✅ Alinhamento customizável de colunas
+- ✅ Renderização customizada por célula
+
+**Componentes Auxiliares:**
+- `TableBadge` - Badges coloridos para status (blue, green, purple, red, yellow, gray)
+- `TableToggle` - Switches/toggles responsivos com loading state
+- `TableActionButton` - Botões de ação com ícones e loading
+- `TableText` - Texto com truncate automático e tooltips
+
+**Exemplo de Uso:**
+```tsx
+import { Table, TableColumn, TableBadge, TableToggle, TableActionButton } from '@/components/Table';
+
+const columns: TableColumn<Agente>[] = [
+  {
+    key: 'nome',
+    header: 'Nome',
+    render: (item) => <TableText>{item.nome}</TableText>,
+  },
+  {
+    key: 'ativo',
+    header: 'Ativo',
+    align: 'center',
+    render: (item) => (
+      <TableToggle
+        checked={item.ativo}
+        onChange={() => handleToggle(item)}
+      />
+    ),
+  },
+  {
+    key: 'acoes',
+    header: 'Ações',
+    width: 'w-16',
+    render: (item) => (
+      <div className="flex items-center gap-0.5">
+        <TableActionButton
+          onClick={() => handleEdit(item)}
+          icon={<Edit size={14} />}
+          title="Editar"
+        />
+      </div>
+    ),
+  },
+];
+
+<Table
+  columns={columns}
+  data={items}
+  keyExtractor={(item) => item.id}
+  selectable
+  selectedItems={selectedItems}
+  onSelectItem={handleSelectItem}
+  onSelectAll={handleSelectAll}
+  compact
+/>
+```
+
+**Props Principais:**
+- `columns` - Array de definições de colunas
+- `data` - Array de dados a exibir
+- `keyExtractor` - Função para extrair chave única
+- `selectable` - Habilita seleção múltipla
+- `compact` - Modo compacto (padrão: true)
+- `loading` - Estado de carregamento
+- `emptyMessage` - Mensagem quando não há dados
+
+**Padrões de Estilo:**
+- Espaçamento: `px-2 py-2` (compacto)
+- Fonte: `text-xs` (compacto)
+- Toggles: `h-4 w-8` (compacto)
+- Ícones: `14px` (compacto)
+- Badges: `px-1.5 py-0.5`
+- Gaps: `gap-0.5`
+
 ## 🔧 Scripts Disponíveis
 
 - `npm run dev` - Inicia o servidor de desenvolvimento
