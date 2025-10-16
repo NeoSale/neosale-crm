@@ -76,12 +76,12 @@ const Modal: React.FC<ModalProps> = ({
       onClick={handleBackdropClick}
     >
       <div
-        className={`bg-white rounded-lg p-6 w-full ${sizeClasses[size]} mx-4 max-h-[90vh] overflow-y-auto shadow-2xl ${className}`}
+        className={`bg-white rounded-lg w-full ${sizeClasses[size]} mx-4 max-h-[600px] flex flex-col shadow-2xl ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabeçalho do Modal */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200 flex-shrink-0">
             {title && (
               <h3 className="text-lg font-semibold text-gray-900">
                 {title}
@@ -99,8 +99,8 @@ const Modal: React.FC<ModalProps> = ({
           </div>
         )}
 
-        {/* Conteúdo do Modal */}
-        <div className="modal-content">
+        {/* Conteúdo do Modal - Scrollável */}
+        <div className="modal-content overflow-y-auto flex-1 p-6">
           {children}
         </div>
       </div>

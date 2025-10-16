@@ -39,7 +39,7 @@ export function Table<T>({
   compact = true,
 }: TableProps<T>) {
   const paddingClass = compact ? 'px-2 py-2' : 'px-3 py-3';
-  const textSizeClass = compact ? 'text-xs' : 'text-sm';
+  const textSizeClass = compact ? 'text-sm' : 'text-base';
 
   if (loading) {
     return (
@@ -63,7 +63,7 @@ export function Table<T>({
         <thead className="bg-gray-50">
           <tr>
             {selectable && (
-              <th className={`${paddingClass} text-left ${textSizeClass} font-medium text-gray-500 uppercase w-8`}>
+              <th className={`${paddingClass} text-left text-xs font-medium text-gray-500 uppercase w-8`}>
                 <input
                   type="checkbox"
                   checked={data.length > 0 && selectedItems.size === data.length}
@@ -75,7 +75,7 @@ export function Table<T>({
             {columns.map((column) => (
               <th
                 key={column.key}
-                className={`${paddingClass} text-${column.align || 'left'} ${textSizeClass} font-medium text-gray-500 uppercase ${column.width || ''}`}
+                className={`${paddingClass} text-${column.align || 'left'} text-xs font-medium text-gray-500 uppercase ${column.width || ''}`}
               >
                 {column.header}
               </th>
@@ -217,7 +217,7 @@ export const TableText: React.FC<{
   title?: string;
   compact?: boolean;
 }> = ({ children, truncate = false, maxWidth, title, compact = true }) => {
-  const textSizeClass = compact ? 'text-xs' : 'text-sm';
+  const textSizeClass = compact ? 'text-sm' : 'text-base';
 
   if (truncate) {
     return (

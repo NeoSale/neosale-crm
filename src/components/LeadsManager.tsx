@@ -952,11 +952,6 @@ const LeadsManager: React.FC = () => {
       render: (lead) => <TableText truncate maxWidth="max-w-[200px]">{lead.email || '-'}</TableText>,
     },
     {
-      key: 'cnpj',
-      header: 'CNPJ',
-      render: (lead) => <TableText>{applyCNPJMask(lead.cnpj || '') || '-'}</TableText>,
-    },
-    {
       key: 'qualificacao',
       header: 'Qualificação',
       render: (lead) => {
@@ -987,34 +982,6 @@ const LeadsManager: React.FC = () => {
         const origemLower = origemText.toLowerCase();
         const variant = origemLower.includes('whatsapp') ? 'green' : origemLower.includes('site') ? 'blue' : 'gray';
         return <TableBadge variant={variant}>{origemText}</TableBadge>;
-      },
-    },
-    {
-      key: 'created_at',
-      header: 'Cadastro',
-      render: (lead) => {
-        const formatted = formatDateTime(lead.created_at || '');
-        return (
-          <TableText>
-            <span className="text-gray-500">
-              {typeof formatted === 'object' ? `${formatted.date} ${formatted.time}` : formatted}
-            </span>
-          </TableText>
-        );
-      },
-    },
-    {
-      key: 'updated_at',
-      header: 'Atualizado',
-      render: (lead) => {
-        const formatted = formatDateTime(lead.updated_at || '');
-        return (
-          <TableText>
-            <span className="text-gray-500">
-              {typeof formatted === 'object' ? `${formatted.date} ${formatted.time}` : formatted}
-            </span>
-          </TableText>
-        );
       },
     },
     {
