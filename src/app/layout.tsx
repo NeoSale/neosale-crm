@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NeoSale CRM Admin",
-  description: "Administração do NeoSale CRM",
+  title: "NeoCRM",
+  description: "Administração do NeoCRM",
 };
 
 export default function RootLayout({

@@ -16,7 +16,7 @@ try {
   // Ler package.json
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   const version = packageJson.version;
-  const name = packageJson.name || 'NeoSale CRM';
+  const name = packageJson.name || 'NeoCRM';
 
   // Conteúdo do arquivo app-version.ts
   const versionFileContent = `/**
@@ -25,7 +25,7 @@ try {
  * Última atualização: ${new Date().toISOString()}
  */
 export const APP_VERSION = '${version}';
-export const APP_NAME = 'NeoSale CRM';
+export const APP_NAME = 'NeoCRM';
 
 /**
  * Função para obter a versão da aplicação

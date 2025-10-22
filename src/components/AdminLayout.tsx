@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import {
   HomeIcon,
@@ -21,6 +21,7 @@ import { APP_VERSION } from '../utils/app-version';
 import ThemeToggle from './ThemeToggle';
 import { clientesApi, Cliente } from '../services/clientesApi';
 import { BookOpenIcon, Bot, CalendarIcon, DatabaseIcon } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -105,6 +106,20 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   const [currentClienteId, setCurrentClienteId] = useState<string>('');
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
+  // Rotas públicas que não precisam de autenticação
+  const publicRoutes = ['/login', '/unauthorized', '/convite'];
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+
+  // Verificar autenticação e redirecionar para login se necessário
+  useEffect(() => {
+    // Se não está carregando, não está autenticado e não é rota pública, redirecionar
+    if (!authLoading && !isAuthenticated && !isPublicRoute) {
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+    }
+  }, [authLoading, isAuthenticated, pathname, router, isPublicRoute]);
 
   // Função para carregar clientes
   const loadClientes = async () => {
@@ -220,6 +235,11 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
     }
   };
 
+  // Se for rota pública, renderizar apenas o children sem layout
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -240,7 +260,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
             </div>
             {sidebarOpen && (
               <div className="flex flex-col">
-                <h1 className="text-xl font-bold text-primary">NeoSale</h1>
+                <h1 className="text-xl font-bold text-primary">NeoCRM</h1>
               </div>
             )}
           </div>
@@ -585,7 +605,17 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
           <div className="max-w-7xl mx-auto">
-            {children}
+            {/* Mostrar loading enquanto verifica autenticação */}
+            {authLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-gray-600">Verificando autenticação...</p>
+                </div>
+              </div>
+            ) : (
+              children
+            )}
           </div>
         </main>
       </div>

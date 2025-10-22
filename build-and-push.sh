@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script para build e push da imagem Docker do NeoSale CRM
+# Script para build e push da imagem Docker do NeoCRM
 # Versiona automaticamente a aplicação e a imagem Docker
 
 # Cores para output
@@ -45,7 +45,7 @@ increment_version() {
 }
 
 # Verificar se deve incrementar versão
-echo -e "${BLUE}🚀 NeoSale CRM - Build & Deploy Automático${NC}"
+echo -e "${BLUE}🚀 NeoCRM - Build & Deploy Automático${NC}"
 echo -e "${YELLOW}🔄 Como deseja incrementar a versão?${NC}"
 echo "1) Patch (0.1.0 -> 0.1.1) - Correções de bugs e pequenos ajustes"
 echo "2) Minor (0.1.0 -> 0.2.0) - Novas funcionalidades"
@@ -253,7 +253,7 @@ fi
 VERSION=$NEW_VERSION
 echo -e "${GREEN}🚀 Usando versão: $VERSION${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}🐳 Iniciando build da imagem Docker do NeoSale CRM${NC}"
+echo -e "${GREEN}🐳 Iniciando build da imagem Docker do NeoCRM${NC}"
 
 # Verificar e iniciar o Docker se necessário
 echo -e "${YELLOW}🐳 Verificando Docker...${NC}"

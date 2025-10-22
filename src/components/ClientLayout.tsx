@@ -5,6 +5,7 @@ import AdminLayout from "./AdminLayout";
 import VersionLoggerComponent from "./VersionLogger";
 import ApiConfigChecker from "./ApiConfigChecker";
 import { ThemeProvider } from "../contexts/ThemeContext";
+import { AuthProvider } from "../contexts/AuthContext";
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -13,9 +14,11 @@ interface ClientLayoutProps {
 export default function ClientLayout({ children }: ClientLayoutProps) {
   return (
     <ThemeProvider>
-      <AdminLayout>
-        {children}
-      </AdminLayout>
+      <AuthProvider>
+        <AdminLayout>
+          {children}
+        </AdminLayout>
+      </AuthProvider>
       <Toaster
         position="bottom-right"
         toastOptions={{
