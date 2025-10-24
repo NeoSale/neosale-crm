@@ -91,6 +91,89 @@ const TruncatedText: React.FC<TruncatedTextProps> = ({
   );
 };
 
+// Componente para exibir Origem com tooltip
+interface OrigemTextProps {
+  text: string;
+  variant?: 'green' | 'blue' | 'gray';
+}
+
+const OrigemText: React.FC<OrigemTextProps> = ({ text, variant = 'gray' }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const elementRef = useRef<HTMLDivElement>(null);
+  
+  // Extrair primeira palavra
+  const firstWord = text.split(/[\s\n]/)[0];
+  
+  const handleMouseEnter = () => {
+    if (elementRef.current) {
+      const rect = elementRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top - 10
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  const TooltipPortal = () => {
+    if (!showTooltip) return null;
+
+    // Converter \n literal em quebras de linha reais
+    const formattedText = text.replace(/\\n/g, '\n');
+
+    return createPortal(
+      <div
+        style={{
+          position: 'fixed',
+          left: tooltipPosition.x,
+          top: tooltipPosition.y,
+          transform: 'translate(-50%, -100%)',
+          zIndex: 2147483647,
+          pointerEvents: 'none'
+        }}
+        className="p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl max-w-xs break-words"
+      >
+        <div className="whitespace-pre-line">{formattedText}</div>
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '4px solid transparent',
+            borderRight: '4px solid transparent',
+            borderTop: '4px solid #111827'
+          }}
+        ></div>
+      </div>,
+      document.body
+    );
+  };
+
+  const variantClasses = {
+    green: 'bg-green-100 text-green-800',
+    blue: 'bg-blue-100 text-blue-800',
+    gray: 'bg-gray-100 text-gray-800'
+  };
+
+  return (
+    <div className="relative inline-block">
+      <div
+        ref={elementRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setShowTooltip(false)}
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-help ${variantClasses[variant]}`}
+      >
+        {firstWord}
+      </div>
+      <TooltipPortal />
+    </div>
+  );
+};
+
 // Componente de Tooltip para Qualificação
 interface QualificacaoTooltipProps {
   qualificacao: any;
@@ -981,7 +1064,7 @@ const LeadsManager: React.FC = () => {
         const origemText = typeof lead.origem === 'object' && lead.origem.nome ? lead.origem.nome : String(lead.origem);
         const origemLower = origemText.toLowerCase();
         const variant = origemLower.includes('whatsapp') ? 'green' : origemLower.includes('site') ? 'blue' : 'gray';
-        return <TableBadge variant={variant}>{origemText}</TableBadge>;
+        return <OrigemText text={origemText} variant={variant} />;
       },
     },
     {

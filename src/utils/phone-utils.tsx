@@ -122,12 +122,32 @@ export const removePhonePrefix = (phone: string): string => {
   return cleanPhone;
 };
 
-// Função para formatar telefone com máscara (99) 99999-9999
+// Função para formatar telefone com máscara 55 (99) 99999-9999
 export const formatPhoneDisplay = (phone: string): string => {
   // Remove todos os caracteres não numéricos
   const cleanPhone = phone.replace(/\D/g, '');
 
-  // Aplica a máscara baseada no tamanho
+  // Se tem 13 dígitos e começa com 55 (celular com código do país)
+  if (cleanPhone.length === 13 && cleanPhone.startsWith('55')) {
+    return `${cleanPhone.slice(0, 2)} (${cleanPhone.slice(2, 4)}) ${cleanPhone.slice(4, 9)}-${cleanPhone.slice(9, 13)}`;
+  }
+
+  // Se tem 12 dígitos e começa com 55 (fixo com código do país)
+  if (cleanPhone.length === 12 && cleanPhone.startsWith('55')) {
+    return `${cleanPhone.slice(0, 2)} (${cleanPhone.slice(2, 4)}) ${cleanPhone.slice(4, 8)}-${cleanPhone.slice(8, 12)}`;
+  }
+
+  // Se tem 11 dígitos (celular sem código do país), adiciona o 55
+  if (cleanPhone.length === 11) {
+    return `55 (${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7, 11)}`;
+  }
+
+  // Se tem 10 dígitos (fixo sem código do país), adiciona o 55
+  if (cleanPhone.length === 10) {
+    return `55 (${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 6)}-${cleanPhone.slice(6, 10)}`;
+  }
+
+  // Para números menores, aplica formatação parcial
   if (cleanPhone.length <= 2) {
     return cleanPhone;
   } else if (cleanPhone.length <= 7) {
@@ -136,8 +156,8 @@ export const formatPhoneDisplay = (phone: string): string => {
     return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}`;
   }
 
-  // Limita a 11 dígitos
-  return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7, 11)}`;
+  // Padrão para números com mais de 11 dígitos
+  return `${cleanPhone.slice(0, 2)} (${cleanPhone.slice(2, 4)}) ${cleanPhone.slice(4, 9)}-${cleanPhone.slice(9, 13)}`;
 };
 
 export default FormattedPhone;

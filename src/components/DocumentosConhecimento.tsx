@@ -26,6 +26,7 @@ const DocumentosConhecimento: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [loadingDocumentos, setLoadingDocumentos] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null }>({ show: false, id: null });
@@ -172,12 +173,15 @@ const DocumentosConhecimento: React.FC = () => {
 
     const confirmDelete = async () => {
         if (deleteConfirm.id) {
+            setDeleting(true);
             try {
                 await documentosApi.deleteDocumento(deleteConfirm.id);
                 loadDocumentos(false);
                 setDeleteConfirm({ show: false, id: null });
             } catch (error) {
                 console.error('Erro ao deletar documento:', error);
+            } finally {
+                setDeleting(false);
             }
         }
     };
@@ -338,7 +342,7 @@ const DocumentosConhecimento: React.FC = () => {
             if (baseId.length === 0) return '-';
             const baseNames = baseId.map(id => {
                 const base = bases.find(b => b.id === id);
-                return base?.nome || id;
+                return base?.nome;
             });
             return baseNames.join(', ');
         }
@@ -510,12 +514,6 @@ const DocumentosConhecimento: React.FC = () => {
                                                 onClick={() => handleDownload(doc)}
                                                 icon={<ArrowDownTrayIcon className="h-4 w-4" />}
                                                 title="Baixar arquivo"
-                                                variant="primary"
-                                            />
-                                            <TableActionButton
-                                                onClick={() => handleEdit(doc)}
-                                                icon={<PencilIcon className="h-4 w-4" />}
-                                                title="Editar"
                                                 variant="primary"
                                             />
                                             <TableActionButton
@@ -792,6 +790,7 @@ const DocumentosConhecimento: React.FC = () => {
                 confirmText="Excluir"
                 cancelText="Cancelar"
                 type="danger"
+                isLoading={deleting}
             />
         </div>
     );
