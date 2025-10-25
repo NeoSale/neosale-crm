@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import {
     PlusIcon,
@@ -46,11 +46,29 @@ const DocumentosConhecimento: React.FC = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [selectedBases, setSelectedBases] = useState<string[]>([]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         loadDocumentos();
         loadBases();
     }, [currentPage, itemsPerPage, searchTerm]);
+
+    // Fechar dropdown ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        if (isDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isDropdownOpen]);
 
     const loadDocumentos = async (showLoadingState = true) => {
         if (showLoadingState) {
@@ -664,7 +682,7 @@ const DocumentosConhecimento: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="relative">
+                    <div className="relative" ref={dropdownRef}>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Bases de Conhecimento *
                         </label>

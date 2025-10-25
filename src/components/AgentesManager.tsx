@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users, Database, Plus, Search, RefreshCw, AlertCircle, Edit, Trash2, Bot } from 'lucide-react';
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -29,6 +29,7 @@ const AgentesManager: React.FC = () => {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState<boolean>(false);
   const [selectedBases, setSelectedBases] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Estados de loading específicos para cada ação
   const [refreshLoading, setRefreshLoading] = useState<boolean>(false);
@@ -44,6 +45,23 @@ const AgentesManager: React.FC = () => {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -808,7 +826,7 @@ const AgentesManager: React.FC = () => {
                     </select>
                   </div>
 
-                  <div className="relative md:col-span-2">
+                  <div className="relative md:col-span-2" ref={dropdownRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Bases de Conhecimento
                   </label>
