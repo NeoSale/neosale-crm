@@ -13,17 +13,29 @@ import {
     LinkIcon,
     PowerIcon,
     DocumentDuplicateIcon,
+    UserGroupIcon,
+    UserPlusIcon,
 } from '@heroicons/react/24/outline';
-import { Search } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Search, UserIcon, Download } from 'lucide-react';
 import {
     evolutionApiV2,
     EvolutionInstancesV2,
     QRCodeResponse,
+    Contact,
 } from '../services/evolutionApiV2';
 
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { agentesApi, Agente } from '@/services/agentesApi';
+import { leadsApi, Lead } from '@/services/leadsApi';
+import { getClienteId } from '@/utils/cliente-utils';
+
+interface ImportError {
+    phone: string;
+    name: string;
+    message: string;
+}
 
 const WhatsAppIntegrationV2: React.FC = () => {
     const [instances, setInstances] = useState<EvolutionInstancesV2[]>([]);
@@ -54,6 +66,25 @@ const WhatsAppIntegrationV2: React.FC = () => {
     const [selectedAgente, setSelectedAgente] = useState<any>(null);
     const [agentes, setAgentes] = useState<Agente[]>([]);
     const updateQtdTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [contactsModal, setContactsModal] = useState<{
+        show: boolean;
+        instanceName: string | null;
+        whatsappNumber: string | null;
+        contacts: Contact[];
+        loading: boolean;
+    }>({
+        show: false,
+        instanceName: null,
+        whatsappNumber: null,
+        contacts: [],
+        loading: false
+    });
+    const [importingContacts, setImportingContacts] = useState<Set<string>>(new Set());
+    const [bulkImporting, setBulkImporting] = useState(false);
+    const [bulkImportProgress, setBulkImportProgress] = useState({ current: 0, total: 0 });
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [importErrors, setImportErrors] = useState<ImportError[]>([]);
+    const [contactSearchTerm, setContactSearchTerm] = useState('');
 
     // Estado local para manter compatibilidade com o formulário
     const [localFormData, setLocalFormData] = useState<EvolutionInstancesV2 | null>(null);
@@ -245,6 +276,45 @@ const WhatsAppIntegrationV2: React.FC = () => {
         }
     };
 
+    const handleViewContacts = async (instanceName: string, whatsappNumber: string) => {
+        setContactsModal({
+            show: true,
+            instanceName,
+            whatsappNumber,
+            contacts: [],
+            loading: true
+        });
+
+        try {
+            const response = await evolutionApiV2.getContacts(instanceName);
+            if (response.success && response.data) {
+                // Filtrar apenas contatos com números válidos (excluindo o próprio número)
+                const validContacts = response.data.filter(contact => 
+                    isValidPhoneNumber(contact.remoteJid, whatsappNumber)
+                );
+                
+                setContactsModal(prev => ({
+                    ...prev,
+                    contacts: validContacts,
+                    loading: false
+                }));
+            } else {
+                setContactsModal(prev => ({
+                    ...prev,
+                    loading: false
+                }));
+                toast.error('Erro ao buscar contatos');
+            }
+        } catch (error) {
+            console.error('Erro ao buscar contatos:', error);
+            setContactsModal(prev => ({
+                ...prev,
+                loading: false
+            }));
+            toast.error('Erro ao buscar contatos');
+        }
+    };
+
     const resetForm = () => {
         setLocalFormData({
             instanceName: '',
@@ -332,6 +402,14 @@ const WhatsAppIntegrationV2: React.FC = () => {
         return phone;
     };
 
+    const formatWhatsAppNumber = (remoteJid: string) => {
+        if (!remoteJid) return '';
+        // Remove o sufixo @s.whatsapp.net, @c.us, @g.us, etc
+        const numberOnly = remoteJid.split('@')[0];
+        // Usa a função formatPhone existente para formatar o número
+        return formatPhone(numberOnly);
+    };
+
     const copyPhoneToClipboard = async (phone: string) => {
         if (!phone || phone === 'Não conectado') {
             toast.error('Número não disponível para cópia');
@@ -354,6 +432,318 @@ const WhatsAppIntegrationV2: React.FC = () => {
             toast.error('Erro ao copiar número');
         }
     };
+
+    const isValidPhoneNumber = (remoteJid: string, whatsappNumber?: string): boolean => {
+        if (!remoteJid) return false;
+        
+        // Remove o sufixo @s.whatsapp.net, @c.us, @g.us, etc
+        const numberOnly = remoteJid.split('@')[0];
+        
+        // Remove todos os caracteres não numéricos
+        const cleanNumber = numberOnly.replace(/\D/g, '');
+        
+        // Verifica se é um número válido:
+        // - Deve ter pelo menos 10 dígitos (DDD + número)
+        // - Não deve ser um grupo (grupos geralmente têm formato diferente)
+        // - Não deve conter apenas zeros ou números repetidos
+        if (cleanNumber.length < 10) return false;
+        
+        // Verifica se não é apenas zeros ou números repetidos
+        if (/^0+$/.test(cleanNumber) || /(\d)\1+$/.test(cleanNumber)) return false;
+        
+        // Verifica se não é um ID de grupo (grupos geralmente terminam com @g.us)
+        if (remoteJid.includes('@g.us')) return false;
+        
+        // Ignora o próprio número do WhatsApp
+        if (whatsappNumber) {
+            const cleanWhatsAppNumber = whatsappNumber.replace(/\D/g, '');
+            if (cleanNumber === cleanWhatsAppNumber || cleanNumber.endsWith(cleanWhatsAppNumber) || cleanWhatsAppNumber.endsWith(cleanNumber)) {
+                return false;
+            }
+        }
+        
+        return true;
+    };
+
+    const formatPhoneForLead = (remoteJid: string): string => {
+        if (!remoteJid) return '';
+        // Remove o sufixo @s.whatsapp.net, @c.us, @g.us, etc
+        const numberOnly = remoteJid.split('@')[0];
+        // Remove todos os caracteres não numéricos
+        const cleanNumber = numberOnly.replace(/\D/g, '');
+        
+        // Garante que o número está no formato correto (5511999999999 ou 551199999999)
+        // Se já tem código do país (55), retorna como está
+        if (cleanNumber.startsWith('55')) {
+            return cleanNumber;
+        }
+        
+        // Se não tem código do país, adiciona 55 (Brasil)
+        return `55${cleanNumber}`;
+    };
+
+    const importContactAsLead = async (contact: Contact) => {
+        if (!contact.remoteJid || !isValidPhoneNumber(contact.remoteJid, contactsModal.whatsappNumber || undefined)) {
+            toast.error('Número de telefone inválido ou grupo');
+            return;
+        }
+
+        if (!contactsModal.instanceName || !contactsModal.whatsappNumber) {
+            toast.error('Informações da instância não encontradas');
+            return;
+        }
+
+        // Adiciona o contato ao set de importação
+        setImportingContacts(prev => new Set(prev).add(contact.id));
+
+        try {
+            const phone = formatPhoneForLead(contact.remoteJid);
+            const name = contact.pushName || 'Sem nome';
+
+            const result = await evolutionApiV2.importContactAsLead(name, phone, contactsModal.instanceName, contactsModal.whatsappNumber);
+
+            if (!result.success) {
+                throw new Error(result.message);
+            }
+
+            toast.success(`Contato ${name} importado como lead com sucesso!`);
+        } catch (error) {
+            console.error('Erro ao importar contato:', error);
+            toast.error(error instanceof Error ? String(error) : 'Erro ao importar contato');
+        } finally {
+            // Remove o contato do set de importação
+            setImportingContacts(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(contact.id);
+                return newSet;
+            });
+        }
+    };
+
+    const bulkImportContacts = async () => {
+        if (!contactsModal.contacts || contactsModal.contacts.length === 0) {
+            toast.error('Nenhum contato disponível para importar');
+            return;
+        }
+
+        if (!contactsModal.instanceName || !contactsModal.whatsappNumber) {
+            toast.error('Informações da instância não encontradas');
+            return;
+        }
+
+        setBulkImporting(true);
+        const totalContacts = contactsModal.contacts.length;
+        setBulkImportProgress({ current: 0, total: totalContacts });
+
+        // Criar toast com progresso
+        const toastId = toast.loading(
+            <div className="flex flex-col gap-2 min-w-[250px]">
+                <div className="flex justify-between items-center">
+                    <span>Importando contatos...</span>
+                    <span className="text-sm text-gray-500">0/{totalContacts}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: '0%' }}
+                    ></div>
+                </div>
+            </div>,
+            { duration: Infinity }
+        );
+
+        const errors: ImportError[] = [];
+        const leadsToImport: Omit<Lead, 'id'>[] = [];
+
+        try {
+            // Preparar todos os leads
+            for (let i = 0; i < contactsModal.contacts.length; i++) {
+                const contact = contactsModal.contacts[i];
+                
+                try {
+                    // Validar se o número é válido antes de processar
+                    if (!contact.remoteJid || !isValidPhoneNumber(contact.remoteJid, contactsModal.whatsappNumber || undefined)) {
+                        errors.push({
+                            phone: contact.remoteJid || 'N/A',
+                            name: contact.pushName || 'Sem nome',
+                            message: 'Número de telefone inválido ou grupo'
+                        });
+                        continue;
+                    }
+
+                    const phone = formatPhoneForLead(contact.remoteJid);
+                    const name = contact.pushName || 'Sem nome';
+
+                    leadsToImport.push({
+                        nome: name,
+                        telefone: phone,
+                        origem: `WhatsApp: ${contactsModal.instanceName}\\nNúmero: ${contactsModal.whatsappNumber}`
+                    });
+
+                } catch (error) {
+                    errors.push({
+                        phone: contact.remoteJid || 'N/A',
+                        name: contact.pushName || 'Sem nome',
+                        message: error instanceof Error ? error.message : 'Erro ao processar contato'
+                    });
+                }
+
+                // Atualizar progresso
+                const current = i + 1;
+                setBulkImportProgress({ current, total: totalContacts });
+                toast.loading(
+                    <div className="flex flex-col gap-2 min-w-[250px]">
+                        <div className="flex justify-between items-center">
+                            <span>Preparando contatos...</span>
+                            <span className="text-sm text-gray-500">{current}/{totalContacts}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${(current / totalContacts) * 100}%` }}
+                            ></div>
+                        </div>
+                    </div>,
+                    { id: toastId }
+                );
+            }
+
+            // Importar em massa usando a API
+            if (leadsToImport.length > 0) {
+                toast.loading(
+                    <div className="flex flex-col gap-2 min-w-[250px]">
+                        <div className="flex justify-between items-center">
+                            <span>Enviando para o servidor...</span>
+                            <span className="text-sm text-gray-500">{leadsToImport.length} leads</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-blue-600 h-2 rounded-full w-full animate-pulse"></div>
+                        </div>
+                    </div>,
+                    { id: toastId }
+                );
+
+                const clienteId = getClienteId();
+                const response = await leadsApi.createMultipleLeads(leadsToImport, clienteId);
+
+                if (response.success) {
+                    toast.dismiss(toastId);
+                    
+                    if (errors.length > 0) {
+                        toast.success(`${leadsToImport.length} leads importados! ${errors.length} erro(s) encontrado(s).`, {
+                            duration: 6000
+                        });
+                        setImportErrors(errors);
+                        setShowErrorModal(true);
+                    }
+
+                    // Fechar modal de contatos
+                    setContactsModal({ show: false, instanceName: null, whatsappNumber: null, contacts: [], loading: false });
+                } else {
+                    toast.dismiss(toastId);
+                    
+                    // Processar erros da API
+                    if (response.errors && Array.isArray(response.errors)) {
+                        response.errors.forEach((error: any) => {
+                            const index = error.path && error.path[1] !== undefined ? error.path[1] : 0;
+                            const lead = leadsToImport[index];
+                            errors.push({
+                                phone: lead?.telefone || 'N/A',
+                                name: lead?.nome || 'Sem nome',
+                                message: error.message || 'Erro desconhecido'
+                            });
+                        });
+                    }
+
+                    setImportErrors(errors);
+                    setShowErrorModal(true);
+                    toast.error('Erro ao importar alguns contatos. Verifique os detalhes.');
+                }
+            } else {
+                toast.dismiss(toastId);
+                if (errors.length > 0) {
+                    setImportErrors(errors);
+                    setShowErrorModal(true);
+                    toast.error('Nenhum contato válido para importar');
+                }
+            }
+
+        } catch (error) {
+            console.error('Erro ao importar contatos em massa:', error);
+            toast.dismiss(toastId);
+            toast.error('Erro ao importar contatos em massa');
+        } finally {
+            setBulkImporting(false);
+            setBulkImportProgress({ current: 0, total: 0 });
+        }
+    };
+
+    // Função para exportar contatos para CSV
+    const handleExportContactsCSV = () => {
+        try {
+            if (contactsModal.contacts.length === 0) {
+                toast.error('Não há contatos para exportar');
+                return;
+            }
+
+            // Definir cabeçalhos do CSV em português
+            const headers = [
+                'Nome',
+                'Telefone'
+            ];
+
+            // Mapear dados dos contatos
+            const csvData = contactsModal.contacts.map(contact => {
+                return [
+                    contact.pushName || 'Sem nome',
+                    formatPhoneForLead(contact.remoteJid) || ''
+                ];
+            });
+
+            // Criar conteúdo CSV
+            const csvContent = [
+                headers.join(';'),
+                ...csvData.map(row =>
+                    row.map(field => {
+                        // Escapar aspas duplas e envolver campos com vírgulas/quebras de linha em aspas
+                        const fieldStr = String(field || '');
+                        if (fieldStr.includes(';') || fieldStr.includes('"') || fieldStr.includes('\n')) {
+                            return `"${fieldStr.replace(/"/g, '""')}"`;
+                        }
+                        return fieldStr;
+                    }).join(';')
+                )
+            ].join('\n');
+
+            // Criar e baixar arquivo com BOM UTF-8 para corrigir acentuação
+            const BOM = '\uFEFF'; // Byte Order Mark para UTF-8
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `contatos_${contactsModal.instanceName}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success(`${contactsModal.contacts.length} contatos exportados com sucesso!`);
+        } catch (error) {
+            console.error('Erro ao exportar CSV:', error);
+            toast.error('Erro ao exportar contatos para CSV');
+        }
+    };
+
+    // Filtrar contatos baseado no termo de busca
+    const filteredContacts = contactsModal.contacts.filter(contact => {
+        if (!contactSearchTerm) return true;
+        const searchLower = contactSearchTerm.toLowerCase();
+        const name = (contact.pushName || '').toLowerCase();
+        const phone = formatWhatsAppNumber(contact.remoteJid).toLowerCase();
+        return name.includes(searchLower) || phone.includes(searchLower);
+    });
 
     // Filtrar instâncias baseado no termo de busca
     const filteredInstances = instances.filter(instance => {
@@ -697,6 +1087,17 @@ const WhatsAppIntegrationV2: React.FC = () => {
                                                         title={instance.status !== 'open' ? 'Não é possível Reiniciar instância desconectada' : 'Reiniciar'}
                                                     >
                                                         <ArrowPathIcon className="h-4 w-4 mr-1" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleViewContacts(instance.instanceName!, instance.owner || '')}
+                                                        disabled={instance.status !== 'open'}
+                                                        className={`inline-flex items-center px-3 py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${instance.status !== 'open'
+                                                            ? 'border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed'
+                                                            : 'border-blue-300 text-blue-700 bg-white hover:bg-blue-50 focus:ring-blue-500'
+                                                            }`}
+                                                        title={instance.status !== 'open' ? 'Conecte a instância para ver contatos' : 'Ver Contatos'}
+                                                    >
+                                                        <UserPlusIcon className="h-4 w-4 mr-1" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleEdit(instance)}
@@ -1207,6 +1608,251 @@ const WhatsAppIntegrationV2: React.FC = () => {
                     </div>
                 </div>
             </Modal>
+
+            {/* Modal de Contatos */}
+            <Modal
+                isOpen={contactsModal.show}
+                onClose={() => {
+                    setContactsModal({ show: false, instanceName: null, whatsappNumber: null, contacts: [], loading: false });
+                    setContactSearchTerm('');
+                }}
+                title={`Contatos - ${contactsModal.instanceName}`}
+                size="2xl"
+            >
+                <div>
+                    {contactsModal.loading ? (
+                        <div className="flex justify-center items-center h-64">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                    ) : contactsModal.contacts.length === 0 ? (
+                        <div className="text-center py-12">
+                            <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400" />
+                            <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhum contato encontrado</h3>
+                            <p className="mt-1 text-sm text-gray-500">Esta instância ainda não possui contatos salvos.</p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Campo de busca */}
+                            <div className="relative mb-1">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Search className="h-5 w-5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={contactSearchTerm}
+                                    onChange={(e) => setContactSearchTerm(e.target.value)}
+                                    placeholder="Buscar por nome ou número..."
+                                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm"
+                                />
+                            </div>
+
+                            {filteredContacts.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Search className="mx-auto h-12 w-12 text-gray-400" />
+                                    <h3 className="mt-2 text-sm font-medium text-gray-900">Nenhum contato encontrado</h3>
+                                    <p className="mt-1 text-sm text-gray-500">Tente buscar com outros termos.</p>
+                                </div>
+                            ) : (
+                                <div className="max-h-96 overflow-y-auto">
+                                    <div className="grid grid-cols-1 gap-3">
+                                    {filteredContacts.map((contact) => (
+                                    <div
+                                        key={contact.id}
+                                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                        {contact.profilePicUrl ? (
+                                            <div className="h-10 w-10 rounded-full relative bg-gray-300 flex items-center justify-center">
+                                                <img
+                                                    src={contact.profilePicUrl}
+                                                    aria-hidden="true"
+                                                    className="h-10 w-10 rounded-full absolute inset-0"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                    }}
+                                                />
+                                                <UserIcon
+                                                    aria-hidden="true"
+                                                    className="h-6 w-6 text-gray-600"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                                <UserIcon className="h-6 w-6 text-gray-600" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-900 truncate">
+                                                {contact.pushName}
+                                            </p>
+                                            <p className="text-xs text-gray-500 truncate">
+                                                {formatWhatsAppNumber(contact.remoteJid)}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => importContactAsLead(contact)}
+                                                disabled={importingContacts.has(contact.id)}
+                                                className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Importar como lead"
+                                            >
+                                                {importingContacts.has(contact.id) ? (
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                                ) : (
+                                                    <UserPlusIcon className="h-4 w-4" />
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => copyPhoneToClipboard(contact.remoteJid)}
+                                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                                                title="Copiar número"
+                                            >
+                                                <DocumentDuplicateIcon className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                </div>
+                            </div>
+                            )}
+                        </>
+                    )}
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                        <p className="text-sm text-gray-600">
+                            {contactSearchTerm ? (
+                                <>
+                                    Exibindo: <span className="font-medium">{filteredContacts.length}</span> de <span className="font-medium">{contactsModal.contacts.length}</span> contatos
+                                </>
+                            ) : (
+                                <>
+                                    Total: <span className="font-medium">{contactsModal.contacts.length}</span> contatos
+                                </>
+                            )}
+                        </p>
+                        <div className="flex gap-3">
+                            {contactsModal.contacts.length > 0 && (
+                                <>
+                                    <button
+                                        onClick={handleExportContactsCSV}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                                        title="Exportar contatos para CSV"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        <span>Exportar CSV</span>
+                                    </button>
+                                    <button
+                                        onClick={bulkImportContacts}
+                                        disabled={bulkImporting}
+                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                        title="Importar todos os contatos como leads"
+                                    >
+                                        {bulkImporting ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                <span>Importando...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <UserPlusIcon className="h-4 w-4" />
+                                                <span>Importar Todos</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </>
+                            )}
+                            <button
+                                onClick={() => {
+                                    setContactsModal({ show: false, instanceName: null, whatsappNumber: null, contacts: [], loading: false });
+                                    setContactSearchTerm('');
+                                }}
+                                className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Modal de Erros de Importação */}
+            {showErrorModal && (
+                <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 text-gray-700"
+                    onClick={() => {
+                        setShowErrorModal(false);
+                        setImportErrors([]);
+                    }}
+                >
+                    <div
+                        className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                <AlertCircle className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-medium text-gray-900">
+                                    Erros na Importação
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                    {importErrors.length} erro(s) encontrado(s) durante a importação
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                            <p className="text-red-800 text-sm">
+                                <strong>Atenção:</strong> Os contatos com erros não foram importados. Corrija os problemas e tente novamente.
+                            </p>
+                        </div>
+
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Nome
+                                        </th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Telefone
+                                        </th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Erro
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {importErrors.map((error, index) => (
+                                        <tr key={index} className="hover:bg-gray-50">
+                                            <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                                                {error.name}
+                                            </td>
+                                            <td className="px-4 py-2 text-sm text-gray-700">
+                                                {error.phone}
+                                            </td>
+                                            <td className="px-4 py-2 text-sm text-gray-700">
+                                                {error.message}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="flex gap-3 justify-end mt-6">
+                            <button
+                                onClick={() => {
+                                    setShowErrorModal(false);
+                                    setImportErrors([]);
+                                }}
+                                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

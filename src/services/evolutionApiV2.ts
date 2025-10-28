@@ -47,6 +47,19 @@ export interface QRCodeResponse {
     base64?: string;
 }
 
+export interface Contact {
+    id: string;
+    remoteJid: string;
+    pushName: string;
+    profilePicUrl?: string;
+    createdAt: string;
+    updatedAt: string;
+    instanceId: string;
+    isGroup: boolean;
+    isSaved: boolean;
+    type: string;
+}
+
 export interface ApiResponse<T = any> {
     success: boolean;
     message: string;
@@ -291,6 +304,92 @@ class EvolutionApiV2Service {
     // Verificar saúde da API
     async checkHealth(): Promise<ApiResponse<any>> {
         return this.makeRequest<any>('/evolution-api-v2/status');
+    }
+
+    // Obter contatos de uma instância
+    async getContacts(instanceName: string): Promise<ApiResponse<Contact[]>> {
+        const cliente_id = getCurrentClienteId();
+        if (!cliente_id) {
+            return {
+                success: false,
+                message: 'Cliente ID não encontrado. Faça login novamente.',
+            };
+        }
+        return this.makeRequest<Contact[]>(`/evolution-api-v2/chat/contacts/${instanceName}`);
+    }
+
+    // Importar contato como lead
+    async importContactAsLead(nome: string, telefone: string, instanceName: string, whatsappNumber: string): Promise<ApiResponse<any>> {
+        const cliente_id = getCurrentClienteId();
+        if (!cliente_id) {
+            return {
+                success: false,
+                message: 'Cliente ID não encontrado. Faça login novamente.',
+            };
+        }
+
+        try {
+            // Formatar o número do WhatsApp para +55 (11) 99999-9999 ou +55 (11) 9999-9999
+            const formatWhatsAppNumber = (number: string): string => {
+                // Remove todos os caracteres não numéricos
+                const cleanNumber = number.replace(/\D/g, '');
+                
+                // Se o número começa com 55 (código do Brasil)
+                if (cleanNumber.startsWith('55') && cleanNumber.length >= 12) {
+                    const countryCode = cleanNumber.substring(0, 2); // 55
+                    const areaCode = cleanNumber.substring(2, 4); // DDD
+                    const restNumber = cleanNumber.substring(4);
+                    
+                    // Celular com 9 dígitos: +55 (11) 99999-9999
+                    if (restNumber.length === 9) {
+                        return `+${countryCode} (${areaCode}) ${restNumber.substring(0, 5)}-${restNumber.substring(5)}`;
+                    }
+                    // Fixo com 8 dígitos: +55 (11) 9999-9999
+                    else if (restNumber.length === 8) {
+                        return `+${countryCode} (${areaCode}) ${restNumber.substring(0, 4)}-${restNumber.substring(4)}`;
+                    }
+                }
+                
+                // Se não conseguir formatar, retorna o número original
+                return number;
+            };
+
+            const formattedWhatsApp = formatWhatsAppNumber(whatsappNumber);
+            const origem = `Importado\nWhatsApp ${formattedWhatsApp}\nInstancia ${instanceName}`;
+
+            const response = await fetch('/api/leads', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'cliente_id': cliente_id,
+                },
+                body: JSON.stringify({
+                    nome,
+                    telefone,
+                    origem,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                return {
+                    success: false,
+                    message: errorData.error || errorData.message || 'Erro ao importar contato',
+                };
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                message: 'Contato importado com sucesso',
+                data,
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : 'Erro ao importar contato',
+            };
+        }
     }
 }
 
