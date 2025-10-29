@@ -443,10 +443,10 @@ const WhatsAppIntegrationV2: React.FC = () => {
         const cleanNumber = numberOnly.replace(/\D/g, '');
         
         // Verifica se é um número válido:
-        // - Deve ter pelo menos 10 dígitos (DDD + número)
+        // - Deve ter entre 10 e 13 dígitos (formato brasileiro: DDD + número ou 55 + DDD + número)
         // - Não deve ser um grupo (grupos geralmente têm formato diferente)
         // - Não deve conter apenas zeros ou números repetidos
-        if (cleanNumber.length < 10) return false;
+        if (cleanNumber.length < 10 || cleanNumber.length > 13) return false;
         
         // Verifica se não é apenas zeros ou números repetidos
         if (/^0+$/.test(cleanNumber) || /(\d)\1+$/.test(cleanNumber)) return false;
@@ -1727,11 +1727,11 @@ const WhatsAppIntegrationV2: React.FC = () => {
                         <p className="text-sm text-gray-600">
                             {contactSearchTerm ? (
                                 <>
-                                    Exibindo: <span className="font-medium">{filteredContacts.length}</span> de <span className="font-medium">{contactsModal.contacts.length}</span> contatos
+                                    Exibindo: <span className="font-medium">{filteredContacts.length.toLocaleString('pt-BR')}</span> de <span className="font-medium">{contactsModal.contacts.length.toLocaleString('pt-BR')}</span> contatos
                                 </>
                             ) : (
                                 <>
-                                    Total: <span className="font-medium">{contactsModal.contacts.length}</span> contatos
+                                    Total: <span className="font-medium">{contactsModal.contacts.length.toLocaleString('pt-BR')}</span> contatos
                                 </>
                             )}
                         </p>
