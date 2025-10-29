@@ -319,7 +319,7 @@ class EvolutionApiV2Service {
     }
 
     // Importar contato como lead
-    async importContactAsLead(nome: string, telefone: string, instanceName: string, whatsappNumber: string): Promise<ApiResponse<any>> {
+    async importContactAsLead(nome: string, telefone: string, instanceName: string, whatsappNumber: string, profilePicUrl?: string): Promise<ApiResponse<any>> {
         const cliente_id = getCurrentClienteId();
         if (!cliente_id) {
             return {
@@ -357,17 +357,24 @@ class EvolutionApiV2Service {
             const formattedWhatsApp = formatWhatsAppNumber(whatsappNumber);
             const origem = `Importado\nWhatsApp ${formattedWhatsApp}\nInstancia ${instanceName}`;
 
+            const leadData: any = {
+                nome,
+                telefone,
+                origem,
+            };
+
+            // Adicionar foto se disponível
+            if (profilePicUrl) {
+                leadData.profile_picture_url = profilePicUrl;
+            }
+
             const response = await fetch('/api/leads', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'cliente_id': cliente_id,
                 },
-                body: JSON.stringify({
-                    nome,
-                    telefone,
-                    origem,
-                }),
+                body: JSON.stringify(leadData),
             });
 
             if (!response.ok) {

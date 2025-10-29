@@ -500,7 +500,13 @@ const WhatsAppIntegrationV2: React.FC = () => {
             const phone = formatPhoneForLead(contact.remoteJid);
             const name = contact.pushName || 'Sem nome';
 
-            const result = await evolutionApiV2.importContactAsLead(name, phone, contactsModal.instanceName, contactsModal.whatsappNumber);
+            const result = await evolutionApiV2.importContactAsLead(
+                name, 
+                phone, 
+                contactsModal.instanceName, 
+                contactsModal.whatsappNumber,
+                contact.profilePicUrl
+            );
 
             if (!result.success) {
                 throw new Error(result.message);
@@ -577,7 +583,8 @@ const WhatsAppIntegrationV2: React.FC = () => {
                     leadsToImport.push({
                         nome: name,
                         telefone: phone,
-                        origem: `WhatsApp: ${contactsModal.instanceName}\\nNúmero: ${contactsModal.whatsappNumber}`
+                        origem: `WhatsApp: ${contactsModal.instanceName}\\nNúmero: ${contactsModal.whatsappNumber}`,
+                        profile_picture_url: contact.profilePicUrl || undefined
                     });
 
                 } catch (error) {
@@ -1753,7 +1760,7 @@ const WhatsAppIntegrationV2: React.FC = () => {
                                         ) : (
                                             <>
                                                 <UserPlusIcon className="h-4 w-4" />
-                                                <span>Importar Todos</span>
+                                                <span>Importar Leads</span>
                                             </>
                                         )}
                                     </button>

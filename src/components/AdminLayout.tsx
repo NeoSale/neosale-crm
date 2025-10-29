@@ -69,7 +69,7 @@ const navigation: MenuItem[] = [
         ]
       },
       { name: 'Mensagens', href: '/followup/mensagens', icon: PaperAirplaneIcon },
-      { name: 'Configurações', icon: CogIcon },
+      { name: 'Configurações', href: '/followup/configuracoes', icon: CogIcon },
     ]
   },
   // {
