@@ -382,7 +382,7 @@ const ConfiguracoesManager: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="w-full p-6">
       {/* Seção de Mensagens */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-primary text-white p-4">

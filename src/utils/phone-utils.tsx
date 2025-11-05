@@ -122,7 +122,7 @@ export const removePhonePrefix = (phone: string): string => {
   return cleanPhone;
 };
 
-// Função para formatar telefone com máscara 55 (99) 99999-9999
+// Função para formatar telefone com máscara 55 (99) 99999-9999 ou 55 (99) 9999-9999
 export const formatPhoneDisplay = (phone: string): string => {
   // Remove todos os caracteres não numéricos
   const cleanPhone = phone.replace(/\D/g, '');
@@ -150,9 +150,14 @@ export const formatPhoneDisplay = (phone: string): string => {
   // Para números menores, aplica formatação parcial
   if (cleanPhone.length <= 2) {
     return cleanPhone;
-  } else if (cleanPhone.length <= 7) {
+  } else if (cleanPhone.length <= 6) {
+    // DDD + até 4 dígitos (formato fixo)
     return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2)}`;
-  } else if (cleanPhone.length <= 11) {
+  } else if (cleanPhone.length <= 10) {
+    // DDD + 4 dígitos + hífen + resto (formato fixo)
+    return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 6)}-${cleanPhone.slice(6)}`;
+  } else if (cleanPhone.length === 11) {
+    // DDD + 5 dígitos + hífen + 4 dígitos (formato celular)
     return `(${cleanPhone.slice(0, 2)}) ${cleanPhone.slice(2, 7)}-${cleanPhone.slice(7)}`;
   }
 

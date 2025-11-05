@@ -15,6 +15,7 @@ export interface Lead {
   escritorio?: string;
   responsavel?: string;
   cnpj?: string;
+  cpf?: string;
   observacao?: string;
   segmento?: string;
   erp_atual?: string;
