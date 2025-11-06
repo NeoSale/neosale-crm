@@ -46,6 +46,7 @@ const WhatsAppIntegrationV2: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingInstance, setEditingInstance] = useState<EvolutionInstancesV2 | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null }>({ show: false, id: null });
+    const [disconnectConfirm, setDisconnectConfirm] = useState<{ show: boolean; id: string | null; instanceName: string | null }>({ show: false, id: null, instanceName: null });
     const [qrCodeModal, setQrCodeModal] = useState<{
         show: boolean;
         data: QRCodeResponse | null;
@@ -235,12 +236,18 @@ const WhatsAppIntegrationV2: React.FC = () => {
         try {
             const response = await evolutionApiV2.disconnectInstance(instanceId);
             if (response.success) {
+                toast.success('Instância desconectada com sucesso!');
+                setDisconnectConfirm({ show: false, id: null, instanceName: null });
                 loadInstances();
             }
         } catch (error) {
             console.error('Erro ao desconectar instância:', error);
             toast.error('Erro ao desconectar instância');
         }
+    };
+
+    const confirmDisconnect = (instanceId: string, instanceName: string) => {
+        setDisconnectConfirm({ show: true, id: instanceId, instanceName });
     };
 
     const handleRestart = async (instanceId: string) => {
@@ -1077,7 +1084,7 @@ const WhatsAppIntegrationV2: React.FC = () => {
                                                         </button>
                                                     ) : (
                                                         <button
-                                                            onClick={() => handleDisconnect(instance.instanceId!)}
+                                                            onClick={() => confirmDisconnect(instance.instanceId!, instance.instanceName!)}
                                                             className="inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                                             title="Desconectar"
                                                         >
@@ -1860,6 +1867,29 @@ const WhatsAppIntegrationV2: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Modal de Confirmação de Desconexão */}
+            <ConfirmModal
+                isOpen={disconnectConfirm.show}
+                onClose={() => setDisconnectConfirm({ show: false, id: null, instanceName: null })}
+                onConfirm={() => disconnectConfirm.id && handleDisconnect(disconnectConfirm.id)}
+                title="Desconectar Instância"
+                message={`Tem certeza que deseja desconectar a instância <strong>${disconnectConfirm.instanceName}</strong>?<br/><br/>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3 text-left">
+                        <p class="text-yellow-800 text-sm">
+                            <strong>⚠️ Atenção:</strong> Ao desconectar:
+                        </p>
+                        <ul class="text-yellow-800 text-sm mt-2 ml-4 space-y-1">
+                            <li>• O agente automático será desativado</li>
+                            <li>• O número não receberá mais mensagens</li>
+                            <li>• As mensagens não serão registradas no sistema</li>
+                        </ul>
+                    </div>`}
+                confirmText="Desconectar"
+                cancelText="Cancelar"
+                type="warning"
+                icon={<PowerIcon className="w-5 h-5" />}
+            />
         </div>
     );
 };

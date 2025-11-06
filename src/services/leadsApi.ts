@@ -319,7 +319,47 @@ class LeadsApiService {
     });
   }
 
+  async getRelatorioDiario(data_inicio?: string, data_fim?: string, cliente_id?: string): Promise<ApiResponse<RelatorioDiario>> {
+    const params = new URLSearchParams();
+    if (data_inicio) params.append('data_inicio', data_inicio);
+    if (data_fim) params.append('data_fim', data_fim);
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/leads/relatorio/diario?${queryString}` : '/leads/relatorio/diario';
+    
+    const headers: Record<string, string> = {};
+    if (cliente_id) {
+      headers['cliente_id'] = cliente_id;
+    }
+    
+    return this.request<RelatorioDiario>(endpoint, { headers }, {
+      showSuccess: false,
+      showError: true,
+    });
+  }
+}
 
+export interface RelatorioDiario {
+  data: string;
+  periodo: {
+    inicio: string;
+    fim: string;
+  };
+  totais: {
+    criados: number;
+    atualizados: number;
+    deletados: number;
+    total: number;
+  };
+  distribuicao: {
+    por_qualificacao: Record<string, number>;
+    por_origem: Record<string, number>;
+  };
+  detalhes: {
+    leads_criados: Lead[];
+    leads_atualizados: Lead[];
+    leads_deletados: Lead[];
+  };
 }
 
 export const leadsApi = new LeadsApiService();
