@@ -1,8 +1,7 @@
 @import "tailwindcss";
+@import "./theme.css";
 
-
-
-/* Custom scrollbar */
+/* Custom scrollbar - Light Mode */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -20,27 +19,31 @@
   background: #a8a8a8;
 }
 
-/* Tailwind configuration moved to tailwind.config.js */
+/* Custom scrollbar - Dark Mode */
+.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
 
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
 
-/* Removed dark theme styles to maintain only light theme */
+/* Base styles */
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
 
 body {
   font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
-  color: #1f2937; /* Default text color - gray-800 */
-  background-color: #ffffff; /* Default background color - white */
-}
-
-/* Ensure default text colors for common elements */
-h1, h2, h3, h4, h5, h6 {
-  color: #1f2937; /* gray-800 */
-}
-
-/* Specific overrides for text elements */
-.text-default {
-  color: #1f2937 !important;
 }
 
 /* Ensure Tailwind primary colors are applied correctly */
@@ -86,11 +89,6 @@ input[type="time"]::-webkit-datetime-edit-ampm-field {
 /* Keep the time picker icon visible */
 input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-}
-
-/* Additional CSS to force 24-hour format */
-input[type="time"] {
-  /* Removed font-family: monospace to match other input fields */
 }
 
 /* Hide AM/PM from any time picker */

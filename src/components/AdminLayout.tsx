@@ -222,11 +222,11 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-950">
       {/* Mobile menu backdrop */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 z-40 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -234,14 +234,14 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <div
         className={classNames(
-          'bg-white shadow-lg transition-all duration-300 ease-in-out flex flex-col',
+          'bg-white dark:bg-gray-900 shadow-lg transition-all duration-300 ease-in-out flex flex-col',
           'fixed lg:relative inset-y-0 left-0 z-50',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           sidebarOpen ? 'w-64' : 'w-15'
         )}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between p-3 border-b border-gray-200">
+        <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
               <img
@@ -260,16 +260,16 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
             {sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="hidden lg:block p-1 rounded-md hover:bg-gray-100 transition-colors"
+                className="hidden lg:block p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
-                <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
+                <ChevronLeftIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               </button>
             )}
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="lg:hidden p-1 rounded-md hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              <XMarkIcon className="h-5 w-5 text-gray-500" />
+              <XMarkIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
         </div>
@@ -297,14 +297,14 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                     }}
                     className={classNames(
                       hasActiveChild
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                        ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-dark'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-white',
                       'group flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors'
                     )}
                   >
                     <Icon
                       className={classNames(
-                        hasActiveChild ? 'text-primary' : 'text-gray-400 group-hover:text-gray-500',
+                        hasActiveChild ? 'text-primary dark:text-primary-dark' : 'text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-400',
                         'mr-3 flex-shrink-0 h-5 w-5'
                       )}
                       aria-hidden="true"
@@ -335,14 +335,14 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                                 onClick={() => toggleMenu(`${item.name}-${child.name}`)}
                                 className={classNames(
                                   hasActiveGrandchild
-                                    ? 'bg-primary/10 text-primary'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                                    ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-dark'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-white',
                                   'group flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors'
                                 )}
                               >
                                 <ChildIcon
                                   className={classNames(
-                                    hasActiveGrandchild ? 'text-primary' : 'text-gray-400 group-hover:text-gray-500',
+                                    hasActiveGrandchild ? 'text-primary dark:text-primary-dark' : 'text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-400',
                                     'mr-3 flex-shrink-0 h-4 w-4'
                                   )}
                                   aria-hidden="true"
@@ -366,14 +366,14 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                                         href={buildUrlWithClienteId(grandchild.href!)}
                                         className={classNames(
                                           isGrandchildActive
-                                            ? 'bg-primary text-white'
-                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                                            ? 'bg-primary text-white dark:bg-primary dark:!text-white'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-white',
                                           'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors'
                                         )}
                                       >
                                         <GrandchildIcon
                                           className={classNames(
-                                            isGrandchildActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-500',
+                                            isGrandchildActive ? 'text-white dark:!text-white' : 'text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-400',
                                             'mr-3 flex-shrink-0 h-3 w-3'
                                           )}
                                           aria-hidden="true"
@@ -393,14 +393,14 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                               href={buildUrlWithClienteId(child.href)}
                               className={classNames(
                                 isChildActive
-                                  ? 'bg-primary text-white'
-                                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                                  ? 'bg-primary text-white dark:bg-primary dark:!text-white'
+                                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-white',
                                 'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors'
                               )}
                             >
                               <ChildIcon
                                 className={classNames(
-                                  isChildActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-500',
+                                  isChildActive ? 'text-white dark:!text-white' : 'text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-400',
                                   'mr-3 flex-shrink-0 h-4 w-4'
                                 )}
                                 aria-hidden="true"
@@ -441,14 +441,14 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                   href={buildUrlWithClienteId(item.href)}
                   className={classNames(
                     isActive
-                      ? 'bg-primary text-white'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                      ? 'bg-primary text-white dark:bg-primary dark:!text-white'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 dark:hover:text-white',
                     'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors'
                   )}
                 >
                   <Icon
                     className={classNames(
-                      isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-500',
+                      isActive ? 'text-white dark:!text-white' : 'text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-400',
                       'mr-3 flex-shrink-0 h-5 w-5'
                     )}
                     aria-hidden="true"
@@ -492,7 +492,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
+        <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
               {/* Botão hamburguer mobile */}
@@ -506,12 +506,12 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
               {!sidebarOpen && (
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="hidden lg:block p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+                  className="hidden lg:block p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300 rounded-md transition-colors"
                 >
                   <ChevronRightIcon className="h-5 w-5" />
                 </button>
               )}
-              <h2 className="text-2xl font-semibold text-gray-900">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 {pathname === '/' ? 'Dashboard' :
                   pathname === '/leads' ? 'Leads' :
                     pathname === '/chat' ? 'Chat' :
@@ -533,13 +533,13 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
-              <button className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md transition-colors">
+              <button className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300 dark:hover:text-gray-100 rounded-md transition-colors">
                 <BellIcon className="h-5 w-5" />
               </button>
               <div className="relative user-tooltip-container">
                 <button
                   onClick={() => setShowTooltip(!showTooltip)}
-                  className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors"
+                  className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
                 >
                   <img
                     src="/user-icon.svg"
@@ -549,26 +549,26 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                 </button>
 
                 {showTooltip && (
-                  <div className="absolute right-0 top-10 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
+                  <div className="absolute right-0 top-10 w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
                     {/* Nome do usuário */}
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Usuário
                       </label>
-                      <div className="text-sm text-gray-900 font-semibold">
+                      <div className="text-sm text-gray-900 dark:text-gray-100 font-semibold">
                         Admin
                       </div>
                     </div>
 
                     {/* Select de clientes */}
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Cliente
                       </label>
                       <select
                         value={selectedCliente}
                         onChange={(e) => handleClienteChange(e.target.value)}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${clienteFromUrl ? 'bg-gray-100 cursor-not-allowed' : ''
+                        className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${clienteFromUrl ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''
                           }`}
                         disabled={loadingClientes || (clienteFromUrl && !window.location.hostname.includes('localhost'))}
                         title={clienteFromUrl && !window.location.hostname.includes('localhost') ? 'Cliente definido via URL - não é possível alterar' : ''}
@@ -586,19 +586,19 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
                     {/* Versão do sistema */}
                     <div className="mb-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Versão do Sistema
                       </label>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
                         v{APP_VERSION}
                       </div>
                     </div>
 
                     {/* Botão para fechar */}
-                    <div className="flex justify-end pt-2 border-t border-gray-100">
+                    <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
                       <button
                         onClick={() => setShowTooltip(false)}
-                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                        className="px-3 py-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
                       >
                         Fechar
                       </button>
@@ -611,7 +611,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 p-6">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
