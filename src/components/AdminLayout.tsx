@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import {
   HomeIcon,
   UsersIcon,
@@ -95,6 +95,7 @@ function classNames(...classes: string[]) {
 // Componente interno que usa useSearchParams
 function AdminLayoutContent({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [manuallyClosedMenus, setManuallyClosedMenus] = useState<string[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -222,14 +223,25 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
   return (
     <div className="flex h-screen bg-gray-100">
+      {/* Mobile menu backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <div
         className={classNames(
-          'bg-white shadow-lg transition-all duration-300 ease-in-out flex flex-col'
+          'bg-white shadow-lg transition-all duration-300 ease-in-out flex flex-col',
+          'fixed lg:relative inset-y-0 left-0 z-50',
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+          sidebarOpen ? 'w-64' : 'w-15'
         )}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-3 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
               <img
@@ -244,14 +256,22 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
               </div>
             )}
           </div>
-          {sidebarOpen && (
+          <div className="flex items-center gap-2">
+            {sidebarOpen && (
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="hidden lg:block p-1 rounded-md hover:bg-gray-100 transition-colors"
+              >
+                <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            )}
             <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+              className="lg:hidden p-1 rounded-md hover:bg-gray-100 transition-colors"
             >
-              <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
+              <XMarkIcon className="h-5 w-5 text-gray-500" />
             </button>
-          )}
+          </div>
         </div>
 
         {/* Navigation */}
@@ -475,10 +495,18 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
+              {/* Botão hamburguer mobile */}
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="lg:hidden p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                <Bars3Icon className="h-6 w-6" />
+              </button>
+              {/* Botão expandir sidebar desktop */}
               {!sidebarOpen && (
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
+                  className="hidden lg:block p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md transition-colors"
                 >
                   <ChevronRightIcon className="h-5 w-5" />
                 </button>
