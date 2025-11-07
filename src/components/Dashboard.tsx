@@ -571,7 +571,7 @@ export default function Dashboard() {
                           ) : ( 
                             <XCircleIcon className="h-5 w-5 text-red-500" />
                           )}
-                          <span className="text-sm text-green-600 dark:text-white font-medium">
+                          <span className={`text-sm ${isConnected ? 'text-green-600' : 'text-red-600'} dark:text-white font-medium`}>
                             {isConnected ? 'Conectado' : 'Desconectado'}
                           </span>
                         </div>
