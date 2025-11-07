@@ -240,9 +240,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const formatMessageContent = (content: string, messageType: 'human' | 'ai') => {
     if (!content) return 'Mensagem sem conteúdo';
 
+    // Remover barras invertidas literais do conteúdo
+    const cleanContent = content.replace(/\\/g, '');
+
     // Regex para detectar URLs e formatação
     // Removido flag global do URL para evitar problemas com lastIndex em .test()
-    const urlRegex = /(https?:\/\/[^\s\\]+)/;
+    const urlRegex = /(https?:\/\/[^\s]+)/;
     // Simplificados sem lookbehind para garantir compatibilidade ampla
     const boldRegex = /\*([^*\n]+)\*/g;
     const italicRegex = /_([^_\n]+)_/g;
@@ -258,7 +261,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
        .replace(/'/g, '&#039;');
 
     // Dividir o texto por quebras de linha
-    const lines = content.split(/\\n|\n/);
+    const lines = cleanContent.split(/\n/);
 
     // Definir classes de cor baseadas no tipo de mensagem
     const linkClasses = messageType === 'human'
@@ -290,9 +293,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
               // Função para limpar e formatar o URL para exibição
               const formatUrlDisplay = (url: string) => {
                 try {
-                  // Remover barras invertidas do URL
-                  const cleanUrl = url.replace(/\\/g, '');
-                  const urlObj = new URL(cleanUrl);
+                  const urlObj = new URL(url);
                   let displayText = urlObj.hostname + urlObj.pathname;
                   
                   // Remover www. se presente
@@ -316,18 +317,15 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   return part;
                 }
               };
-
-              // Limpar barras invertidas do URL original também
-              const cleanOriginalUrl = part.replace(/\\/g, '');
               
               return (
                 <a
                   key={partIndex}
-                  href={cleanOriginalUrl}
+                  href={part}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`${linkClasses} break-words`}
-                  title={cleanOriginalUrl} // Mostra o URL completo limpo no hover
+                  title={part}
                 >
                   🔗 {formatUrlDisplay(part)}
                 </a>
@@ -832,7 +830,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             {/* Mensagens */}
             <div
               ref={messagesListRef}
-              className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 md:space-y-3 bg-gray-50 dark:bg-gray-950"
+              className="flex-1 overflow-y-auto p-2 md:p-3 pb-20 md:pb-3 space-y-2 md:space-y-3 bg-gray-50 dark:bg-gray-950"
               onScroll={handleMessagesScroll}
             >
               {loadingMoreMessages && (
@@ -897,7 +895,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             </div>
 
             {/* Input de mensagem - Fixo na parte inferior no mobile */}
-            <div className="sticky bottom-0 p-2 md:p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 z-10 safe-bottom">
+            <div className="fixed md:sticky bottom-0 left-0 right-0 md:left-auto md:right-auto p-2 md:p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 z-50 safe-bottom">
               <div className="flex space-x-2 items-end">
                 <textarea
                   ref={textareaRef}
