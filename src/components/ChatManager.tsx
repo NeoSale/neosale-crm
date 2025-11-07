@@ -603,7 +603,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   }, [initialLeadId, leads]);
 
   return (
-    <div className="flex h-full md:h-full w-full bg-gray-50 overflow-hidden md:rounded-lg">
+    <div className="flex h-full w-full bg-gray-50 overflow-hidden md:rounded-lg">
       {/* Lista de Leads */}
       <div className={`w-full md:w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col overflow-hidden md:rounded-l-lg ${showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {/* Header da lista */}
@@ -719,7 +719,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       </div>
 
       {/* Área de Chat */}
-      <div className={`flex-1 flex flex-col border-b border-gray-200 shadow overflow-hidden md:rounded-r-lg ${!showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col border-b border-gray-200 shadow md:rounded-r-lg ${!showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {selectedLead ? (
           <>
             {/* Header do chat */}
@@ -811,7 +811,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             {/* Mensagens */}
             <div
               ref={messagesListRef}
-              className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 md:space-y-3 shadow-md"
+              className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 md:space-y-3 bg-gray-50 dark:bg-gray-950"
               onScroll={handleMessagesScroll}
             >
               {loadingMoreMessages && (
