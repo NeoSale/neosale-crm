@@ -378,6 +378,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const messagesListRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const leadItemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Carregar leads
   const loadLeads = async (page: number = 1, append: boolean = false) => {
@@ -413,6 +414,26 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     });
     window.dispatchEvent(event);
   }, [showChatOnMobile]);
+
+  // Ajustar viewport quando o teclado abrir no mobile
+  useEffect(() => {
+    const handleResize = () => {
+      // Forçar scroll para o input quando o teclado abrir
+      if (document.activeElement?.tagName === 'TEXTAREA') {
+        setTimeout(() => {
+          document.activeElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.visualViewport?.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Carregar mensagens
   const loadMessages = async (id: string, page: number = 1, append: boolean = false) => {
@@ -845,7 +866,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                           ${message.status === 'erro' && message.erro ? 'opacity-75' : ''}
                           `}
                       >
-                        <div className={`text-xs md:text-sm leading-relaxed font-normal break-words ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
+                        <div className={`text-md md:text-sm leading-relaxed font-normal break-words ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
                           {message.mensagem && message.mensagem ?
                             (typeof message.mensagem === 'string' ? renderMessageContent(message.mensagem, message.tipo || 'ai') : JSON.stringify(message.mensagem))
                             : 'Mensagem sem conteúdo'
@@ -876,12 +897,19 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             </div>
 
             {/* Input de mensagem - Fixo na parte inferior no mobile */}
-            <div className="p-2 md:p-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 safe-bottom">
+            <div className="sticky bottom-0 p-2 md:p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 z-10 safe-bottom">
               <div className="flex space-x-2 items-end">
                 <textarea
+                  ref={textareaRef}
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={(e) => {
+                    // Scroll para o input quando receber foco (mobile)
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }, 300);
+                  }}
                   placeholder={leadInfo?.ai_habilitada ? "🤖 Desabilite o agente para enviar mensagens" : "✍️ Digite sua mensagem..."}
                   className={`flex-1 px-2 md:px-3 py-2 text-xs md:text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 resize-none min-h-[40px] max-h-24 md:max-h-32 ${leadInfo?.ai_habilitada ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-800 dark:text-white'}`}
                   disabled={sending || leadInfo?.ai_habilitada}
