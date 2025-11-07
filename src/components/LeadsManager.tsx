@@ -1156,7 +1156,7 @@ const LeadsManager: React.FC = () => {
 
 
       {/* Seção de Leads Existentes */}
-      <div className="mt-6 bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-primary text-white p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

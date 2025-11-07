@@ -611,8 +611,8 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 p-2">
-          <div className="max-w-8xl mx-auto">
+        <main className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-950 p-2">
+          <div className="max-w-8xl mx-auto h-full">
             {children}
           </div>
         </main>

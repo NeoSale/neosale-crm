@@ -122,7 +122,7 @@ const ConfiguracoesManager: React.FC = () => {
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8">
       {/* Seção de Configurações */}
-      <div className="mt-6 bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-primary text-white p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

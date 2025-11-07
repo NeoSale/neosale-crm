@@ -595,13 +595,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   }, [initialLeadId, leads]);
 
   return (
-    <div className="flex bg-gray-50" style={{ height: 'calc(87vh)' }}>
+    <div className="flex h-full w-full bg-gray-50 overflow-hidden rounded-lg">
       {/* Lista de Leads */}
-      <div className={`w-full md:w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col rounded-l-xl overflow-hidden ${showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col overflow-hidden rounded-l-lg ${showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {/* Header da lista */}
-        <div className="p-4 shadow-lg">
+        <div className="p-3 md:p-4 shadow-lg flex-shrink-0">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold">Conversas</h2>
+            <h2 className="text-base md:text-lg font-bold">Conversas</h2>
             <button
               onClick={() => {
                 setCurrentPage(1);
@@ -616,12 +616,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
           </div>
 
           {/* Campo de busca */}
-          <div className="relative mt-4">
+          <div className="relative mt-3 md:mt-4">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Buscar conversas..."
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Buscar..."
+              className="w-full pl-9 pr-3 py-2 text-xs md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -660,13 +660,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       leadItemRefs.current[lead.id] = el;
                     }}
                     onClick={() => selectLead(lead)}
-                    className={`p-3 mx-2 my-1 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${selectedLead?.id === lead.id
+                    className={`p-2 md:p-3 mx-1 md:mx-2 my-1 rounded-lg md:rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.01] md:hover:scale-[1.02] ${selectedLead?.id === lead.id
                       ? 'bg-gray-50 border-l-4 border-[#403CCF] shadow-lg'
                       : 'bg-white hover:bg-gray-50 border border-gray-100'
                       }`}
                   >
                     <div className="flex items-center space-x-2">
-                      <div className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                      <div className="w-9 h-9 md:w-10 md:h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden flex-shrink-0">
                         {lead.profile_picture_url ? (
                           <img
                             src={lead.profile_picture_url}
@@ -678,20 +678,20 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                             }}
                           />
                         ) : null}
-                        <UserIcon className={`w-5 h-5 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
+                        <UserIcon className={`w-4 h-4 md:w-5 md:h-5 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        <div className="flex justify-between items-start gap-1">
+                          <h3 className="text-xs md:text-sm font-semibold text-gray-900 truncate">
                             {typeof lead.nome === 'string' ? lead.nome : JSON.stringify(lead.nome)}
                           </h3>
-                          <div className="flex items-center space-x-1 text-xs text-gray-600 ml-2">
-                            <span>{formatDate(lead.data_ultima_mensagem)}</span>
-                            <span>-</span>
+                          <div className="flex items-center space-x-0.5 md:space-x-1 text-[10px] md:text-xs text-gray-600 flex-shrink-0">
+                            <span className="hidden sm:inline">{formatDate(lead.data_ultima_mensagem)}</span>
+                            <span className="hidden sm:inline">-</span>
                             <span>{formatTime(lead.data_ultima_mensagem)}</span>
                           </div>
                         </div>
-                        <div className="text-sm mt-1">
+                        <div className="text-xs md:text-sm mt-1">
                           <LastMessageDisplay ultimaMensagem={lead.ultima_mensagem} />
                         </div>
                       </div>
@@ -711,12 +711,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       </div>
 
       {/* Área de Chat */}
-      <div className={`flex-1 flex flex-col border-b border-gray-200 shadow ${!showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col border-b border-gray-200 shadow overflow-hidden rounded-r-lg ${!showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {selectedLead ? (
           <>
             {/* Header do chat */}
-            <div className="p-3 md:p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm">
-              <div className="flex items-center space-x-2 md:space-x-3 flex-1 min-w-0">
+            <div className="p-2 md:p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm flex-shrink-0">
+              <div className="flex items-center space-x-1.5 md:space-x-3 flex-1 min-w-0">
                 {/* Botão voltar (mobile) */}
                 <button
                   onClick={backToList}
@@ -803,7 +803,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             {/* Mensagens */}
             <div
               ref={messagesListRef}
-              className="flex-1 overflow-y-auto p-3 space-y-3 shadow-md"
+              className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 md:space-y-3 shadow-md"
               onScroll={handleMessagesScroll}
             >
               {loadingMoreMessages && (
@@ -821,7 +821,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   {messages.slice().reverse().map((message, index) => (
                     <div
                       key={`${message.id}-${index}`}
-                      className={`flex ${message.tipo === 'human' ? 'justify-start' : 'justify-end'} mb-4`}
+                      className={`flex ${message.tipo === 'human' ? 'justify-start' : 'justify-end'} mb-2 md:mb-4`}
                     >
                       {(message.status === 'erro' && message.erro && message.tipo === 'ai') && (
                         <div
@@ -832,12 +832,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         </div>
                       )}
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-md 
+                        className={`max-w-[75%] md:max-w-xs lg:max-w-md px-3 md:px-4 py-2 rounded-2xl shadow-md 
                           ${message.tipo === 'human' ? 'bg-white border border-gray-200' : 'bg-[#403CCF]'}
                           ${message.status === 'erro' && message.erro ? 'opacity-75' : ''}
                           `}
                       >
-                        <div className={`text-xs leading-relaxed font-normal ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
+                        <div className={`text-xs md:text-sm leading-relaxed font-normal break-words ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
                           {message.mensagem && message.mensagem ?
                             (typeof message.mensagem === 'string' ? renderMessageContent(message.mensagem, message.tipo || 'ai') : JSON.stringify(message.mensagem))
                             : 'Mensagem sem conteúdo'
@@ -868,21 +868,21 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             </div>
 
             {/* Input de mensagem */}
-            <div className="p-2 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex space-x-2">
+            <div className="p-2 md:p-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex space-x-2 items-end">
                 <textarea
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={leadInfo?.ai_habilitada ? "🤖 Desabilite o agente para enviar mensagem manualmente" : "✍️ Digite sua mensagem..."}
-                  className={`flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 resize-none min-h-[40px] max-h-32 ${leadInfo?.ai_habilitada ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-800 dark:text-white'}`}
+                  placeholder={leadInfo?.ai_habilitada ? "🤖 Desabilite o agente para enviar mensagens" : "✍️ Digite sua mensagem..."}
+                  className={`flex-1 px-2 md:px-3 py-2 text-xs md:text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 resize-none min-h-[40px] max-h-24 md:max-h-32 ${leadInfo?.ai_habilitada ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-800 dark:text-white'}`}
                   disabled={sending || leadInfo?.ai_habilitada}
                   rows={1}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageText.trim() || sending || leadInfo?.ai_habilitada}
-                  className="px-3 py-2 bg-[#403CCF] text-white rounded-lg hover:bg-[#3530B8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  className="px-3 py-2 bg-[#403CCF] text-white rounded-lg hover:bg-[#3530B8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0"
                 >
                   {sending ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
