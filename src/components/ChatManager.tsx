@@ -523,7 +523,6 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       setMessageText('');
       // Recarregar mensagens
       await loadMessages(selectedLead.id);
-      toast.success('Mensagem enviada com sucesso!');
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast.error('Erro ao enviar mensagem');
@@ -742,7 +741,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
         {selectedLead ? (
           <>
             {/* Header do chat */}
-            <div className="p-2 md:p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm flex-shrink-0 safe-top">
+            <div className="fixed md:sticky top-0 left-0 right-0 md:left-auto md:right-auto p-2 md:p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm flex-shrink-0 z-50 safe-top">
               <div className="flex items-center space-x-1.5 md:space-x-3 flex-1 min-w-0">
                 {/* Botão voltar (mobile) */}
                 <button
@@ -797,7 +796,6 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         const response = await leadsApi.updateAiHabilitada(leadInfo.id, newValue, lead_id);
                         if (response.success) {
                           setLeadInfo({ ...leadInfo, ai_habilitada: newValue });
-                          toast.success(`Agente AI ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
                         }
                       } catch (error) {
                         console.error('Erro ao atualizar Agente AI:', error);
@@ -830,7 +828,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             {/* Mensagens */}
             <div
               ref={messagesListRef}
-              className="flex-1 overflow-y-auto p-2 md:p-3 pb-20 md:pb-3 space-y-2 md:space-y-3 bg-gray-50 dark:bg-gray-950"
+              className="flex-1 overflow-y-auto p-2 md:p-3 pt-20 md:pt-3 pb-20 md:pb-3 space-y-2 md:space-y-3 bg-gray-50 dark:bg-gray-950"
               onScroll={handleMessagesScroll}
             >
               {loadingMoreMessages && (
