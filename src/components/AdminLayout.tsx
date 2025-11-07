@@ -237,7 +237,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
           'bg-white dark:bg-gray-900 shadow-lg transition-all duration-300 ease-in-out flex flex-col',
           'fixed lg:relative inset-y-0 left-0 z-50',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-          sidebarOpen ? 'w-64' : 'w-16'
+          sidebarOpen ? 'w-46' : 'w-15'
         )}
         suppressHydrationWarning
       >
