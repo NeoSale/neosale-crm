@@ -406,6 +406,14 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
   };
 
+  // Notificar quando está em uma conversa (para ocultar header no mobile)
+  useEffect(() => {
+    const event = new CustomEvent('chatStateChange', { 
+      detail: { inChat: !!showChatOnMobile } 
+    });
+    window.dispatchEvent(event);
+  }, [showChatOnMobile]);
+
   // Carregar mensagens
   const loadMessages = async (id: string, page: number = 1, append: boolean = false) => {
     if (page === 1) {

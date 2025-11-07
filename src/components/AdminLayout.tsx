@@ -106,6 +106,20 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   const [currentClienteId, setCurrentClienteId] = useState<string>('');
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isInChat, setIsInChat] = useState(false);
+  
+  // Escutar mudanças de estado do chat
+  useEffect(() => {
+    const handleChatStateChange = (event: CustomEvent) => {
+      setIsInChat(event.detail.inChat);
+    };
+    
+    window.addEventListener('chatStateChange', handleChatStateChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('chatStateChange', handleChatStateChange as EventListener);
+    };
+  }, []);
 
   // Função para carregar clientes
   const loadClientes = async () => {
@@ -493,7 +507,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <header className={`bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 ${isInChat ? 'hidden md:block' : 'block'}`}>
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
               {/* Botão hamburguer mobile */}
@@ -612,8 +626,8 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 p-2 md:p-4" suppressHydrationWarning>
-          <div className="max-w-8xl mx-auto">
+        <main className={`flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 ${isInChat ? 'p-0 md:p-2 md:p-4' : 'p-2 md:p-4'}`} suppressHydrationWarning>
+          <div className={isInChat ? 'h-full' : 'max-w-8xl mx-auto'}>
             {children}
           </div>
         </main>
