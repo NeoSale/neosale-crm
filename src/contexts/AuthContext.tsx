@@ -49,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const response = await authApi.login(email, senha);
 
-      if (response.success) {
+      if (response.success && response.data) {
         // Armazenar token e dados do usuário
         localStorage.setItem('token', response.data.sessao.token);
         localStorage.setItem('refresh_token', response.data.sessao.refresh_token);
@@ -57,9 +57,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         setUser(response.data.usuario);
         router.push('/');
+      } else {
+        throw new Error(response.message || 'Erro ao fazer login');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao fazer login:', error);
+      // Limpar qualquer dado parcial
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      setUser(null);
       throw error;
     }
   };

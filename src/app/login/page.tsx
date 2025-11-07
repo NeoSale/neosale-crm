@@ -4,18 +4,25 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import bcrypt from 'bcryptjs';
-import { authApi } from '../../services/authApi';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; senha?: string }>({});
+
+  // Redirecionar se já estiver autenticado
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      router.push(redirectUrl);
+    }
+  }, [isAuthenticated, authLoading, router, redirectUrl]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,35 +56,21 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Hash da senha antes de enviar
-      const salt = bcrypt.genSaltSync(10);
-      const senhaHash = bcrypt.hashSync(senha, salt);
-
-      const response = await authApi.login(email, senhaHash);
-
-      if (response.success) {
-        // Armazenar token e dados do usuário
-        localStorage.setItem('token', response.data.sessao.token);
-        localStorage.setItem('refresh_token', response.data.sessao.refresh_token);
-        localStorage.setItem('user', JSON.stringify(response.data.usuario));
-
-        toast.success('Login realizado com sucesso!');
-
-        // Redirecionar para a página de origem ou home
-        router.push(redirectUrl);
-      } else {
-        toast.error(response.message || 'Erro ao fazer login');
-      }
+      // Enviar senha em texto plano - o backend fará o hash
+      await login(email, senha);
+      toast.success('Login realizado com sucesso!');
+      // O AuthContext já redireciona para '/' após login bem-sucedido
     } catch (error: any) {
       console.error('Erro ao fazer login:', error);
-      toast.error(error.response?.data?.message || 'Email ou senha inválidos');
+      const errorMessage = error.response?.data?.message || error.message || 'Email ou senha inválidos';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-white to-primary/5 px-4 py-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-white to-primary/5 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 px-4 py-4">
       <div className="w-full max-w-md">
         {/* Logo e Título */}
         <div className="text-center mb-4">
@@ -88,20 +81,20 @@ export default function LoginPage() {
               className="w-full h-full"
             />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">NeoCRM</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">NeoCRM</h1>
         </div>
 
         {/* Card de Login */}
-        <div className="bg-white rounded-xl p-6" style={{ boxShadow: '0 0 40px rgba(0, 0, 0, 0.15)' }}>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-2xl dark:shadow-gray-900/50">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Campo Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                 </div>
                 <input
                   id="email"
@@ -112,8 +105,8 @@ export default function LoginPage() {
                     if (errors.email) setErrors({ ...errors, email: undefined });
                   }}
                   className={`block w-full pl-10 pr-3 py-2 border ${
-                    errors.email ? 'border-red-500' : 'border-gray-300'
-                  } rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors`}
+                    errors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  } rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500`}
                   placeholder="seu@email.com"
                   disabled={loading}
                 />
@@ -128,12 +121,12 @@ export default function LoginPage() {
 
             {/* Campo Senha */}
             <div>
-              <label htmlFor="senha" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="senha" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Senha
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                 </div>
                 <input
                   id="senha"
@@ -144,21 +137,21 @@ export default function LoginPage() {
                     if (errors.senha) setErrors({ ...errors, senha: undefined });
                   }}
                   className={`block w-full pl-10 pr-12 py-2 border ${
-                    errors.senha ? 'border-red-500' : 'border-gray-300'
-                  } rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors`}
+                    errors.senha ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  } rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500`}
                   placeholder="••••••••"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
                   disabled={loading}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <EyeOff className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <Eye className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                   )}
                 </button>
               </div>
@@ -178,14 +171,14 @@ export default function LoginPage() {
                   type="checkbox"
                   className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                 />
-                <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="remember" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                   Lembrar-me
                 </label>
               </div>
               <button
                 type="button"
-                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                onClick={() => toast('Funcionalidade em desenvolvimento')}
+                className="text-sm font-medium text-primary dark:text-primary-light hover:text-primary/80 dark:hover:text-primary transition-colors cursor-pointer"
+                onClick={() => router.push('/forgot-password')}
               >
                 Esqueceu a senha?
               </button>
@@ -195,7 +188,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
             >
               {loading ? (
                 <>

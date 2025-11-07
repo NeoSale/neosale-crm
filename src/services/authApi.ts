@@ -151,38 +151,93 @@ api.interceptors.request.use(
   }
 );
 
+// Fila para controlar múltiplas requisições durante refresh
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+}> = [];
+
+const processQueue = (error: any = null, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Interceptor para renovar token automaticamente
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Se o erro for 401 e não for uma tentativa de refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          const response = await authApi.refreshToken(refreshToken);
-          
-          if (response.success) {
-            localStorage.setItem('token', response.data.token);
-            originalRequest.headers.Authorization = `Bearer ${response.data.token}`;
-            return api(originalRequest);
-          }
-        }
-      } catch (refreshError) {
-        // Se falhar ao renovar, fazer logout
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
+    // Ignorar erros que não são 401 ou requisições de login/refresh
+    if (error.response?.status !== 401) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    // Ignorar se for requisição de login ou refresh
+    if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/refresh')) {
+      return Promise.reject(error);
+    }
+
+    // Se já tentou fazer refresh, redirecionar para login
+    if (originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    // Se já está fazendo refresh, adicionar à fila
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      }).then(token => {
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return api(originalRequest);
+      }).catch(err => {
+        return Promise.reject(err);
+      });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    const refreshToken = localStorage.getItem('refresh_token');
+    
+    if (!refreshToken) {
+      processQueue(new Error('No refresh token'), null);
+      isRefreshing = false;
+      localStorage.clear();
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
+    try {
+      const response = await authApi.refreshToken(refreshToken);
+      
+      if (response.success && response.data.token) {
+        const newToken = response.data.token;
+        localStorage.setItem('token', newToken);
+        api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        processQueue(null, newToken);
+        isRefreshing = false;
+        return api(originalRequest);
+      } else {
+        throw new Error('Failed to refresh token');
+      }
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      isRefreshing = false;
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      return Promise.reject(refreshError);
+    }
   }
 );
 
@@ -256,7 +311,31 @@ export const authApi = {
    */
   isAuthenticated: (): boolean => {
     const token = localStorage.getItem('token');
-    return !!token;
+    if (!token) return false;
+
+    try {
+      // Decodificar JWT para verificar expiração
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const now = Math.floor(Date.now() / 1000);
+      
+      // Verificar se token expirou
+      if (payload.exp && payload.exp < now) {
+        // Token expirado, limpar
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      // Token inválido
+      console.error('Token inválido:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      return false;
+    }
   },
 
   /**

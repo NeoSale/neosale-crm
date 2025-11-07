@@ -108,11 +108,11 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isInChat, setIsInChat] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   // Define public routes that don't need the admin layout
-  const publicRoutes = ['/login', '/register', '/forgot-password'];
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/unauthorized'];
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   // Escutar mudanças de estado do chat
   useEffect(() => {
