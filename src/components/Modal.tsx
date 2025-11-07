@@ -72,25 +72,25 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 text-gray-700"
+      className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 text-gray-700 dark:text-gray-300"
       onClick={handleBackdropClick}
     >
       <div
-        className={`bg-white rounded-lg w-full ${sizeClasses[size]} mx-4 max-h-[600px] flex flex-col shadow-2xl ${className}`}
+        className={`bg-white dark:bg-gray-900 rounded-lg w-full ${sizeClasses[size]} mx-4 max-h-[600px] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabeçalho do Modal */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             {title && (
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {title}
               </h3>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Fechar modal"
               >
                 <XMarkIcon className="h-5 w-5" />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import {
     PlusIcon,
@@ -26,6 +26,7 @@ const DocumentosConhecimento: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [loadingDocumentos, setLoadingDocumentos] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [editingDocumento, setEditingDocumento] = useState<Documento | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null }>({ show: false, id: null });
@@ -45,11 +46,29 @@ const DocumentosConhecimento: React.FC = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [selectedBases, setSelectedBases] = useState<string[]>([]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         loadDocumentos();
         loadBases();
     }, [currentPage, itemsPerPage, searchTerm]);
+
+    // Fechar dropdown ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+
+        if (isDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isDropdownOpen]);
 
     const loadDocumentos = async (showLoadingState = true) => {
         if (showLoadingState) {
@@ -172,12 +191,15 @@ const DocumentosConhecimento: React.FC = () => {
 
     const confirmDelete = async () => {
         if (deleteConfirm.id) {
+            setDeleting(true);
             try {
                 await documentosApi.deleteDocumento(deleteConfirm.id);
                 loadDocumentos(false);
                 setDeleteConfirm({ show: false, id: null });
             } catch (error) {
                 console.error('Erro ao deletar documento:', error);
+            } finally {
+                setDeleting(false);
             }
         }
     };
@@ -338,7 +360,7 @@ const DocumentosConhecimento: React.FC = () => {
             if (baseId.length === 0) return '-';
             const baseNames = baseId.map(id => {
                 const base = bases.find(b => b.id === id);
-                return base?.nome || id;
+                return base?.nome;
             });
             return baseNames.join(', ');
         }
@@ -513,12 +535,6 @@ const DocumentosConhecimento: React.FC = () => {
                                                 variant="primary"
                                             />
                                             <TableActionButton
-                                                onClick={() => handleEdit(doc)}
-                                                icon={<PencilIcon className="h-4 w-4" />}
-                                                title="Editar"
-                                                variant="primary"
-                                            />
-                                            <TableActionButton
                                                 onClick={() => handleDelete(doc.id!)}
                                                 icon={<TrashIcon className="h-4 w-4" />}
                                                 title="Excluir"
@@ -666,7 +682,7 @@ const DocumentosConhecimento: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="relative">
+                    <div className="relative" ref={dropdownRef}>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Bases de Conhecimento *
                         </label>
@@ -792,6 +808,7 @@ const DocumentosConhecimento: React.FC = () => {
                 confirmText="Excluir"
                 cancelText="Cancelar"
                 type="danger"
+                isLoading={deleting}
             />
         </div>
     );

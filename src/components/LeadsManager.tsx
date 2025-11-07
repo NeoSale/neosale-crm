@@ -11,7 +11,7 @@ import { useLeads, ImportError } from '../hooks/useLeads';
 import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 import { formatPhone, removePhonePrefix, formatPhoneDisplay } from '../utils/phone-utils';
-import { validateCNPJForForm, applyCNPJMask } from '../utils/document-validation';
+import { validateCNPJForForm, applyCNPJMask, validateCPFForForm, applyCPFMask } from '../utils/document-validation';
 import { formatDateTime } from '../utils/date-utils';
 import { Table, TableColumn, TableToggle, TableActionButton, TableText, TableBadge } from './Table';
 
@@ -85,6 +85,89 @@ const TruncatedText: React.FC<TruncatedTextProps> = ({
         onMouseLeave={() => setShowTooltip(false)}
       >
         {displayText}
+      </div>
+      <TooltipPortal />
+    </div>
+  );
+};
+
+// Componente para exibir Origem com tooltip
+interface OrigemTextProps {
+  text: string;
+  variant?: 'green' | 'blue' | 'gray';
+}
+
+const OrigemText: React.FC<OrigemTextProps> = ({ text, variant = 'gray' }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const elementRef = useRef<HTMLDivElement>(null);
+  
+  // Extrair primeira palavra
+  const firstWord = text.split(/[\s\n]/)[0];
+  
+  const handleMouseEnter = () => {
+    if (elementRef.current) {
+      const rect = elementRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top - 10
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  const TooltipPortal = () => {
+    if (!showTooltip) return null;
+
+    // Converter \n literal em quebras de linha reais
+    const formattedText = text.replace(/\\n/g, '\n');
+
+    return createPortal(
+      <div
+        style={{
+          position: 'fixed',
+          left: tooltipPosition.x,
+          top: tooltipPosition.y,
+          transform: 'translate(-50%, -100%)',
+          zIndex: 2147483647,
+          pointerEvents: 'none'
+        }}
+        className="p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl max-w-xs break-words"
+      >
+        <div className="whitespace-pre-line">{formattedText}</div>
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '4px solid transparent',
+            borderRight: '4px solid transparent',
+            borderTop: '4px solid #111827'
+          }}
+        ></div>
+      </div>,
+      document.body
+    );
+  };
+
+  const variantClasses = {
+    green: 'bg-green-100 text-green-800',
+    blue: 'bg-blue-100 text-blue-800',
+    gray: 'bg-gray-100 text-gray-800'
+  };
+
+  return (
+    <div className="relative inline-block">
+      <div
+        ref={elementRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setShowTooltip(false)}
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-help ${variantClasses[variant]}`}
+      >
+        {firstWord}
       </div>
       <TooltipPortal />
     </div>
@@ -442,6 +525,7 @@ const LeadsManager: React.FC = () => {
         'Telefone',
         'Email',
         'CNPJ',
+        'CPF',
         'Resumo',
         'Qualificacao',
         'Descrição',
@@ -469,6 +553,7 @@ const LeadsManager: React.FC = () => {
           formatPhoneDisplay(removePhonePrefix(lead.telefone!)) || '',
           lead.email || '',
           lead.cnpj || '',
+          lead.cpf || '',
           lead.resumo || '',
           lead.qualificacao?.nome || '',
           lead.qualificacao?.descricao || '',
@@ -564,6 +649,12 @@ const LeadsManager: React.FC = () => {
         mapping['nome'] = header;
       } else if (normalizedHeader.includes('telefone') || normalizedHeader.includes('phone') || normalizedHeader.includes('celular')) {
         mapping['telefone'] = header;
+      } else if (normalizedHeader.includes('email') || normalizedHeader.includes('e-mail')) {
+        mapping['email'] = header;
+      } else if (normalizedHeader.includes('cnpj')) {
+        mapping['cnpj'] = header;
+      } else if (normalizedHeader.includes('cpf')) {
+        mapping['cpf'] = header;
       }
     });
 
@@ -981,7 +1072,7 @@ const LeadsManager: React.FC = () => {
         const origemText = typeof lead.origem === 'object' && lead.origem.nome ? lead.origem.nome : String(lead.origem);
         const origemLower = origemText.toLowerCase();
         const variant = origemLower.includes('whatsapp') ? 'green' : origemLower.includes('site') ? 'blue' : 'gray';
-        return <TableBadge variant={variant}>{origemText}</TableBadge>;
+        return <OrigemText text={origemText} variant={variant} />;
       },
     },
     {
@@ -1061,11 +1152,11 @@ const LeadsManager: React.FC = () => {
   }
 
   return (
-    <div className="w-full mx-auto space-y-8">
+    <div className="w-full mx-auto space-y-8 max-h-full overflow-y-auto" suppressHydrationWarning>
 
 
       {/* Seção de Leads Existentes */}
-      <div className="mt-6 bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="bg-primary text-white p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -1664,6 +1755,29 @@ const LeadsManager: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Campo CPF */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                      CPF
+                    </label>
+                    <select
+                      value={fieldMapping['cpf'] || ''}
+                      onChange={(e) => handleFieldMappingChange('cpf', e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione uma coluna</option>
+                      {fileHeaders.map(header => (
+                        <option key={header} value={header}>{header}</option>
+                      ))}
+                    </select>
+                    {fieldMapping['cpf'] && (
+                      <div className="mt-2 text-xs text-green-600">
+                        ✓ Mapeado para: {fieldMapping['cpf']}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Campo Segmento */}
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
@@ -1963,6 +2077,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
     responsavel: lead.responsavel || '',
     resumo: lead.resumo || '',
     cnpj: lead.cnpj || '',
+    cpf: lead.cpf || '',
     observacao: lead.observacao || '',
     segmento: lead.segmento || '',
     erp_atual: lead.erp_atual || ''
@@ -1975,6 +2090,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
     telefone?: string;
     email?: string;
     cnpj?: string;
+    cpf?: string;
   }>({});
 
   // Função para validar nome
@@ -2002,11 +2118,16 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
     }
 
     // Remove todos os caracteres não numéricos
-    const cleanPhone = phone.replace(/\D/g, '');
+    let cleanPhone = phone.replace(/\D/g, '');
+
+    // Remove o prefixo 55 se presente
+    if (cleanPhone.startsWith('55') && cleanPhone.length > 11) {
+      cleanPhone = cleanPhone.substring(2);
+    }
 
     // Verifica se tem exatamente 10 ou 11 dígitos (DDD + número)
     if (cleanPhone.length < 10) {
-      return 'Telefone deve ter pelo menos 10 dígitos (DDD + número)';
+      return 'Telefone deve ter 10 dígitos (fixo) ou 11 dígitos (celular)';
     }
 
     if (cleanPhone.length > 11) {
@@ -2022,6 +2143,11 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
     // Para celular (11 dígitos), o primeiro dígito após o DDD deve ser 9
     if (cleanPhone.length === 11 && cleanPhone[2] !== '9') {
       return 'Número de celular deve começar com 9 após o DDD';
+    }
+
+    // Para fixo (10 dígitos), o primeiro dígito após o DDD NÃO deve ser 9
+    if (cleanPhone.length === 10 && cleanPhone[2] === '9') {
+      return 'Número fixo não deve começar com 9 após o DDD';
     }
 
     return null;
@@ -2043,6 +2169,10 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
 
   const validateCNPJ = (cnpj: string): string | null => {
     return validateCNPJForForm(cnpj);
+  };
+
+  const validateCPF = (cpf: string): string | null => {
+    return validateCPFForForm(cpf);
   };
 
   React.useEffect(() => {
@@ -2069,12 +2199,14 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
     const phoneError = validatePhone(formData.telefone || '');
     const emailError = validateEmail(formData.email || '');
     const cnpjError = validateCNPJ(formData.cnpj || '');
+    const cpfError = validateCPF(formData.cpf || '');
 
-    const newErrors: { nome?: string; telefone?: string; email?: string; cnpj?: string } = {};
+    const newErrors: { nome?: string; telefone?: string; email?: string; cnpj?: string; cpf?: string } = {};
     if (nameError) newErrors.nome = nameError;
     if (phoneError) newErrors.telefone = phoneError;
     if (emailError) newErrors.email = emailError;
     if (cnpjError) newErrors.cnpj = cnpjError;
+    if (cpfError) newErrors.cpf = cpfError;
 
     setErrors(newErrors);
 
@@ -2139,11 +2271,12 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
                   <circle cx="10" cy="7" r="3" fill="#012169" />
                   <path d="M7,6.5 Q10,5 13,6.5 Q10,8.5 7,6.5" fill="#FEDD00" />
                 </svg>
+                <span className="text-gray-600 text-sm font-medium">+</span>
               </div>
             </div>
             <input
               type="tel"
-              className={`w-full pl-16 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.telefone ? 'border-red-500' : 'border-gray-300'
+              className={`w-full pl-12 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.telefone ? 'border-red-500' : 'border-gray-300'
                 }`}
               value={formatPhoneDisplay(formData.telefone || '')}
               onChange={(e) => {
@@ -2152,7 +2285,7 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
                 handleChange('telefone', cleanValue);
               }}
               placeholder="(11) 99999-9999"
-              maxLength={15}
+              maxLength={19}
             />
           </div>
           {errors.telefone && (
@@ -2188,6 +2321,22 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
           />
           {errors.cnpj && (
             <p className="text-red-500 text-xs mt-1">{errors.cnpj}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">CPF</label>
+          <input
+            type="text"
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm ${errors.cpf ? 'border-red-500' : 'border-gray-300'
+              }`}
+            value={formData.cpf || ''}
+            onChange={(e) => handleChange('cpf', applyCPFMask(e.target.value))}
+            placeholder="000.000.000-00"
+            maxLength={14}
+          />
+          {errors.cpf && (
+            <p className="text-red-500 text-xs mt-1">{errors.cpf}</p>
           )}
         </div>
 
@@ -2332,6 +2481,33 @@ const EditLeadForm: React.FC<EditLeadFormProps> = ({ lead, onSave, onCancel, sav
                 placeholder="Sistema ERP utilizado atualmente"
               />
             </div>
+
+            {/* Datas de Criação e Atualização */}
+            {lead.created_at && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Data de Criação</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-600"
+                  value={`${formatDateTime(lead.created_at).date} ${formatDateTime(lead.created_at).time}`}
+                  disabled
+                  readOnly
+                />
+              </div>
+            )}
+
+            {lead.updated_at && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Última Atualização</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-600"
+                  value={`${formatDateTime(lead.updated_at).date} ${formatDateTime(lead.updated_at).time}`}
+                  disabled
+                  readOnly
+                />
+              </div>
+            )}
           </>
         )}
       </div>

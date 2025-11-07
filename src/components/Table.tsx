@@ -60,7 +60,7 @@ export function Table<T>({
   return (
     <div className="overflow-x-auto">
       <table className="w-full table-auto">
-        <thead className="bg-gray-50">
+        <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
             {selectable && (
               <th className={`${paddingClass} text-left text-xs font-medium text-gray-500 uppercase w-8`}>
@@ -75,14 +75,14 @@ export function Table<T>({
             {columns.map((column) => (
               <th
                 key={column.key}
-                className={`${paddingClass} text-${column.align || 'left'} text-xs font-medium text-gray-500 uppercase ${column.width || ''}`}
+                className={`${paddingClass} text-${column.align || 'left'} text-xs font-medium text-gray-500 dark:text-gray-400 uppercase ${column.width || ''}`}
               >
                 {column.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
           {data.map((item, index) => {
             const itemKey = keyExtractor(item, index);
             const isSelected = selectedItems.has(itemKey);
@@ -91,7 +91,7 @@ export function Table<T>({
               <tr
                 key={itemKey}
                 onClick={() => onRowClick?.(item)}
-                className={`hover:bg-gray-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
               >
                 {selectable && (
                   <td className={`${paddingClass} whitespace-nowrap`}>
@@ -135,12 +135,12 @@ export const TableBadge: React.FC<{
   compact?: boolean;
 }> = ({ children, variant = 'blue', compact = true }) => {
   const colors = {
-    blue: 'bg-blue-100 text-blue-800',
-    green: 'bg-green-100 text-green-800',
-    purple: 'bg-purple-100 text-purple-800',
-    red: 'bg-red-100 text-red-800',
-    yellow: 'bg-yellow-100 text-yellow-800',
-    gray: 'bg-gray-100 text-gray-600',
+    blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    green: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    purple: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    red: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    gray: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
   };
 
   const paddingClass = compact ? 'px-1.5 py-0.5' : 'px-2.5 py-0.5';
@@ -189,9 +189,9 @@ export const TableActionButton: React.FC<{
   variant?: 'default' | 'danger' | 'primary';
 }> = ({ onClick, icon, title, disabled = false, loading = false, variant = 'default' }) => {
   const variantClasses = {
-    default: 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-primary',
-    danger: 'border-red-300 text-red-700 bg-white hover:bg-red-50 focus:ring-red-500',
-    primary: 'border-primary text-primary bg-white hover:bg-primary/10 focus:ring-primary',
+    default: 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 focus:ring-primary',
+    danger: 'border-red-300 text-red-700 bg-white hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-gray-800 dark:hover:bg-red-900/20 focus:ring-red-500',
+    primary: 'border-primary text-primary bg-white hover:bg-primary/10 dark:bg-gray-800 dark:hover:bg-primary/20 focus:ring-primary',
   };
 
   return (
@@ -222,14 +222,14 @@ export const TableText: React.FC<{
   if (truncate) {
     return (
       <div className={maxWidth || 'max-w-[200px]'}>
-        <div className={`${textSizeClass} text-gray-900 truncate`} title={title || String(children)}>
+        <div className={`${textSizeClass} text-gray-900 dark:text-gray-100 truncate`} title={title || String(children)}>
           {children}
         </div>
       </div>
     );
   }
 
-  return <span className={`${textSizeClass} text-gray-900`}>{children}</span>;
+  return <span className={`${textSizeClass} text-gray-900 dark:text-gray-100`}>{children}</span>;
 };
 
 export default Table;

@@ -5,17 +5,17 @@ module.exports = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  // darkMode: 'class', // Removed dark mode support
+  darkMode: false, // Disable Tailwind dark mode - using CSS variables instead
   theme: {
     extend: {
       colors: {
         primary: {
           DEFAULT: '#403CCF',
-          // dark: '#5B59E8', // Removed dark variant
+          dark: '#5B59E8',
         },
         secondary: {
           DEFAULT: '#FBFAFF',
-          // dark: '#1a1a1a', // Removed dark variant
+          dark: '#1a1a1a',
         },
       },
       fontFamily: {

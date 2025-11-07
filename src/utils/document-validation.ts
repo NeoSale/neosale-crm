@@ -148,3 +148,146 @@ export const applyCNPJMask = (value: string): string => {
     return limited.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/, '$1.$2.$3/$4-$5');
   }
 };
+
+/**
+ * Formata um CPF removendo caracteres especiais
+ * @param cpf - CPF com ou sem formatação
+ * @returns CPF apenas com números
+ */
+export const cleanCPF = (cpf: string): string => {
+  return cpf.replace(/\D/g, '');
+};
+
+/**
+ * Formata um CPF para o padrão brasileiro XXX.XXX.XXX-XX
+ * @param cpf - CPF apenas com números
+ * @returns CPF formatado
+ */
+export const formatCPF = (cpf: string): string => {
+  const cleaned = cleanCPF(cpf);
+  if (cleaned.length !== 11) return cpf;
+  
+  return cleaned.replace(
+    /(\d{3})(\d{3})(\d{3})(\d{2})/,
+    '$1.$2.$3-$4'
+  );
+};
+
+/**
+ * Valida se o formato do CPF está correto (XXX.XXX.XXX-XX)
+ * @param cpf - CPF formatado
+ * @returns true se o formato estiver correto
+ */
+export const isValidCPFFormat = (cpf: string): boolean => {
+  const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
+  return cpfRegex.test(cpf);
+};
+
+/**
+ * Calcula os dígitos verificadores do CPF
+ * @param cpfBase - Os primeiros 9 dígitos do CPF
+ * @returns Array com os dois dígitos verificadores
+ */
+const calculateCPFVerificationDigits = (cpfBase: string): [number, number] => {
+  // Primeiro dígito verificador
+  let soma = 0;
+  for (let i = 0; i < 9; i++) {
+    soma += parseInt(cpfBase.charAt(i)) * (10 - i);
+  }
+  let resto = soma % 11;
+  const digito1 = resto < 2 ? 0 : 11 - resto;
+
+  // Segundo dígito verificador
+  soma = 0;
+  const cpfComPrimeiroDigito = cpfBase + digito1;
+  for (let i = 0; i < 10; i++) {
+    soma += parseInt(cpfComPrimeiroDigito.charAt(i)) * (11 - i);
+  }
+  resto = soma % 11;
+  const digito2 = resto < 2 ? 0 : 11 - resto;
+
+  return [digito1, digito2];
+};
+
+/**
+ * Valida um CPF completo (formato e dígitos verificadores)
+ * @param cpf - CPF com ou sem formatação
+ * @returns Objeto com resultado da validação
+ */
+export const validateCPF = (cpf: string): {
+  isValid: boolean;
+  error?: string;
+  formatted?: string;
+} => {
+  if (!cpf || !cpf.trim()) {
+    return { isValid: false, error: 'CPF é obrigatório' };
+  }
+
+  const cleaned = cleanCPF(cpf);
+
+  // Verifica se tem 11 dígitos
+  if (cleaned.length !== 11) {
+    return { 
+      isValid: false, 
+      error: 'CPF deve ter 11 dígitos no formato XXX.XXX.XXX-XX' 
+    };
+  }
+
+  // Verifica se não são todos os dígitos iguais
+  if (/^(\d)\1{10}$/.test(cleaned)) {
+    return { isValid: false, error: 'CPF inválido - todos os dígitos são iguais' };
+  }
+
+  // Valida os dígitos verificadores
+  const cpfBase = cleaned.substring(0, 9);
+  const [expectedDigit1, expectedDigit2] = calculateCPFVerificationDigits(cpfBase);
+  
+  const actualDigit1 = parseInt(cleaned.charAt(9));
+  const actualDigit2 = parseInt(cleaned.charAt(10));
+
+  if (actualDigit1 !== expectedDigit1 || actualDigit2 !== expectedDigit2) {
+    return { isValid: false, error: 'CPF inválido - dígitos verificadores incorretos' };
+  }
+
+  return { 
+    isValid: true, 
+    formatted: formatCPF(cleaned)
+  };
+};
+
+/**
+ * Valida CPF para uso em formulários (permite campo vazio)
+ * @param cpf - CPF com ou sem formatação
+ * @returns String com erro ou null se válido
+ */
+export const validateCPFForForm = (cpf: string): string | null => {
+  if (!cpf || !cpf.trim()) {
+    return null; // CPF não é obrigatório
+  }
+
+  const result = validateCPF(cpf);
+  return result.isValid ? null : result.error || 'CPF inválido';
+};
+
+/**
+ * Aplica máscara de CPF durante a digitação
+ * @param value - Valor atual do input
+ * @returns Valor formatado com máscara
+ */
+export const applyCPFMask = (value: string): string => {
+  const cleaned = cleanCPF(value);
+  
+  // Limita a 11 dígitos
+  const limited = cleaned.substring(0, 11);
+  
+  // Aplica a máscara progressivamente
+  if (limited.length <= 3) {
+    return limited;
+  } else if (limited.length <= 6) {
+    return limited.replace(/(\d{3})(\d+)/, '$1.$2');
+  } else if (limited.length <= 9) {
+    return limited.replace(/(\d{3})(\d{3})(\d+)/, '$1.$2.$3');
+  } else {
+    return limited.replace(/(\d{3})(\d{3})(\d{3})(\d+)/, '$1.$2.$3-$4');
+  }
+};

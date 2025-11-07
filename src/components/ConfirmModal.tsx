@@ -29,30 +29,30 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   const typeConfig = {
     danger: {
-      iconBg: 'bg-red-100',
-      iconColor: 'text-red-600',
-      titleColor: 'text-red-600',
+      iconBg: 'bg-red-100 dark:bg-red-900/30',
+      iconColor: 'text-red-600 dark:text-red-400',
+      titleColor: 'text-red-600 dark:text-red-400',
       confirmBg: 'bg-primary hover:bg-primary/90',
       defaultIcon: <TrashIcon className="w-5 h-5" />
     },
     warning: {
-      iconBg: 'bg-yellow-100',
-      iconColor: 'text-yellow-600',
-      titleColor: 'text-yellow-600',
+      iconBg: 'bg-yellow-100 dark:bg-yellow-900/30',
+      iconColor: 'text-yellow-600 dark:text-yellow-400',
+      titleColor: 'text-yellow-600 dark:text-yellow-400',
       confirmBg: 'bg-primary hover:bg-primary/90',
       defaultIcon: <ExclamationTriangleIcon className="w-5 h-5" />
     },
     success: {
-      iconBg: 'bg-green-100',
-      iconColor: 'text-green-600',
-      titleColor: 'text-green-600',
+      iconBg: 'bg-green-100 dark:bg-green-900/30',
+      iconColor: 'text-green-600 dark:text-green-400',
+      titleColor: 'text-green-600 dark:text-green-400',
       confirmBg: 'bg-primary hover:bg-primary/90',
       defaultIcon: <CheckCircleIcon className="w-5 h-5" />
     },
     info: {
-      iconBg: 'bg-primary/10',
-      iconColor: 'text-primary',
-      titleColor: 'text-primary',
+      iconBg: 'bg-primary/10 dark:bg-primary/20',
+      iconColor: 'text-primary dark:text-primary-dark',
+      titleColor: 'text-primary dark:text-primary-dark',
         confirmBg: 'bg-primary hover:bg-primary/90',
       defaultIcon: <InformationCircleIcon className="w-5 h-5" />
     }
@@ -84,7 +84,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         </h3>
 
         {/* Mensagem */}
-        <div className="text-gray-700 mb-6 text-sm">
+        <div className="text-gray-700 dark:text-gray-300 mb-6 text-sm">
           {typeof message === 'string' ? (
             <p dangerouslySetInnerHTML={{ __html: message }} />
           ) : (
@@ -94,8 +94,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
         {/* Aviso adicional para ações perigosas */}
         {type === 'danger' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
-            <p className="text-red-800 text-sm">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-6">
+            <p className="text-red-800 dark:text-red-300 text-sm">
               <strong>Atenção:</strong> Esta ação não pode ser desfeita.
             </p>
           </div>
@@ -106,7 +106,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-800 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {cancelText}
           </button>

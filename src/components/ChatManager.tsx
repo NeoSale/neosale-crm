@@ -17,6 +17,7 @@ import {
   ArrowPathIcon,
   PhotoIcon,
   MicrophoneIcon,
+  ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
 import { chatApi, Chat, ChatMessage } from '../services/chatApi';
 import { leadsApi, Lead } from '../services/leadsApi';
@@ -239,9 +240,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const formatMessageContent = (content: string, messageType: 'human' | 'ai') => {
     if (!content) return 'Mensagem sem conteúdo';
 
+    // Remover barras invertidas literais do conteúdo
+    const cleanContent = content.replace(/\\/g, '');
+
     // Regex para detectar URLs e formatação
     // Removido flag global do URL para evitar problemas com lastIndex em .test()
-    const urlRegex = /(https?:\/\/[^\s\\]+)/;
+    const urlRegex = /(https?:\/\/[^\s]+)/;
     // Simplificados sem lookbehind para garantir compatibilidade ampla
     const boldRegex = /\*([^*\n]+)\*/g;
     const italicRegex = /_([^_\n]+)_/g;
@@ -257,7 +261,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
        .replace(/'/g, '&#039;');
 
     // Dividir o texto por quebras de linha
-    const lines = content.split(/\\n|\n/);
+    const lines = cleanContent.split(/\n/);
 
     // Definir classes de cor baseadas no tipo de mensagem
     const linkClasses = messageType === 'human'
@@ -289,9 +293,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
               // Função para limpar e formatar o URL para exibição
               const formatUrlDisplay = (url: string) => {
                 try {
-                  // Remover barras invertidas do URL
-                  const cleanUrl = url.replace(/\\/g, '');
-                  const urlObj = new URL(cleanUrl);
+                  const urlObj = new URL(url);
                   let displayText = urlObj.hostname + urlObj.pathname;
                   
                   // Remover www. se presente
@@ -315,18 +317,15 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   return part;
                 }
               };
-
-              // Limpar barras invertidas do URL original também
-              const cleanOriginalUrl = part.replace(/\\/g, '');
               
               return (
                 <a
                   key={partIndex}
-                  href={cleanOriginalUrl}
+                  href={part}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`${linkClasses} break-words`}
-                  title={cleanOriginalUrl} // Mostra o URL completo limpo no hover
+                  title={part}
                 >
                   🔗 {formatUrlDisplay(part)}
                 </a>
@@ -371,11 +370,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showChatOnMobile, setShowChatOnMobile] = useState(false);
 
   const leadsListRef = useRef<HTMLDivElement>(null);
   const messagesListRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const leadItemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Carregar leads
   const loadLeads = async (page: number = 1, append: boolean = false) => {
@@ -403,6 +404,34 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       setLoadingMoreLeads(false);
     }
   };
+
+  // Notificar quando está em uma conversa (para ocultar header no mobile)
+  useEffect(() => {
+    const event = new CustomEvent('chatStateChange', { 
+      detail: { inChat: !!showChatOnMobile } 
+    });
+    window.dispatchEvent(event);
+  }, [showChatOnMobile]);
+
+  // Ajustar viewport quando o teclado abrir no mobile
+  useEffect(() => {
+    const handleResize = () => {
+      // Forçar scroll para o input quando o teclado abrir
+      if (document.activeElement?.tagName === 'TEXTAREA') {
+        setTimeout(() => {
+          document.activeElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.visualViewport?.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Carregar mensagens
   const loadMessages = async (id: string, page: number = 1, append: boolean = false) => {
@@ -494,7 +523,6 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       setMessageText('');
       // Recarregar mensagens
       await loadMessages(selectedLead.id);
-      toast.success('Mensagem enviada com sucesso!');
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       toast.error('Erro ao enviar mensagem');
@@ -519,6 +547,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     setMessagesPage(1);
     setHasMoreMessages(true);
     setMessageText(''); // Limpar campo de mensagem ao selecionar conversa
+    setShowChatOnMobile(true); // Mostrar chat no mobile
     await loadMessages(lead.id);
     await loadLeadInfo(lead.id);
 
@@ -528,6 +557,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
         messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
       }
     }, 500);
+  };
+
+  // Voltar para lista no mobile
+  const backToList = () => {
+    setShowChatOnMobile(false);
+    setSelectedLead(null);
   };
 
   // Scroll infinito para mensagens (carregar mensagens mais antigas)
@@ -586,13 +621,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   }, [initialLeadId, leads]);
 
   return (
-    <div className="flex bg-gray-50" style={{ height: 'calc(87vh)' }}>
+    <div className="flex h-full w-full bg-gray-50 overflow-hidden md:rounded-lg">
       {/* Lista de Leads */}
-      <div className="w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col rounded-l-xl overflow-hidden">
+      <div className={`w-full md:w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col overflow-hidden md:rounded-l-lg ${showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {/* Header da lista */}
-        <div className="p-4 shadow-lg">
+        <div className="p-3 md:p-4 shadow-lg flex-shrink-0">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold">Conversas</h2>
+            <h2 className="text-base md:text-lg font-bold">Conversas</h2>
             <button
               onClick={() => {
                 setCurrentPage(1);
@@ -607,12 +642,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
           </div>
 
           {/* Campo de busca */}
-          <div className="relative mt-4">
+          <div className="relative mt-3 md:mt-4">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Buscar conversas..."
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Buscar..."
+              className="w-full pl-9 pr-3 py-2 text-xs md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -651,13 +686,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       leadItemRefs.current[lead.id] = el;
                     }}
                     onClick={() => selectLead(lead)}
-                    className={`p-3 mx-2 my-1 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${selectedLead?.id === lead.id
+                    className={`p-2 md:p-3 mx-1 md:mx-2 my-1 rounded-lg md:rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.01] md:hover:scale-[1.02] ${selectedLead?.id === lead.id
                       ? 'bg-gray-50 border-l-4 border-[#403CCF] shadow-lg'
                       : 'bg-white hover:bg-gray-50 border border-gray-100'
                       }`}
                   >
                     <div className="flex items-center space-x-2">
-                      <div className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                      <div className="w-9 h-9 md:w-10 md:h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-md overflow-hidden flex-shrink-0">
                         {lead.profile_picture_url ? (
                           <img
                             src={lead.profile_picture_url}
@@ -669,20 +704,20 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                             }}
                           />
                         ) : null}
-                        <UserIcon className={`w-5 h-5 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
+                        <UserIcon className={`w-4 h-4 md:w-5 md:h-5 text-white ${lead.profile_picture_url ? 'hidden' : ''}`} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        <div className="flex justify-between items-start gap-1">
+                          <h3 className="text-xs md:text-sm font-semibold text-gray-900 truncate">
                             {typeof lead.nome === 'string' ? lead.nome : JSON.stringify(lead.nome)}
                           </h3>
-                          <div className="flex items-center space-x-1 text-xs text-gray-600 ml-2">
-                            <span>{formatDate(lead.data_ultima_mensagem)}</span>
-                            <span>-</span>
+                          <div className="flex items-center space-x-0.5 md:space-x-1 text-[10px] md:text-xs text-gray-600 flex-shrink-0">
+                            <span className="hidden sm:inline">{formatDate(lead.data_ultima_mensagem)}</span>
+                            <span className="hidden sm:inline">-</span>
                             <span>{formatTime(lead.data_ultima_mensagem)}</span>
                           </div>
                         </div>
-                        <div className="text-sm mt-1">
+                        <div className="text-xs md:text-sm mt-1">
                           <LastMessageDisplay ultimaMensagem={lead.ultima_mensagem} />
                         </div>
                       </div>
@@ -702,13 +737,21 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       </div>
 
       {/* Área de Chat */}
-      <div className="flex-1 flex flex-col border-b border-gray-200 shadow">
+      <div className={`flex-1 flex flex-col border-b border-gray-200 shadow md:rounded-r-lg ${!showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {selectedLead ? (
           <>
             {/* Header do chat */}
-            <div className="p-4 bg-white border-b border-gray-200 flex items-center justify-between shadow-sm">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-[#403CCF] rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+            <div className="fixed md:sticky top-0 left-0 right-0 md:left-auto md:right-auto p-2 md:p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm flex-shrink-0 z-50 safe-top">
+              <div className="flex items-center space-x-1.5 md:space-x-3 flex-1 min-w-0">
+                {/* Botão voltar (mobile) */}
+                <button
+                  onClick={backToList}
+                  className="md:hidden p-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0"
+                  title="Voltar para lista"
+                >
+                  <ArrowLeftIcon className="w-5 h-5" />
+                </button>
+                <div className="w-9 h-9 md:w-12 md:h-12 bg-[#403CCF] rounded-full flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
                   {selectedLead.profile_picture_url ? (
                     <img
                       src={selectedLead.profile_picture_url}
@@ -720,30 +763,30 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                       }}
                     />
                   ) : null}
-                  <UserIcon className={`w-5 h-5 text-white ${selectedLead.profile_picture_url ? 'hidden' : ''}`} />
+                  <UserIcon className={`w-4 h-4 md:w-6 md:h-6 text-white ${selectedLead.profile_picture_url ? 'hidden' : ''}`} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">{typeof selectedLead.nome === 'string' ? selectedLead.nome : JSON.stringify(selectedLead.nome)}</h3>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm md:text-base font-bold text-gray-900 dark:text-white truncate">{typeof selectedLead.nome === 'string' ? selectedLead.nome : JSON.stringify(selectedLead.nome)}</h3>
                   {leadInfo?.telefone ? (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-500">{formatPhone(leadInfo.telefone || '')}</span>
+                    <div className="flex items-center space-x-1 md:space-x-2">
+                      <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{formatPhone(leadInfo.telefone || '')}</span>
                       <button
                         onClick={() => copyPhone(formatPhone(leadInfo.telefone || ''))}
-                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                        className="p-0.5 md:p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors flex-shrink-0"
                         title="Copiar telefone"
                       >
-                        <DocumentDuplicateIcon className="w-4 h-4" />
+                        <DocumentDuplicateIcon className="w-3 h-3 md:w-4 md:h-4" />
                       </button>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">Telefone não disponível</p>
+                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Telefone não disponível</p>
                   )}
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1.5 md:space-x-2 flex-shrink-0">
                 {/* Toggle Agente AI */}
-                <div className="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-xl">
-                  <span className="text-sm">Agente</span>
+                <div className="flex items-center space-x-1.5 md:space-x-2 bg-gray-50 dark:bg-gray-800 px-2 md:px-3 py-1.5 md:py-2 rounded-lg">
+                  <span className="text-xs md:text-sm font-medium dark:text-gray-300 hidden sm:inline">Agente</span>
                   <button
                     onClick={async () => {
                       if (!leadInfo?.id) return;
@@ -753,18 +796,17 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         const response = await leadsApi.updateAiHabilitada(leadInfo.id, newValue, lead_id);
                         if (response.success) {
                           setLeadInfo({ ...leadInfo, ai_habilitada: newValue });
-                          toast.success(`Agente AI ${newValue ? 'ativado' : 'desativado'} com sucesso!`);
                         }
                       } catch (error) {
                         console.error('Erro ao atualizar Agente AI:', error);
                         toast.error('Erro ao atualizar Agente AI');
                       }
                     }}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 shadow-md ${leadInfo?.ai_habilitada ? 'bg-[#403CCF]' : 'bg-gray-300'}`}
+                    className={`relative inline-flex h-5 w-9 md:h-6 md:w-11 items-center rounded-full transition-all duration-300 shadow-sm ${leadInfo?.ai_habilitada ? 'bg-[#403CCF]' : 'bg-gray-300'}`}
                     title={`Agente AI ${leadInfo?.ai_habilitada ? 'ativo' : 'inativo'}`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${leadInfo?.ai_habilitada ? 'translate-x-6' : 'translate-x-1'}`}
+                      className={`inline-block h-3.5 w-3.5 md:h-4 md:w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${leadInfo?.ai_habilitada ? 'translate-x-5 md:translate-x-6' : 'translate-x-0.5 md:translate-x-1'}`}
                     />
                   </button>
                 </div>
@@ -774,11 +816,11 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                     setMessagesPage(1);
                     loadMessages(selectedLead.id, 1, false);
                   }}
-                  className="p-3 text-[#403CCF] hover:text-white hover:bg-[#403CCF] bg-gray-50 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="p-2 md:p-2.5 text-[#403CCF] dark:text-primary hover:text-white hover:bg-[#403CCF] dark:hover:bg-primary bg-gray-50 dark:bg-gray-800 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Atualizar mensagens"
                   disabled={loadingMessages}
                 >
-                  <ArrowPathIcon className={`w-6 h-6 ${loadingMessages ? 'animate-spin' : ''}`} />
+                  <ArrowPathIcon className={`w-5 h-5 md:w-6 md:h-6 ${loadingMessages ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
@@ -786,7 +828,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
             {/* Mensagens */}
             <div
               ref={messagesListRef}
-              className="flex-1 overflow-y-auto p-3 space-y-3 shadow-md"
+              className="flex-1 overflow-y-auto p-2 md:p-3 pt-20 md:pt-3 pb-20 md:pb-3 space-y-2 md:space-y-3 bg-gray-50 dark:bg-gray-950"
               onScroll={handleMessagesScroll}
             >
               {loadingMoreMessages && (
@@ -804,7 +846,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   {messages.slice().reverse().map((message, index) => (
                     <div
                       key={`${message.id}-${index}`}
-                      className={`flex ${message.tipo === 'human' ? 'justify-start' : 'justify-end'} mb-4`}
+                      className={`flex ${message.tipo === 'human' ? 'justify-start' : 'justify-end'} mb-2 md:mb-4`}
                     >
                       {(message.status === 'erro' && message.erro && message.tipo === 'ai') && (
                         <div
@@ -815,12 +857,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                         </div>
                       )}
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl shadow-md 
+                        className={`max-w-[75%] md:max-w-xs lg:max-w-md px-3 md:px-4 py-2 rounded-2xl shadow-md 
                           ${message.tipo === 'human' ? 'bg-white border border-gray-200' : 'bg-[#403CCF]'}
                           ${message.status === 'erro' && message.erro ? 'opacity-75' : ''}
                           `}
                       >
-                        <div className={`text-xs leading-relaxed font-normal ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
+                        <div className={`text-md md:text-sm leading-relaxed font-normal break-words ${message.tipo === 'human' ? 'text-gray-800' : 'text-white'}`}>
                           {message.mensagem && message.mensagem ?
                             (typeof message.mensagem === 'string' ? renderMessageContent(message.mensagem, message.tipo || 'ai') : JSON.stringify(message.mensagem))
                             : 'Mensagem sem conteúdo'
@@ -850,27 +892,34 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input de mensagem */}
-            <div className="p-4 bg-gray-50 border-t border-gray-200">
-              <div className="flex space-x-3">
+            {/* Input de mensagem - Fixo na parte inferior no mobile */}
+            <div className="fixed md:sticky bottom-0 left-0 right-0 md:left-auto md:right-auto p-2 md:p-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 z-50 safe-bottom">
+              <div className="flex space-x-2 items-end">
                 <textarea
+                  ref={textareaRef}
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={leadInfo?.ai_habilitada ? "🤖 Desabilite o agente para enviar mensagem manualmente" : "✍️ Digite sua mensagem... (Shift+Enter para quebrar linha)"}
-                  className={`flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 shadow-sm hover:shadow-md resize-none min-h-[48px] max-h-32 ${leadInfo?.ai_habilitada ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+                  onFocus={(e) => {
+                    // Scroll para o input quando receber foco (mobile)
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }, 300);
+                  }}
+                  placeholder={leadInfo?.ai_habilitada ? "🤖 Desabilite o agente para enviar mensagens" : "✍️ Digite sua mensagem..."}
+                  className={`flex-1 px-2 md:px-3 py-2 text-xs md:text-sm border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#403CCF] focus:border-[#403CCF] transition-all duration-200 resize-none min-h-[40px] max-h-24 md:max-h-32 ${leadInfo?.ai_habilitada ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-800 dark:text-white'}`}
                   disabled={sending || leadInfo?.ai_habilitada}
                   rows={1}
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageText.trim() || sending || leadInfo?.ai_habilitada}
-                  className="px-4 py-3 bg-[#403CCF] text-white rounded-2xl hover:bg-[#3530B8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="px-3 py-3 bg-[#403CCF] text-white rounded-lg hover:bg-[#3530B8] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex-shrink-0"
                 >
                   {sending ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   ) : (
-                    <PaperAirplaneIcon className="w-5 h-5" />
+                    <PaperAirplaneIcon className="w-4 h-4" />
                   )}
                 </button>
               </div>

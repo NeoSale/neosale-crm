@@ -1,0 +1,391 @@
+/* Theme CSS Variables - Solução sem Tailwind dark: */
+
+:root {
+  /* Light Mode Colors (DEFAULT) */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-tertiary: #f3f4f6;
+  --color-bg-hover: #f3f4f6;
+  
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  
+  --color-border: #e5e7eb;
+  --color-border-hover: #d1d5db;
+  
+  --color-sidebar: #ffffff;
+  --color-header: #ffffff;
+  --color-main: #f9fafb;
+}
+
+html.dark {
+  /* Dark Mode Colors */
+  --color-bg-primary: #111827;
+  --color-bg-secondary: #030712;
+  --color-bg-tertiary: #1f2937;
+  --color-bg-hover: #1f2937;
+  
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-tertiary: #6b7280;
+  
+  --color-border: #374151;
+  --color-border-hover: #4b5563;
+  
+  --color-sidebar: #111827;
+  --color-header: #111827;
+  --color-main: #030712;
+}
+
+/* Apply theme colors to common elements */
+body {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+/* Override Tailwind classes with CSS variables */
+.bg-white {
+  background-color: var(--color-bg-primary) !important;
+}
+
+.bg-gray-50 {
+  background-color: var(--color-bg-secondary) !important;
+}
+
+.bg-gray-100,
+.bg-gray-200 {
+  background-color: var(--color-bg-tertiary) !important;
+}
+
+.text-gray-900 {
+  color: #4b5563 !important; /* gray-600 - ainda mais claro */
+}
+
+.text-gray-800 {
+  color: var(--color-text-primary) !important;
+}
+
+html.dark .text-gray-900 {
+  color: #d1d5db !important; /* gray-300 - mais escuro que gray-200 */
+}
+
+.text-gray-600,
+.text-gray-700 {
+  color: var(--color-text-secondary) !important;
+}
+
+.text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.text-gray-400 {
+  color: var(--color-text-tertiary) !important;
+}
+
+html.dark .text-gray-500 {
+  color: #d1d5db !important; /* gray-300 - mais claro para ícones do menu */
+}
+
+.text-gray-300 {
+  color: #d1d5db !important;
+}
+
+html.dark .text-gray-300 {
+  color: #e5e7eb !important; /* gray-200 - ainda mais claro para texto do menu */
+}
+
+.text-gray-200 {
+  color: #e5e7eb !important;
+}
+
+html.dark .text-gray-200 {
+  color: #e5e7eb !important; /* gray-200 - texto claro do menu */
+}
+
+.border-gray-200,
+.border-gray-300 {
+  border-color: var(--color-border) !important;
+}
+
+.divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--color-border) !important;
+}
+
+.hover\:bg-gray-50:hover,
+.hover\:bg-gray-100:hover {
+  background-color: var(--color-bg-hover) !important;
+}
+
+.hover\:text-gray-600:hover,
+.hover\:text-gray-700:hover {
+  color: var(--color-text-primary) !important;
+}
+
+.hover\:text-gray-100:hover {
+  color: #f3f4f6 !important;
+}
+
+html.dark .hover\:text-gray-100:hover {
+  color: #f3f4f6 !important;
+}
+
+.hover\:text-white:hover {
+  color: #ffffff !important;
+}
+
+html.dark .hover\:text-white:hover {
+  color: #ffffff !important;
+}
+
+/* Menu text colors - override dark: classes */
+html.dark .dark\:text-gray-200 {
+  color: #d1d5db !important;
+}
+
+html.dark .dark\:hover\:text-white:hover {
+  color: #ffffff !important;
+}
+
+/* Primary text color for dark mode */
+.text-primary-dark {
+  color: #403CCF !important;
+}
+
+html.dark .text-primary-dark {
+  color: #9ca3af !important;
+}
+
+/* Adjust white text in dark mode */
+.text-white {
+  color: #ffffff !important;
+}
+
+html.dark .text-white {
+  color: #d1d5db !important; /* gray-300 - mais escuro que gray-200 */
+}
+
+/* Force white text in dark mode with !important */
+html.dark .dark\:\!text-white {
+  color: #d1d5db !important; /* gray-300 - mais escuro que gray-200 */
+}
+
+/* Card backgrounds -50 - Light Mode */
+.bg-blue-50 {
+  background-color: #eff6ff !important;
+}
+
+.bg-green-50 {
+  background-color: #f0fdf4 !important;
+}
+
+.bg-yellow-50 {
+  background-color: #fefce8 !important;
+}
+
+.bg-purple-50 {
+  background-color: #faf5ff !important;
+}
+
+.bg-pink-50 {
+  background-color: #fdf2f8 !important;
+}
+
+/* Card backgrounds -50 - Dark Mode */
+html.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+html.dark .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+
+html.dark .bg-yellow-50 {
+  background-color: rgba(234, 179, 8, 0.15) !important;
+}
+
+html.dark .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.15) !important;
+}
+
+html.dark .bg-pink-50 {
+  background-color: rgba(236, 72, 153, 0.15) !important;
+}
+
+/* Icon backgrounds -100 - Light Mode */
+.bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+.bg-yellow-100 {
+  background-color: #fef3c7 !important;
+}
+
+.bg-red-100 {
+  background-color: #fee2e2 !important;
+}
+
+.bg-green-100 {
+  background-color: #d1fae5 !important;
+}
+
+/* Icon backgrounds -100 - Dark Mode */
+html.dark .bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+html.dark .bg-yellow-100 {
+  background-color: rgba(251, 191, 36, 0.2) !important;
+}
+
+html.dark .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+html.dark .bg-green-100 {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+}
+
+/* Text colors -600 - Light Mode */
+.text-blue-600 {
+  color: #2563eb !important;
+}
+
+.text-green-600 {
+  color: #16a34a !important;
+}
+
+.text-yellow-600 {
+  color: #ca8a04 !important;
+}
+
+.text-purple-600 {
+  color: #9333ea !important;
+}
+
+.text-pink-600 {
+  color: #db2777 !important;
+}
+
+.text-red-600 {
+  color: #dc2626 !important;
+}
+
+/* Text colors -600 - Dark Mode */
+html.dark .text-blue-600 {
+  color: #60a5fa !important;
+}
+
+html.dark .text-green-600 {
+  color: #4ade80 !important;
+}
+
+html.dark .text-yellow-600 {
+  color: #fbbf24 !important;
+}
+
+html.dark .text-purple-600 {
+  color: #c084fc !important;
+}
+
+html.dark .text-pink-600 {
+  color: #f472b6 !important;
+}
+
+html.dark .text-red-600 {
+  color: #f87171 !important;
+}
+
+/* Dot colors -500 - Light Mode */
+.bg-blue-500 {
+  background-color: #3b82f6 !important;
+}
+
+.bg-green-500 {
+  background-color: #22c55e !important;
+}
+
+.bg-yellow-500 {
+  background-color: #eab308 !important;
+}
+
+.bg-purple-500 {
+  background-color: #a855f7 !important;
+}
+
+.bg-pink-500 {
+  background-color: #ec4899 !important;
+}
+
+/* Dot colors -500 - Dark Mode (mesmas cores) */
+html.dark .bg-blue-500 {
+  background-color: #3b82f6 !important;
+}
+
+html.dark .bg-green-500 {
+  background-color: #22c55e !important;
+}
+
+html.dark .bg-yellow-500 {
+  background-color: #eab308 !important;
+}
+
+html.dark .bg-purple-500 {
+  background-color: #a855f7 !important;
+}
+
+html.dark .bg-pink-500 {
+  background-color: #ec4899 !important;
+}
+
+/* Border colors for table */
+.border-gray-100 {
+  border-color: #f3f4f6 !important;
+}
+
+html.dark .border-gray-100 {
+  border-color: #374151 !important;
+}
+
+/* Cards and containers */
+.shadow-sm,
+.shadow,
+.shadow-lg {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-lg {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Primary color backgrounds */
+.bg-primary\/10 {
+  background-color: rgba(64, 60, 207, 0.1) !important;
+}
+
+.bg-primary\/20 {
+  background-color: rgba(64, 60, 207, 0.2) !important;
+}
+
+.hover\:bg-primary\/10:hover {
+  background-color: rgba(64, 60, 207, 0.1) !important;
+}
+
+.hover\:bg-primary\/20:hover {
+  background-color: rgba(64, 60, 207, 0.2) !important;
+}
+
+/* Sidebar and Header */
+.sidebar-bg {
+  background-color: var(--color-sidebar) !important;
+}
+
+.header-bg {
+  background-color: var(--color-header) !important;
+}
+
+.main-bg {
+  background-color: var(--color-main) !important;
+}
