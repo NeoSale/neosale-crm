@@ -28,6 +28,11 @@ export default function Dashboard() {
   const [relatorio, setRelatorio] = useState<RelatorioDiario | null>(null);
   const [loadingRelatorio, setLoadingRelatorio] = useState(true);
   
+  // Formatar número com ponto de milhar
+  const formatarNumero = (num: number): string => {
+    return num.toLocaleString('pt-BR');
+  };
+  
   // Inicializar com data de hoje (local, sem conversão de timezone)
   const getDataHojeLocal = () => {
     const hoje = new Date();
@@ -592,7 +597,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Criados</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{relatorio.totais.criados}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{formatarNumero(relatorio.totais.criados)}</p>
               </div>
               <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
                 <PlusIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -604,7 +609,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Atualizados</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{relatorio.totais.atualizados}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{formatarNumero(relatorio.totais.atualizados)}</p>
               </div>
               <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
                 <ArrowPathIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
@@ -616,7 +621,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Deletados</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{relatorio.totais.deletados}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{formatarNumero(relatorio.totais.deletados)}</p>
               </div>
               <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/30">
                 <XCircleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -628,7 +633,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{relatorio.totais.total}</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{formatarNumero(relatorio.totais.total)}</p>
               </div>
               <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30">
                 <UsersIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -676,7 +681,7 @@ export default function Dashboard() {
                         <span className="font-medium text-gray-900 dark:text-white">{qual}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-xl font-bold ${color.text}`}>{qtd}</span>
+                        <span className={`text-xl font-bold ${color.text}`}>{formatarNumero(qtd)}</span>
                         <span className="text-sm text-gray-500 dark:text-gray-400">({percentual}%)</span>
                       </div>
                     </div>
