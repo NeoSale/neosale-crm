@@ -645,7 +645,7 @@ export default function Dashboard() {
 
       {/* Distribuição por Qualificação e Detalhes */}
       {!loadingRelatorio && relatorio && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Distribuição por Qualificação */}
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">

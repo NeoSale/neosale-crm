@@ -98,3 +98,28 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .ant-time-picker-panel-select:last-child {
   display: none !important;
 }
+
+/* Mobile App Styles - Safe Areas and Viewport */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+  
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+}
+
+/* Mobile viewport height fix */
+@media (max-width: 768px) {
+  html, body {
+    height: 100vh;
+    height: -webkit-fill-available;
+    overflow: hidden;
+  }
+  
+  /* Prevent zoom on input focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}

@@ -595,9 +595,9 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   }, [initialLeadId, leads]);
 
   return (
-    <div className="flex h-full w-full bg-gray-50 overflow-hidden rounded-lg">
+    <div className="flex fixed inset-0 md:relative md:h-full w-full bg-gray-50 overflow-hidden md:rounded-lg">
       {/* Lista de Leads */}
-      <div className={`w-full md:w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col overflow-hidden rounded-l-lg ${showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col overflow-hidden md:rounded-l-lg ${showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {/* Header da lista */}
         <div className="p-3 md:p-4 shadow-lg flex-shrink-0">
           <div className="flex justify-between items-center">
@@ -711,11 +711,11 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       </div>
 
       {/* Área de Chat */}
-      <div className={`flex-1 flex flex-col border-b border-gray-200 shadow overflow-hidden rounded-r-lg ${!showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col border-b border-gray-200 shadow overflow-hidden md:rounded-r-lg ${!showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {selectedLead ? (
           <>
             {/* Header do chat */}
-            <div className="p-2 md:p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm flex-shrink-0">
+            <div className="p-2 md:p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm flex-shrink-0 safe-top">
               <div className="flex items-center space-x-1.5 md:space-x-3 flex-1 min-w-0">
                 {/* Botão voltar (mobile) */}
                 <button
@@ -867,8 +867,8 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input de mensagem */}
-            <div className="p-2 md:p-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+            {/* Input de mensagem - Fixo na parte inferior no mobile */}
+            <div className="p-2 md:p-3 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 safe-bottom">
               <div className="flex space-x-2 items-end">
                 <textarea
                   value={messageText}
