@@ -8,7 +8,7 @@ export default function ChatPage() {
   const leadId = searchParams.get('leadId');
 
   return (
-    <div className="h-full md:h-[calc(100vh-110px)]">
+    <div className="h-[calc(100vh-60px)] md:h-[calc(100vh-110px)]">
       <ChatManager initialLeadId={leadId} />
     </div>
   );

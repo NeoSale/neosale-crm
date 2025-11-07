@@ -595,7 +595,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   }, [initialLeadId, leads]);
 
   return (
-    <div className="flex fixed inset-0 md:relative md:h-full w-full bg-gray-50 overflow-hidden md:rounded-lg">
+    <div className="flex h-full md:h-full w-full bg-gray-50 overflow-hidden md:rounded-lg">
       {/* Lista de Leads */}
       <div className={`w-full md:w-1/3 bg-white shadow-lg border-r border-gray-200 flex flex-col overflow-hidden md:rounded-l-lg ${showChatOnMobile ? 'hidden md:flex' : 'flex'}`}>
         {/* Header da lista */}

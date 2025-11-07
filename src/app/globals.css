@@ -112,10 +112,9 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
 /* Mobile viewport height fix */
 @media (max-width: 768px) {
-  html, body {
+  html {
     height: 100vh;
     height: -webkit-fill-available;
-    overflow: hidden;
   }
   
   /* Prevent zoom on input focus */
