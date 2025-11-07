@@ -20,15 +20,161 @@ import {
   QrCodeIcon,
   PowerIcon,
   UserPlusIcon,
+  CalendarIcon,
 } from '@heroicons/react/24/outline';
-
-type Periodo = 'hoje' | 'ontem' | '7dias' | '30dias' | '90dias';
 
 export default function Dashboard() {
   const router = useRouter();
   const [relatorio, setRelatorio] = useState<RelatorioDiario | null>(null);
   const [loadingRelatorio, setLoadingRelatorio] = useState(true);
-  const [periodo, setPeriodo] = useState<Periodo>('hoje');
+  
+  // Inicializar com data de hoje (local, sem conversão de timezone)
+  const getDataHojeLocal = () => {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+  
+  const hoje = getDataHojeLocal();
+  const [dataInicio, setDataInicio] = useState<string>(hoje);
+  const [dataFim, setDataFim] = useState<string>(hoje);
+  const [periodoAtivo, setPeriodoAtivo] = useState<'hoje' | 'ontem' | '7dias' | '30dias' | 'custom'>('hoje');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDataInicio, setTempDataInicio] = useState<string>(hoje);
+  const [tempDataFim, setTempDataFim] = useState<string>(hoje);
+  
+  // Formatar data para exibição em português
+  const formatarDataPtBr = (dataStr: string): string => {
+    if (!dataStr) return '';
+    const [ano, mes, dia] = dataStr.split('-');
+    return `${dia}/${mes}/${ano}`;
+  };
+  
+  const getTextoDataRange = (): string => {
+    if (dataInicio === dataFim) {
+      return formatarDataPtBr(dataInicio);
+    }
+    return `${formatarDataPtBr(dataInicio)} - ${formatarDataPtBr(dataFim)}`;
+  };
+  
+  // Funções para o calendário
+  const getDiasNoMes = (ano: number, mes: number): number => {
+    return new Date(ano, mes + 1, 0).getDate();
+  };
+  
+  const getPrimeiroDiaSemana = (ano: number, mes: number): number => {
+    return new Date(ano, mes, 1).getDay();
+  };
+  
+  const getNomeMes = (mes: number): string => {
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return meses[mes];
+  };
+  
+  const [mesAtual, setMesAtual] = useState(new Date().getMonth());
+  const [anoAtual, setAnoAtual] = useState(new Date().getFullYear());
+  
+  const handleDiaClick = async (dia: number, mes: number, ano: number) => {
+    const dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    
+    // Se não tem início ou se já tem início e fim (resetar para nova seleção)
+    if (!tempDataInicio || (tempDataInicio && tempDataFim && tempDataInicio !== tempDataFim)) {
+      // Primeira seleção - marca apenas o início
+      setTempDataInicio(dataStr);
+      setTempDataFim('');
+    } else if (tempDataInicio && !tempDataFim) {
+      // Segunda seleção - define o fim e aplica automaticamente
+      let novaDataInicio = tempDataInicio;
+      let novaDataFim = dataStr;
+      
+      if (dataStr < tempDataInicio) {
+        // Se clicar em data anterior, inverte
+        novaDataInicio = dataStr;
+        novaDataFim = tempDataInicio;
+      }
+      
+      setTempDataInicio(novaDataInicio);
+      setTempDataFim(novaDataFim);
+      
+      // Aplicar automaticamente
+      setDataInicio(novaDataInicio);
+      setDataFim(novaDataFim);
+      setPeriodoAtivo('custom');
+      setShowDatePicker(false);
+      
+      // Carregar relatório
+      setLoadingRelatorio(true);
+      try {
+        const clienteId = getClienteId();
+        const response = await leadsApi.getRelatorioDiario(novaDataInicio, novaDataFim, clienteId);
+        if (response.success && response.data) {
+          setRelatorio(response.data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar relatório:', error);
+      } finally {
+        setLoadingRelatorio(false);
+      }
+    } else if (tempDataInicio === tempDataFim) {
+      // Se tem apenas um dia selecionado, define o fim e aplica
+      let novaDataInicio = tempDataInicio;
+      let novaDataFim = dataStr;
+      
+      if (dataStr < tempDataInicio) {
+        novaDataInicio = dataStr;
+        novaDataFim = tempDataInicio;
+      }
+      
+      setTempDataInicio(novaDataInicio);
+      setTempDataFim(novaDataFim);
+      
+      // Aplicar automaticamente
+      setDataInicio(novaDataInicio);
+      setDataFim(novaDataFim);
+      setPeriodoAtivo('custom');
+      setShowDatePicker(false);
+      
+      // Carregar relatório
+      setLoadingRelatorio(true);
+      try {
+        const clienteId = getClienteId();
+        const response = await leadsApi.getRelatorioDiario(novaDataInicio, novaDataFim, clienteId);
+        if (response.success && response.data) {
+          setRelatorio(response.data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar relatório:', error);
+      } finally {
+        setLoadingRelatorio(false);
+      }
+    }
+  };
+  
+  const isDiaNoRange = (dia: number, mes: number, ano: number): boolean => {
+    if (!tempDataInicio) return false;
+    const dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    
+    // Se só tem data início, não marca range
+    if (!tempDataFim) return false;
+    
+    return dataStr >= tempDataInicio && dataStr <= tempDataFim;
+  };
+  
+  const isDiaInicio = (dia: number, mes: number, ano: number): boolean => {
+    if (!tempDataInicio) return false;
+    const dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    return dataStr === tempDataInicio;
+  };
+  
+  const isDiaFim = (dia: number, mes: number, ano: number): boolean => {
+    if (!tempDataFim) return false;
+    const dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    return dataStr === tempDataFim;
+  };
+  
   const [qualificacaoSelecionada, setQualificacaoSelecionada] = useState<string | null>(null);
   const [showModalQualificacao, setShowModalQualificacao] = useState(false);
   const [integracoes, setIntegracoes] = useState<EvolutionInstancesV2[]>([]);
@@ -43,45 +189,95 @@ export default function Dashboard() {
     loadRelatorio();
     loadIntegracoes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodo]);
+  }, []);
 
-  const getDatasByPeriodo = (periodo: Periodo): { data_inicio: string; data_fim: string } => {
+  // Fechar date picker ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showDatePicker && !target.closest('.date-picker-container')) {
+        setShowDatePicker(false);
+      }
+    };
+
+    if (showDatePicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDatePicker]);
+
+  // Função para definir período rápido
+  const setPeriodoRapido = async (dias: number, tipo: 'hoje' | 'ontem' | '7dias' | '30dias') => {
+    // Usar data local sem conversão de timezone
     const hoje = new Date();
-    let dataInicio = new Date();
-    const dataFim = new Date(hoje); // data_fim sempre é hoje
+    hoje.setHours(0, 0, 0, 0);
     
-    switch (periodo) {
-      case 'hoje':
-        dataInicio = new Date(hoje);
-        break;
-      case 'ontem':
-        dataInicio.setDate(hoje.getDate() - 1);
-        dataFim.setDate(hoje.getDate() - 1);
-        break;
-      case '7dias':
-        dataInicio.setDate(hoje.getDate() - 7);
-        break;
-      case '30dias':
-        dataInicio.setDate(hoje.getDate() - 30);
-        break;
-      case '90dias':
-        dataInicio.setDate(hoje.getDate() - 90);
-        break;
+    const inicio = new Date(hoje);
+    let novaDataInicio = '';
+    let novaDataFim = '';
+    
+    if (dias === 0) {
+      // Hoje
+      const ano = hoje.getFullYear();
+      const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+      const dia = String(hoje.getDate()).padStart(2, '0');
+      novaDataInicio = `${ano}-${mes}-${dia}`;
+      novaDataFim = `${ano}-${mes}-${dia}`;
+    } else if (dias === -1) {
+      // Ontem
+      inicio.setDate(hoje.getDate() - 1);
+      const ano = inicio.getFullYear();
+      const mes = String(inicio.getMonth() + 1).padStart(2, '0');
+      const dia = String(inicio.getDate()).padStart(2, '0');
+      novaDataInicio = `${ano}-${mes}-${dia}`;
+      novaDataFim = `${ano}-${mes}-${dia}`;
+    } else {
+      // Semana ou Mês - de ontem para trás
+      const ontem = new Date(hoje);
+      ontem.setDate(hoje.getDate() - 1);
+      
+      inicio.setDate(ontem.getDate() - dias + 1);
+      
+      const anoInicio = inicio.getFullYear();
+      const mesInicio = String(inicio.getMonth() + 1).padStart(2, '0');
+      const diaInicio = String(inicio.getDate()).padStart(2, '0');
+      
+      const anoFim = ontem.getFullYear();
+      const mesFim = String(ontem.getMonth() + 1).padStart(2, '0');
+      const diaFim = String(ontem.getDate()).padStart(2, '0');
+      
+      novaDataInicio = `${anoInicio}-${mesInicio}-${diaInicio}`;
+      novaDataFim = `${anoFim}-${mesFim}-${diaFim}`;
     }
     
-    return {
-      data_inicio: dataInicio.toISOString().split('T')[0],
-      data_fim: dataFim.toISOString().split('T')[0]
-    };
+    setDataInicio(novaDataInicio);
+    setDataFim(novaDataFim);
+    setPeriodoAtivo(tipo);
+    
+    // Atualizar relatório automaticamente
+    setLoadingRelatorio(true);
+    try {
+      const clienteId = getClienteId();
+      const response = await leadsApi.getRelatorioDiario(novaDataInicio, novaDataFim, clienteId);
+      if (response.success && response.data) {
+        setRelatorio(response.data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar relatório:', error);
+    } finally {
+      setLoadingRelatorio(false);
+    }
   };
 
   const loadRelatorio = async () => {
     setLoadingRelatorio(true);
     try {
       const clienteId = getClienteId();
-      const { data_inicio, data_fim } = getDatasByPeriodo(periodo);
       
-      const response = await leadsApi.getRelatorioDiario(data_inicio, data_fim, clienteId);
+      const response = await leadsApi.getRelatorioDiario(dataInicio, dataFim, clienteId);
       if (response.success && response.data) {
         setRelatorio(response.data);
       }
@@ -187,23 +383,17 @@ export default function Dashboard() {
     }
   };
 
-  if (loadingRelatorio) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Filtro de Período */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
         <div className="flex flex-wrap items-center gap-2">
+          {/* Botões de Período Rápido */}
           <button
-            onClick={() => setPeriodo('hoje')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              periodo === 'hoje'
+            onClick={() => setPeriodoRapido(0, 'hoje')}
+            disabled={loadingRelatorio}
+            className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+              periodoAtivo === 'hoje'
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             }`}
@@ -211,9 +401,10 @@ export default function Dashboard() {
             Hoje
           </button>
           <button
-            onClick={() => setPeriodo('ontem')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              periodo === 'ontem'
+            onClick={() => setPeriodoRapido(-1, 'ontem')}
+            disabled={loadingRelatorio}
+            className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+              periodoAtivo === 'ontem'
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             }`}
@@ -221,55 +412,182 @@ export default function Dashboard() {
             Ontem
           </button>
           <button
-            onClick={() => setPeriodo('7dias')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              periodo === '7dias'
+            onClick={() => setPeriodoRapido(7, '7dias')}
+            disabled={loadingRelatorio}
+            className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+              periodoAtivo === '7dias'
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             }`}
           >
-            7 dias
+            Semana
           </button>
           <button
-            onClick={() => setPeriodo('30dias')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              periodo === '30dias'
+            onClick={() => setPeriodoRapido(30, '30dias')}
+            disabled={loadingRelatorio}
+            className={`px-3 py-2 text-sm rounded-lg font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+              periodoAtivo === '30dias'
                 ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             }`}
           >
-            30 dias
+            Mês
           </button>
-          <button
-            onClick={() => setPeriodo('90dias')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              periodo === '90dias'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-            }`}
-          >
-            90 dias
-          </button>
-          
-          <div className="ml-auto">
+
+          {/* Seletor de Datas */}
+          <div className="relative date-picker-container">
             <button
               onClick={() => {
-                loadRelatorio();
-                loadIntegracoes();
+                setTempDataInicio(dataInicio);
+                setTempDataFim(dataFim);
+                setShowDatePicker(!showDatePicker);
               }}
-              disabled={loadingRelatorio || loadingIntegracoes}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+              disabled={loadingRelatorio}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <ArrowPathIcon className={`h-5 w-5 ${loadingRelatorio || loadingIntegracoes ? 'animate-spin' : ''}`} />
-              Atualizar
+              <CalendarIcon className="h-4 w-4" />
+              {getTextoDataRange()}
             </button>
+            
+            {showDatePicker && (
+              <div className="absolute top-full mt-2 left-0 z-50 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl p-4">
+                {/* Calendários lado a lado */}
+                <div className="flex gap-4">
+                  {[0, 1].map((offset) => {
+                    const mes = (mesAtual + offset) % 12;
+                    const ano = anoAtual + Math.floor((mesAtual + offset) / 12);
+                    const diasNoMes = getDiasNoMes(ano, mes);
+                    const primeiroDia = getPrimeiroDiaSemana(ano, mes);
+                    
+                    return (
+                      <div key={offset} className="w-64">
+                        {/* Header do mês */}
+                        <div className="flex items-center justify-between mb-3">
+                          {offset === 0 && (
+                            <button
+                              onClick={() => {
+                                if (mesAtual === 0) {
+                                  setMesAtual(11);
+                                  setAnoAtual(anoAtual - 1);
+                                } else {
+                                  setMesAtual(mesAtual - 1);
+                                }
+                              }}
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                            >
+                              <span className="text-gray-600 dark:text-gray-400">‹</span>
+                            </button>
+                          )}
+                          <div className="flex-1 text-center">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {getNomeMes(mes)} {ano}
+                            </span>
+                          </div>
+                          {offset === 1 && (
+                            <button
+                              onClick={() => {
+                                if (mesAtual === 11) {
+                                  setMesAtual(0);
+                                  setAnoAtual(anoAtual + 1);
+                                } else {
+                                  setMesAtual(mesAtual + 1);
+                                }
+                              }}
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                            >
+                              <span className="text-gray-600 dark:text-gray-400">›</span>
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Dias da semana */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((dia) => (
+                            <div key={dia} className="text-center text-xs font-medium text-gray-600 dark:text-gray-400 py-1">
+                              {dia}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Dias do mês */}
+                        <div className="grid grid-cols-7 gap-1">
+                          {/* Espaços vazios antes do primeiro dia */}
+                          {Array.from({ length: primeiroDia }).map((_, i) => (
+                            <div key={`empty-${i}`} />
+                          ))}
+                          
+                          {/* Dias do mês */}
+                          {Array.from({ length: diasNoMes }).map((_, i) => {
+                            const dia = i + 1;
+                            const noRange = isDiaNoRange(dia, mes, ano);
+                            const isInicio = isDiaInicio(dia, mes, ano);
+                            const isFim = isDiaFim(dia, mes, ano);
+                            const hoje = new Date();
+                            hoje.setHours(0, 0, 0, 0);
+                            const dataAtual = new Date(ano, mes, dia);
+                            dataAtual.setHours(0, 0, 0, 0);
+                            const isHoje = dataAtual.getTime() === hoje.getTime();
+                            const isFuturo = dataAtual > hoje;
+                            
+                            return (
+                              <button
+                                key={dia}
+                                onClick={() => !isFuturo && handleDiaClick(dia, mes, ano)}
+                                disabled={isFuturo}
+                                className={`
+                                  h-8 text-sm transition-colors relative
+                                  ${isInicio && isFim ? 'rounded-full' : ''}
+                                  ${isInicio && !isFim ? 'rounded-l-full' : ''}
+                                  ${isFim && !isInicio ? 'rounded-r-full' : ''}
+                                  ${!isInicio && !isFim && noRange ? 'rounded-none' : ''}
+                                  ${!noRange && !isInicio && !isFim ? 'rounded-full' : ''}
+                                  ${noRange && !isInicio && !isFim ? 'bg-primary/10 text-primary dark:bg-primary/20' : ''}
+                                  ${isInicio || isFim ? 'bg-primary text-white font-semibold' : ''}
+                                  ${!noRange && !isInicio && !isFim && !isFuturo ? 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' : ''}
+                                  ${isHoje && !isInicio && !isFim ? 'ring-2 ring-primary ring-inset' : ''}
+                                  ${isFuturo ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                                `}
+                              >
+                                {dia}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
+          
+          <button
+            onClick={() => {
+              loadRelatorio();
+              loadIntegracoes();
+            }}
+            disabled={loadingRelatorio || loadingIntegracoes}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+          >
+            <ArrowPathIcon className={`h-5 w-5 ${loadingRelatorio || loadingIntegracoes ? 'animate-spin' : ''}`} />
+            Atualizar
+          </button>
         </div>
       </div>
 
+      {/* Indicador de Loading */}
+      {loadingRelatorio && (
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Carregando dados...</span>
+          </div>
+        </div>
+      )}
+
       {/* Cards de Totais */}
-      {relatorio && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {!loadingRelatorio && relatorio && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 border-l-4 border-blue-500 dark:border-blue-400">
             <div className="flex items-center justify-between">
               <div>
@@ -321,7 +639,7 @@ export default function Dashboard() {
       )}
 
       {/* Distribuição por Qualificação e Detalhes */}
-      {relatorio && (
+      {!loadingRelatorio && relatorio && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Distribuição por Qualificação */}
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">

@@ -1152,7 +1152,7 @@ const LeadsManager: React.FC = () => {
   }
 
   return (
-    <div className="w-full mx-auto space-y-8">
+    <div className="w-full mx-auto space-y-8 max-h-full overflow-y-auto" suppressHydrationWarning>
 
 
       {/* Seção de Leads Existentes */}

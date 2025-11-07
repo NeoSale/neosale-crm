@@ -237,8 +237,9 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
           'bg-white dark:bg-gray-900 shadow-lg transition-all duration-300 ease-in-out flex flex-col',
           'fixed lg:relative inset-y-0 left-0 z-50',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-          sidebarOpen ? 'w-64' : 'w-15'
+          sidebarOpen ? 'w-64' : 'w-16'
         )}
+        suppressHydrationWarning
       >
         {/* Logo */}
         <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
@@ -611,8 +612,8 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-950 p-2">
-          <div className="max-w-8xl mx-auto h-full overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950 p-2 md:p-4" suppressHydrationWarning>
+          <div className="max-w-8xl mx-auto">
             {children}
           </div>
         </main>
