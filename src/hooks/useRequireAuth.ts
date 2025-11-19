@@ -1,0 +1,32 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { UserRole } from '@/types/auth'
+
+export function useRequireAuth(requiredRole?: UserRole) {
+  const { user, profile, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login')
+    }
+
+    if (!loading && user && requiredRole && profile) {
+      const roleHierarchy: Record<UserRole, number> = {
+        super_admin: 4,
+        admin: 3,
+        member: 2,
+        viewer: 1,
+      }
+
+      if (roleHierarchy[profile.role] < roleHierarchy[requiredRole]) {
+        router.push('/unauthorized')
+      }
+    }
+  }, [user, profile, loading, requiredRole, router])
+
+  return { user, profile, loading }
+}
