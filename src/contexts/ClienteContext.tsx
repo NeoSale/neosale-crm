@@ -16,15 +16,16 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
   const [reloadTrigger, setReloadTrigger] = useState(0)
   const { profile } = useAuth()
 
-  // Carregar cliente do localStorage ao iniciar
+  // Carregar cliente do localStorage ao iniciar E quando o profile mudar
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedClienteId = localStorage.getItem('selected_cliente_id')
-      if (savedClienteId) {
+      if (savedClienteId && savedClienteId !== selectedClienteId) {
         setSelectedClienteIdState(savedClienteId)
+        console.log('📍 ClienteContext: Cliente carregado do localStorage:', savedClienteId)
       }
     }
-  }, [])
+  }, [profile]) // Recarrega quando o profile muda (após login)
 
   // Função para alterar o cliente selecionado
   const setSelectedClienteId = useCallback((clienteId: string | null) => {

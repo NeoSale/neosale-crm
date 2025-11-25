@@ -65,7 +65,7 @@ export default function PerfilPage() {
 
   const getRoleName = (role: string) => {
     // Retorna o nome exatamente como está no banco
-    return role || 'viewer'
+    return role
   }
 
   const getRoleColor = (role: string) => {
@@ -114,8 +114,8 @@ export default function PerfilPage() {
               </div>
             </label>
             <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${getRoleColor(profile?.role || 'viewer')}`}>
-                {getRoleName(profile?.role || 'viewer')}
+              <span className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-medium ${getRoleColor(profile?.role!)}`}>
+                {getRoleName(profile?.role!)}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 (Somente administradores podem alterar perfis)

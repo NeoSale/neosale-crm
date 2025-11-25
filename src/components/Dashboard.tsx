@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { leadsApi, RelatorioDiario } from '../services/leadsApi';
 import { evolutionApiV2, EvolutionInstancesV2 } from '../services/evolutionApiV2';
 import { formatPhoneDisplay } from '../utils/phone-utils';
-import { getClienteId } from '../utils/cliente-utils';
+import { useCliente } from '../contexts/ClienteContext';
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import WhatsAppActionsModal from './WhatsAppActionsModal';
@@ -25,6 +25,7 @@ import {
 
 export default function Dashboard() {
   const router = useRouter();
+  const { selectedClienteId } = useCliente();
   const [relatorio, setRelatorio] = useState<RelatorioDiario | null>(null);
   const [loadingRelatorio, setLoadingRelatorio] = useState(true);
   
@@ -113,7 +114,7 @@ export default function Dashboard() {
       // Carregar relatório
       setLoadingRelatorio(true);
       try {
-        const clienteId = getClienteId();
+        const clienteId = selectedClienteId || undefined;
         const response = await leadsApi.getRelatorioDiario(novaDataInicio, novaDataFim, clienteId);
         if (response.success && response.data) {
           setRelatorio(response.data);
@@ -145,7 +146,7 @@ export default function Dashboard() {
       // Carregar relatório
       setLoadingRelatorio(true);
       try {
-        const clienteId = getClienteId();
+        const clienteId = selectedClienteId || undefined;
         const response = await leadsApi.getRelatorioDiario(novaDataInicio, novaDataFim, clienteId);
         if (response.success && response.data) {
           setRelatorio(response.data);
@@ -191,10 +192,15 @@ export default function Dashboard() {
   }>({ show: false, type: null, instance: null });
 
   useEffect(() => {
-    loadRelatorio();
-    loadIntegracoes();
+    if (selectedClienteId) {
+      console.log('📊 Dashboard: Carregando com cliente_id:', selectedClienteId);
+      loadRelatorio();
+      loadIntegracoes();
+    } else {
+      console.log('⏳ Dashboard: Aguardando selectedClienteId...');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedClienteId]);
 
   // Fechar date picker ao clicar fora
   useEffect(() => {
@@ -265,7 +271,7 @@ export default function Dashboard() {
     // Atualizar relatório automaticamente
     setLoadingRelatorio(true);
     try {
-      const clienteId = getClienteId();
+      const clienteId = selectedClienteId || undefined;
       const response = await leadsApi.getRelatorioDiario(novaDataInicio, novaDataFim, clienteId);
       if (response.success && response.data) {
         setRelatorio(response.data);
@@ -280,7 +286,7 @@ export default function Dashboard() {
   const loadRelatorio = async () => {
     setLoadingRelatorio(true);
     try {
-      const clienteId = getClienteId();
+      const clienteId = selectedClienteId || undefined;
       
       const response = await leadsApi.getRelatorioDiario(dataInicio, dataFim, clienteId);
       if (response.success && response.data) {

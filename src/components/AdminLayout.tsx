@@ -113,16 +113,10 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isInChat, setIsInChat] = useState(false);
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { selectedClienteId, setSelectedClienteId } = useCliente();
   const router = useRouter();
   const supabase = createClient();
-  
-  // Debug: verificar dados do usuário
-  useEffect(() => {
-    console.log('AdminLayout - User:', user);
-    console.log('AdminLayout - Profile:', profile);
-  }, [user, profile]);
   
   // Escutar mudanças de estado do chat
   useEffect(() => {
@@ -162,11 +156,27 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
   // Função para logout
   const handleLogout = async () => {
+    console.log('🔘 Botão de logout clicado')
     try {
-      await supabase.auth.signOut();
+      console.log('📤 Chamando signOut...')
+      await signOut();
+      console.log('🔄 Redirecionando para /login...')
+      
+      // Tentar com router.push primeiro
       router.push('/login');
+      
+      // Fallback: forçar redirecionamento após 500ms
+      setTimeout(() => {
+        console.log('🔄 Forçando redirecionamento...')
+        window.location.href = '/login';
+      }, 500);
+      
+      console.log('✅ Redirecionamento iniciado')
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      console.error('❌ Erro ao fazer logout:', error);
+      // Forçar redirecionamento imediatamente
+      console.log('🔄 Redirecionamento forçado devido a erro')
+      window.location.href = '/login';
     }
   };
 
@@ -271,7 +281,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
           'bg-white dark:bg-gray-900 shadow-lg transition-all duration-300 ease-in-out flex flex-col',
           'fixed lg:relative inset-y-0 left-0 z-50',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-          sidebarOpen ? 'w-46' : 'w-15'
+          sidebarOpen ? 'w-54' : 'w-15'
         )}
         suppressHydrationWarning
       >
@@ -649,7 +659,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                           title={clienteFromUrl && !window.location.hostname.includes('localhost') ? 'Cliente definido via URL - não é possível alterar' : ''}
                         >
                           <option value="">
-                            {loadingClientes ? 'Carregando...' : 'Selecione um cliente'}
+                            {loadingClientes ? 'Carregando...' : 'Todos os clientes'}
                           </option>
                           {clientes.map((cliente) => (
                             <option key={cliente.id} value={cliente.id}>
@@ -683,7 +693,10 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                         Editar Perfil
                       </button>
                       <button
-                        onClick={handleLogout}
+                        onClick={() => {
+                          setShowTooltip(false);
+                          handleLogout();
+                        }}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                       >
                         <LogOut className="w-4 h-4" />

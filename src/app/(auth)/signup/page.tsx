@@ -1,20 +1,56 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
-import { Mail, Lock, User, Chrome, Apple } from 'lucide-react'
+import { Mail, Lock, User, Chrome, Apple, Building2 } from 'lucide-react'
+
+interface Cliente {
+  id: string
+  nome: string
+}
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [clienteId, setClienteId] = useState('')
+  const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingClientes, setLoadingClientes] = useState(true)
   const router = useRouter()
   const supabase = createClient()
+
+  // Carregar lista de clientes disponíveis
+  useEffect(() => {
+    const loadClientes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('clientes')
+          .select('id, nome')
+          .order('nome')
+
+        if (error) throw error
+
+        setClientes(data || [])
+        
+        // Selecionar o primeiro cliente por padrão se houver apenas um
+        if (data && data.length === 1) {
+          setClienteId(data[0].id)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar clientes:', error)
+        toast.error('Erro ao carregar lista de clientes')
+      } finally {
+        setLoadingClientes(false)
+      }
+    }
+
+    loadClientes()
+  }, [supabase])
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,6 +65,11 @@ export default function SignUpPage() {
       return
     }
 
+    if (!clienteId) {
+      toast.error('Selecione um cliente')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -38,6 +79,7 @@ export default function SignUpPage() {
         options: {
           data: {
             full_name: fullName,
+            cliente_id: clienteId, // Passar cliente_id no metadata
           },
         },
       })
@@ -167,6 +209,32 @@ export default function SignUpPage() {
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="seu@email.com"
                 />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="cliente" className="block text-sm font-medium text-gray-700 mb-2">
+                Cliente
+              </label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <select
+                  id="cliente"
+                  value={clienteId}
+                  onChange={(e) => setClienteId(e.target.value)}
+                  required
+                  disabled={loadingClientes}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white disabled:bg-gray-100"
+                >
+                  <option value="">
+                    {loadingClientes ? 'Carregando...' : 'Selecione um cliente'}
+                  </option>
+                  {clientes.map((cliente) => (
+                    <option key={cliente.id} value={cliente.id}>
+                      {cliente.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

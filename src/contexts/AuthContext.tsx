@@ -16,6 +16,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Função auxiliar para criar perfil a partir do user do Supabase Auth
+function createProfileFromUser(user: User): Profile {
+
+  return {
+    id: user.id,
+    email: user.email || '',
+    full_name: user.user_metadata.full_name || user.user_metadata.name || user.email?.split('@')[0] || 'Usuário',
+    avatar_url: user.user_metadata.avatar_url || user.user_metadata.picture || null,
+    role: user.user_metadata.role as any,
+    created_at: user.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -24,116 +38,129 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const supabase = createClient()
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (currentUser: User) => {
     try {
-      console.log('🔍 Buscando perfil para userId:', userId)
+      console.log('🔍 Carregando perfil do usuário:', currentUser.email)
+      console.log('🔍 User:', currentUser)
       
-      // Verificar se o cliente Supabase está configurado
-      const { data: { session } } = await supabase.auth.getSession()
-      console.log('📝 Sessão ativa:', session ? 'Sim' : 'Não')
+      // IMPORTANTE: O role real está na tabela profiles, não no auth.users
+      // O session.user.role retorna apenas "authenticated" (role do Supabase Auth)
       
-      const { data: profileData, error: profileError } = await supabase
+      console.log('📊 Buscando perfil na tabela profiles para user_id:', currentUser.id)
+      
+      // Buscar perfil completo da tabela profiles
+      const { data: dbProfile, error: dbError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', currentUser.id)
         .single()
-
-      if (profileError) {
-        console.error('❌ Erro ao buscar perfil:', {
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint,
-          code: profileError.code
-        })
-        
-        // Se o perfil não existe ou há erro de permissão, tentar criar
-        if (profileError.code === 'PGRST116' || profileError.code === 'PGRST301' || profileError.message?.includes('permission')) {
-          console.log('⚠️ Perfil não encontrado ou sem permissão, tentando criar...')
-          
-          // Tentar com upsert (funciona mesmo sem política INSERT se tiver UPDATE)
-          const { data: upsertProfile, error: upsertError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: userId,
-              email: session?.user?.email || '',
-              full_name: session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || '',
-              role: 'viewer',
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'id',
-              ignoreDuplicates: false
-            })
-            .select()
-            .single()
-          
-          if (upsertError) {
-            console.error('❌ Erro ao fazer upsert do perfil:', upsertError)
-            
-            // Última tentativa: criar perfil temporário no estado local
-            console.log('⚠️ Criando perfil temporário no estado local...')
-            const tempProfile: Profile = {
-              id: userId,
-              email: session?.user?.email || '',
-              full_name: session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Usuário',
-              avatar_url: null,
-              role: 'viewer',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-            setProfile(tempProfile)
-            console.log('⚠️ Usando perfil temporário. IMPORTANTE: Aplique a migration 004_fix_profiles_insert_policy.sql')
-            return
-          }
-          
-          console.log('✅ Perfil criado via upsert:', upsertProfile)
-          setProfile(upsertProfile)
-          return
+      
+      console.log('📊 Resultado da consulta profiles:')
+      console.log('  - dbProfile:', dbProfile)
+      console.log('  - dbError:', dbError)
+      
+      let userProfile: Profile
+      
+      if (dbError || !dbProfile) {
+        console.error('❌ Erro ao buscar perfil da tabela profiles:', dbError)
+        // Criar perfil básico como fallback
+        userProfile = createProfileFromUser(currentUser)
+        console.log('⚠️ Usando perfil básico (fallback):', userProfile)
+      } else {
+        // Usar dados da tabela profiles (fonte confiável do role)
+        userProfile = {
+          id: dbProfile.id,
+          email: dbProfile.email,
+          full_name: dbProfile.full_name || currentUser.email?.split('@')[0] || 'Usuário',
+          avatar_url: dbProfile.avatar_url || currentUser.user_metadata?.avatar_url || null,
+          role: dbProfile.role, // ROLE CORRETO vem da tabela profiles
+          created_at: dbProfile.created_at,
+          updated_at: dbProfile.updated_at
         }
         
-        throw profileError
+        console.log('✅ Perfil carregado da tabela profiles:', userProfile)
+        console.log('🔑 Role do usuário:', userProfile.role)
       }
+      
+      // Atualizar estado do perfil
+      setProfile(userProfile)
 
-      console.log('✅ Perfil encontrado:', profileData)
-      setProfile(profileData)
+      // Buscar associações de clientes
+      try {
+        if (userProfile.role !== 'super_admin') {
+          const { data: clientsData, error: clientsError } = await supabase
+            .from('cliente_members')
+            .select('*, clientes(*)')
+            .eq('user_id', currentUser.id)
 
-      // Fetch client memberships
-      if (profileData.role !== 'super_admin') {
-        const { data: clientsData, error: clientsError } = await supabase
-          .from('cliente_members')
-          .select('*, clientes(*)')
-          .eq('user_id', userId)
+          if (!clientsError && clientsData) {
+            setClients(clientsData)
+            console.log('✅ Clientes carregados:', clientsData.length)
+            
+            // Definir automaticamente o primeiro cliente no localStorage se não houver nenhum selecionado
+            if (typeof window !== 'undefined' && clientsData.length > 0) {
+              const savedClienteId = localStorage.getItem('selected_cliente_id')
+              if (!savedClienteId) {
+                const firstClienteId = clientsData[0].cliente_id
+                localStorage.setItem('selected_cliente_id', firstClienteId)
+                console.log('✅ Cliente padrão definido:', firstClienteId)
+              }
+            }
+          } else {
+            console.log('⚠️ Não foi possível carregar clientes:', clientsError?.message)
+            setClients([])
+          }
+        } else {
+          // Super admin tem acesso a todos os clientes
+          const { data: allClientes, error: allClientesError } = await supabase
+            .from('clientes')
+            .select('*')
 
-        if (clientsError) throw clientsError
-        setClients(clientsData || [])
-      } else {
-        // Super admin has access to all clients
-        const { data: allClientes, error: allClientesError } = await supabase
-          .from('clientes')
-          .select('*')
-
-        if (allClientesError) throw allClientesError
-        
-        // Create virtual client memberships for super admin
-        const virtualMemberships = (allClientes || []).map((cliente: any) => ({
-          id: `virtual-${cliente.id}`,
-          user_id: userId,
-          cliente_id: cliente.id,
-          role: 'super_admin' as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          clientes: cliente
-        }))
-        
-        setClients(virtualMemberships)
+          if (!allClientesError && allClientes) {
+            // Criar memberships virtuais para super admin
+            const virtualMemberships = allClientes.map((cliente: any) => ({
+              id: `virtual-${cliente.id}`,
+              user_id: currentUser.id,
+              cliente_id: cliente.id,
+              role: 'super_admin' as const,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              clientes: cliente
+            }))
+            
+            setClients(virtualMemberships)
+            console.log('✅ Todos os clientes carregados (super admin):', virtualMemberships.length)
+            
+            // Definir automaticamente o primeiro cliente no localStorage se não houver nenhum selecionado
+            if (typeof window !== 'undefined' && virtualMemberships.length > 0) {
+              const savedClienteId = localStorage.getItem('selected_cliente_id')
+              if (!savedClienteId) {
+                const firstClienteId = virtualMemberships[0].cliente_id
+                localStorage.setItem('selected_cliente_id', firstClienteId)
+                console.log('✅ Cliente padrão definido (super admin):', firstClienteId)
+              }
+            }
+          } else {
+            console.log('⚠️ Não foi possível carregar todos os clientes:', allClientesError?.message)
+            setClients([])
+          }
+        }
+      } catch (err) {
+        console.log('⚠️ Erro ao carregar clientes:', err)
+        setClients([])
       }
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      console.error('❌ Erro ao carregar perfil:', error)
+      // Mesmo com erro, criar perfil básico para não bloquear o usuário
+      const basicProfile = createProfileFromUser(currentUser)
+      setProfile(basicProfile)
+      setClients([])
     }
   }, [supabase])
 
   const refreshProfile = useCallback(async () => {
     if (user) {
-      await fetchProfile(user.id)
+      await fetchProfile(user)
     }
   }, [user, fetchProfile])
 
@@ -144,34 +171,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('📝 Sessão obtida:', session?.user ? 'Usuário logado' : 'Sem usuário')
       setUser(session?.user ?? null)
       if (session?.user) {
-        console.log('👤 User ID:', session.user.id)
-        fetchProfile(session.user.id)
+        fetchProfile(session.user)
       }
       setLoading(false)
     })
 
     // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setClients([])
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        console.log('🔄 Auth state changed:', event)
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          await fetchProfile(session.user)
+        } else {
+          setProfile(null)
+          setClients([])
+        }
+        setLoading(false)
       }
-      setLoading(false)
-    })
+    )
 
     return () => subscription.unsubscribe()
   }, [supabase, fetchProfile])
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
-    setClients([])
+    try {
+      console.log('🚪 Fazendo logout...')
+      
+      // Criar promise com timeout de 3 segundos
+      const signOutPromise = supabase.auth.signOut()
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 3000)
+      )
+      
+      try {
+        const { error } = await Promise.race([signOutPromise, timeoutPromise]) as any
+        if (error) {
+          console.error('❌ Erro ao fazer logout:', error)
+        }
+      } catch (timeoutError: any) {
+        if (timeoutError.message === 'Timeout') {
+          console.log('⚠️ Timeout ao fazer logout no Supabase, continuando...')
+        } else {
+          throw timeoutError
+        }
+      }
+      
+      console.log('✅ Limpando estado local...')
+      setUser(null)
+      setProfile(null)
+      setClients([])
+      
+      // Limpar localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('selected_cliente_id')
+        localStorage.removeItem('cliente_id')
+      }
+      
+      console.log('✅ Logout concluído')
+    } catch (error) {
+      console.error('❌ Erro fatal ao fazer logout:', error)
+      // Mesmo com erro, limpar o estado local
+      setUser(null)
+      setProfile(null)
+      setClients([])
+      throw error
+    }
   }
 
   return (
