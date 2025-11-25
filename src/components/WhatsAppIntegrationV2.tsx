@@ -29,6 +29,7 @@ import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { agentesApi, Agente } from '@/services/agentesApi';
 import { leadsApi, Lead } from '@/services/leadsApi';
+import { useCliente } from '@/contexts/ClienteContext';
 import { getClienteId } from '@/utils/cliente-utils';
 
 interface ImportError {
@@ -38,6 +39,7 @@ interface ImportError {
 }
 
 const WhatsAppIntegrationV2: React.FC = () => {
+    const { selectedClienteId } = useCliente();
     const [instances, setInstances] = useState<EvolutionInstancesV2[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -91,9 +93,15 @@ const WhatsAppIntegrationV2: React.FC = () => {
     const [localFormData, setLocalFormData] = useState<EvolutionInstancesV2 | null>(null);
 
     useEffect(() => {
-        loadInstances();
-        loadAgentes();
-    }, []);
+        console.log('🔍 WhatsApp useEffect - selectedClienteId:', selectedClienteId);
+        if (selectedClienteId) {
+            console.log('✅ Carregando instâncias e agentes...');
+            loadInstances();
+            loadAgentes();
+        } else {
+            console.warn('⚠️ selectedClienteId não disponível ainda');
+        }
+    }, [selectedClienteId]);
 
     const loadInstances = async (showLoadingState = true) => {
         if (showLoadingState) {
@@ -185,8 +193,13 @@ const WhatsAppIntegrationV2: React.FC = () => {
     };
 
     const loadAgentes = async () => {
+        if (!selectedClienteId) {
+            console.warn(' selectedClienteId não disponível');
+            return;
+        }
+
         try {
-            const response = await agentesApi.getAgentes();
+            const response = await agentesApi.getAgentes(selectedClienteId);
             setAgentes(response.data);
         } catch (error) {
             console.error('Erro ao carregar agentes:', error);
@@ -296,10 +309,10 @@ const WhatsAppIntegrationV2: React.FC = () => {
             const response = await evolutionApiV2.getContacts(instanceName);
             if (response.success && response.data) {
                 // Filtrar apenas contatos com números válidos (excluindo o próprio número)
-                const validContacts = response.data.filter(contact => 
+                const validContacts = response.data.filter(contact =>
                     isValidPhoneNumber(contact.remoteJid, whatsappNumber)
                 );
-                
+
                 setContactsModal(prev => ({
                     ...prev,
                     contacts: validContacts,
@@ -442,25 +455,25 @@ const WhatsAppIntegrationV2: React.FC = () => {
 
     const isValidPhoneNumber = (remoteJid: string, whatsappNumber?: string): boolean => {
         if (!remoteJid) return false;
-        
+
         // Remove o sufixo @s.whatsapp.net, @c.us, @g.us, etc
         const numberOnly = remoteJid.split('@')[0];
-        
+
         // Remove todos os caracteres não numéricos
         const cleanNumber = numberOnly.replace(/\D/g, '');
-        
+
         // Verifica se é um número válido:
         // - Deve ter entre 10 e 13 dígitos (formato brasileiro: DDD + número ou 55 + DDD + número)
         // - Não deve ser um grupo (grupos geralmente têm formato diferente)
         // - Não deve conter apenas zeros ou números repetidos
         if (cleanNumber.length < 10 || cleanNumber.length > 13) return false;
-        
+
         // Verifica se não é apenas zeros ou números repetidos
         if (/^0+$/.test(cleanNumber) || /(\d)\1+$/.test(cleanNumber)) return false;
-        
+
         // Verifica se não é um ID de grupo (grupos geralmente terminam com @g.us)
         if (remoteJid.includes('@g.us')) return false;
-        
+
         // Ignora o próprio número do WhatsApp
         if (whatsappNumber) {
             const cleanWhatsAppNumber = whatsappNumber.replace(/\D/g, '');
@@ -468,7 +481,7 @@ const WhatsAppIntegrationV2: React.FC = () => {
                 return false;
             }
         }
-        
+
         return true;
     };
 
@@ -478,13 +491,13 @@ const WhatsAppIntegrationV2: React.FC = () => {
         const numberOnly = remoteJid.split('@')[0];
         // Remove todos os caracteres não numéricos
         const cleanNumber = numberOnly.replace(/\D/g, '');
-        
+
         // Garante que o número está no formato correto (5511999999999 ou 551199999999)
         // Se já tem código do país (55), retorna como está
         if (cleanNumber.startsWith('55')) {
             return cleanNumber;
         }
-        
+
         // Se não tem código do país, adiciona 55 (Brasil)
         return `55${cleanNumber}`;
     };
@@ -508,9 +521,9 @@ const WhatsAppIntegrationV2: React.FC = () => {
             const name = contact.pushName || 'Sem nome';
 
             const result = await evolutionApiV2.importContactAsLead(
-                name, 
-                phone, 
-                contactsModal.instanceName, 
+                name,
+                phone,
+                contactsModal.instanceName,
                 contactsModal.whatsappNumber,
                 contact.profilePicUrl
             );
@@ -572,7 +585,7 @@ const WhatsAppIntegrationV2: React.FC = () => {
             // Preparar todos os leads
             for (let i = 0; i < contactsModal.contacts.length; i++) {
                 const contact = contactsModal.contacts[i];
-                
+
                 try {
                     // Validar se o número é válido antes de processar
                     if (!contact.remoteJid || !isValidPhoneNumber(contact.remoteJid, contactsModal.whatsappNumber || undefined)) {
@@ -642,7 +655,7 @@ const WhatsAppIntegrationV2: React.FC = () => {
 
                 if (response.success) {
                     toast.dismiss(toastId);
-                    
+
                     if (errors.length > 0) {
                         toast.success(`${leadsToImport.length} leads importados! ${errors.length} erro(s) encontrado(s).`, {
                             duration: 6000
@@ -655,7 +668,7 @@ const WhatsAppIntegrationV2: React.FC = () => {
                     setContactsModal({ show: false, instanceName: null, whatsappNumber: null, contacts: [], loading: false });
                 } else {
                     toast.dismiss(toastId);
-                    
+
                     // Processar erros da API
                     if (response.errors && Array.isArray(response.errors)) {
                         response.errors.forEach((error: any) => {
@@ -1669,64 +1682,64 @@ const WhatsAppIntegrationV2: React.FC = () => {
                             ) : (
                                 <div className="max-h-96 overflow-y-auto">
                                     <div className="grid grid-cols-1 gap-3">
-                                    {filteredContacts.map((contact) => (
-                                    <div
-                                        key={contact.id}
-                                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                                    >
-                                        {contact.profilePicUrl ? (
-                                            <div className="h-10 w-10 rounded-full relative bg-gray-300 flex items-center justify-center">
-                                                <img
-                                                    src={contact.profilePicUrl}
-                                                    aria-hidden="true"
-                                                    className="h-10 w-10 rounded-full absolute inset-0"
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                    }}
-                                                />
-                                                <UserIcon
-                                                    aria-hidden="true"
-                                                    className="h-6 w-6 text-gray-600"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                                <UserIcon className="h-6 w-6 text-gray-600" />
-                                            </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 truncate">
-                                                {contact.pushName}
-                                            </p>
-                                            <p className="text-xs text-gray-500 truncate">
-                                                {formatWhatsAppNumber(contact.remoteJid)}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => importContactAsLead(contact)}
-                                                disabled={importingContacts.has(contact.id)}
-                                                className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                title="Importar como lead"
+                                        {filteredContacts.map((contact) => (
+                                            <div
+                                                key={contact.id}
+                                                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                                             >
-                                                {importingContacts.has(contact.id) ? (
-                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                                {contact.profilePicUrl ? (
+                                                    <div className="h-10 w-10 rounded-full relative bg-gray-300 flex items-center justify-center">
+                                                        <img
+                                                            src={contact.profilePicUrl}
+                                                            aria-hidden="true"
+                                                            className="h-10 w-10 rounded-full absolute inset-0"
+                                                            onError={(e) => {
+                                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                            }}
+                                                        />
+                                                        <UserIcon
+                                                            aria-hidden="true"
+                                                            className="h-6 w-6 text-gray-600"
+                                                        />
+                                                    </div>
                                                 ) : (
-                                                    <UserPlusIcon className="h-4 w-4" />
+                                                    <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                                        <UserIcon className="h-6 w-6 text-gray-600" />
+                                                    </div>
                                                 )}
-                                            </button>
-                                            <button
-                                                onClick={() => copyPhoneToClipboard(contact.remoteJid)}
-                                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                                                title="Copiar número"
-                                            >
-                                                <DocumentDuplicateIcon className="h-4 w-4" />
-                                            </button>
-                                        </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                                        {contact.pushName}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 truncate">
+                                                        {formatWhatsAppNumber(contact.remoteJid)}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => importContactAsLead(contact)}
+                                                        disabled={importingContacts.has(contact.id)}
+                                                        className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        title="Importar como lead"
+                                                    >
+                                                        {importingContacts.has(contact.id) ? (
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                                        ) : (
+                                                            <UserPlusIcon className="h-4 w-4" />
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => copyPhoneToClipboard(contact.remoteJid)}
+                                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                                                        title="Copiar número"
+                                                    >
+                                                        <DocumentDuplicateIcon className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
                                 </div>
-                            </div>
                             )}
                         </>
                     )}

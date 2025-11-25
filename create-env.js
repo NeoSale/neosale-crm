@@ -14,7 +14,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-console.log('\n🔧 Configuração do Supabase - NeoSale CRM\n');
+console.log('\n🔧 Configuração do Supabase - NeoCRM\n');
 console.log('Este script irá criar o arquivo .env.local com suas credenciais.\n');
 console.log('📋 Você precisará das seguintes informações do Supabase:');
 console.log('   1. Project URL (https://xxxxx.supabase.co)');

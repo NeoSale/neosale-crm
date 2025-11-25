@@ -10,11 +10,13 @@ import {
 } from '@heroicons/react/24/outline';
 import { Search, Database } from 'lucide-react';
 import { baseApi, Base } from '../services/baseApi';
+import { useCliente } from '../contexts/ClienteContext';
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { Table, TableColumn, TableText, TableActionButton } from './Table';
 
 const BaseConhecimento: React.FC = () => {
+    const { selectedClienteId } = useCliente();
     const [bases, setBases] = useState<Base[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -34,10 +36,17 @@ const BaseConhecimento: React.FC = () => {
     });
 
     useEffect(() => {
-        loadBases();
-    }, [currentPage, itemsPerPage, searchTerm]);
+        if (selectedClienteId) {
+            loadBases();
+        }
+    }, [currentPage, itemsPerPage, searchTerm, selectedClienteId]);
 
     const loadBases = async (showLoadingState = true) => {
+        if (!selectedClienteId) {
+            console.warn('⚠️ selectedClienteId não disponível');
+            return;
+        }
+
         if (showLoadingState) {
             setLoading(true);
         } else {
@@ -48,7 +57,7 @@ const BaseConhecimento: React.FC = () => {
                 page: currentPage,
                 limit: itemsPerPage,
                 search: searchTerm || undefined,
-            });
+            }, selectedClienteId);
             
             if (response.success && response.data) {
                 setBases(response.data.bases || []);
@@ -76,13 +85,15 @@ const BaseConhecimento: React.FC = () => {
             return;
         }
 
+        if (!selectedClienteId) return;
+
         setSubmitting(true);
 
         try {
             if (editingBase?.id) {
-                await baseApi.updateBase(editingBase.id, formData);
+                await baseApi.updateBase(editingBase.id, formData, selectedClienteId);
             } else {
-                await baseApi.createBase(formData as Omit<Base, 'id'>);
+                await baseApi.createBase(formData as Omit<Base, 'id'>, selectedClienteId);
             }
             loadBases(false);
             resetForm();
@@ -107,9 +118,9 @@ const BaseConhecimento: React.FC = () => {
     };
 
     const confirmDelete = async () => {
-        if (deleteConfirm.id) {
+        if (deleteConfirm.id && selectedClienteId) {
             try {
-                await baseApi.deleteBase(deleteConfirm.id);
+                await baseApi.deleteBase(deleteConfirm.id, selectedClienteId);
                 loadBases(false);
                 setDeleteConfirm({ show: false, id: null });
             } catch (error) {

@@ -31,27 +31,32 @@ export default function MembersPage() {
   const isSuperAdmin = profile?.role === 'super_admin'
   const isAdmin = profile?.role === 'admin' || isSuperAdmin
 
-  useEffect(() => {
+  useEffect(() => {    
     if (clients.length > 0 && !selectedClient) {
-      setSelectedClient(clients[0].client_id)
+      const firstClientId = clients[0].cliente_id
+      setSelectedClient(firstClientId)
     }
   }, [clients, selectedClient])
 
   const fetchMembers = useCallback(async () => {
     try {
       setLoading(true)
+      
       const { data, error } = await supabase
-        .from('client_members')
+        .from('cliente_members')
         .select('*, profile:profiles(*)')
-        .eq('client_id', selectedClient)
+        .eq('cliente_id', selectedClient)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro ao carregar membros:', error)
+        throw error
+      }
 
       setMembers(data as MemberWithProfile[] || [])
     } catch (error: any) {
       toast.error('Erro ao carregar membros')
-      console.error(error)
+      console.error('❌ Erro fatal:', error)
     } finally {
       setLoading(false)
     }
@@ -72,7 +77,7 @@ export default function MembersPage() {
         body: JSON.stringify({
           email,
           role,
-          client_id: selectedClient,
+          cliente_id: selectedClient,
         }),
       })
 
@@ -121,7 +126,7 @@ export default function MembersPage() {
 
     try {
       const { error } = await supabase
-        .from('client_members')
+        .from('cliente_members')
         .delete()
         .eq('id', memberId)
 
@@ -137,7 +142,7 @@ export default function MembersPage() {
   const handleUpdateRole = async (memberId: string, newRole: UserRole) => {
     try {
       const { error } = await supabase
-        .from('client_members')
+        .from('cliente_members')
         .update({ role: newRole })
         .eq('id', memberId)
 
@@ -177,11 +182,23 @@ export default function MembersPage() {
     )
   }
 
+  // Aguardar carregamento do perfil antes de verificar permissões
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <span className="text-sm text-gray-600 dark:text-gray-400">Carregando...</span>
+        </div>
+      </div>
+    )
+  }
+
   if (!isAdmin) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">Você não tem permissão para acessar esta página.</p>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-800 dark:text-red-400">Você não tem permissão para acessar esta página.</p>
         </div>
       </div>
     )
@@ -191,24 +208,24 @@ export default function MembersPage() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Membros</h1>
-        <p className="text-gray-600">Gerencie os membros da equipe</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Membros</h1>
+        <p className="text-gray-600 dark:text-gray-400">Gerencie os membros da equipe</p>
       </div>
 
       {/* Client Selector */}
       {clients.length > 1 && (
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Cliente
           </label>
           <select
             value={selectedClient}
             onChange={(e) => setSelectedClient(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             {clients.map((client) => (
-              <option key={client.client_id} value={client.client_id}>
-                {(client as any).clients?.name || client.client_id}
+              <option key={client.cliente_id} value={client.cliente_id}>
+                {(client as any).clientes?.nome || client.cliente_id}
               </option>
             ))}
           </select>
@@ -224,7 +241,7 @@ export default function MembersPage() {
             placeholder="Buscar membros..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <button
@@ -238,21 +255,24 @@ export default function MembersPage() {
 
       {/* Members List */}
       {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Carregando membros...</span>
+          </div>
         </div>
       ) : filteredMembers.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Nenhum membro encontrado
           </h3>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             {searchTerm ? 'Tente buscar com outros termos' : 'Comece convidando membros para sua equipe'}
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>

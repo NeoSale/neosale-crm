@@ -39,33 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   const fetchProfile = useCallback(async (currentUser: User) => {
-    try {
-      console.log('🔍 Carregando perfil do usuário:', currentUser.email)
-      console.log('🔍 User:', currentUser)
-      
-      // IMPORTANTE: O role real está na tabela profiles, não no auth.users
-      // O session.user.role retorna apenas "authenticated" (role do Supabase Auth)
-      
-      console.log('📊 Buscando perfil na tabela profiles para user_id:', currentUser.id)
-      
-      // Buscar perfil completo da tabela profiles
+    try {    
       const { data: dbProfile, error: dbError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single()
       
-      console.log('📊 Resultado da consulta profiles:')
-      console.log('  - dbProfile:', dbProfile)
-      console.log('  - dbError:', dbError)
-      
       let userProfile: Profile
       
       if (dbError || !dbProfile) {
         console.error('❌ Erro ao buscar perfil da tabela profiles:', dbError)
-        // Criar perfil básico como fallback
         userProfile = createProfileFromUser(currentUser)
-        console.log('⚠️ Usando perfil básico (fallback):', userProfile)
       } else {
         // Usar dados da tabela profiles (fonte confiável do role)
         userProfile = {
@@ -77,13 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: dbProfile.created_at,
           updated_at: dbProfile.updated_at
         }
-        
-        console.log('✅ Perfil carregado da tabela profiles:', userProfile)
-        console.log('🔑 Role do usuário:', userProfile.role)
       }
       
-      // Atualizar estado do perfil
       setProfile(userProfile)
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user_profile', JSON.stringify(userProfile))
+      }
 
       // Buscar associações de clientes
       try {
@@ -95,19 +80,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (!clientsError && clientsData) {
             setClients(clientsData)
-            console.log('✅ Clientes carregados:', clientsData.length)
             
-            // Definir automaticamente o primeiro cliente no localStorage se não houver nenhum selecionado
             if (typeof window !== 'undefined' && clientsData.length > 0) {
               const savedClienteId = localStorage.getItem('selected_cliente_id')
               if (!savedClienteId) {
                 const firstClienteId = clientsData[0].cliente_id
                 localStorage.setItem('selected_cliente_id', firstClienteId)
-                console.log('✅ Cliente padrão definido:', firstClienteId)
               }
             }
           } else {
-            console.log('⚠️ Não foi possível carregar clientes:', clientsError?.message)
             setClients([])
           }
         } else {
@@ -129,19 +110,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }))
             
             setClients(virtualMemberships)
-            console.log('✅ Todos os clientes carregados (super admin):', virtualMemberships.length)
             
-            // Definir automaticamente o primeiro cliente no localStorage se não houver nenhum selecionado
             if (typeof window !== 'undefined' && virtualMemberships.length > 0) {
               const savedClienteId = localStorage.getItem('selected_cliente_id')
               if (!savedClienteId) {
                 const firstClienteId = virtualMemberships[0].cliente_id
                 localStorage.setItem('selected_cliente_id', firstClienteId)
-                console.log('✅ Cliente padrão definido (super admin):', firstClienteId)
               }
             }
           } else {
-            console.log('⚠️ Não foi possível carregar todos os clientes:', allClientesError?.message)
             setClients([])
           }
         }
@@ -165,13 +142,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile])
 
   useEffect(() => {
+    // Carregar perfil do localStorage primeiro (para evitar perder o role)
+    if (typeof window !== 'undefined') {
+      const savedProfile = localStorage.getItem('user_profile')
+      if (savedProfile) {
+        try {
+          const parsedProfile = JSON.parse(savedProfile)
+          setProfile(parsedProfile)
+        } catch (error) {
+          console.error('❌ Erro ao carregar perfil do localStorage:', error)
+        }
+      }
+    }
+
     // Get initial session
-    console.log('🚀 AuthContext: Inicializando...')
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      console.log('📝 Sessão obtida:', session?.user ? 'Usuário logado' : 'Sem usuário')
       setUser(session?.user ?? null)
       if (session?.user) {
         fetchProfile(session.user)
+      } else {
+        // Limpar localStorage se não houver sessão
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('user_profile')
+        }
       }
       setLoading(false)
     })
@@ -179,13 +172,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        console.log('🔄 Auth state changed:', event)
         setUser(session?.user ?? null)
         if (session?.user) {
           await fetchProfile(session.user)
         } else {
           setProfile(null)
           setClients([])
+          // Limpar localStorage quando não houver sessão
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('user_profile')
+            localStorage.removeItem('selected_cliente_id')
+          }
         }
         setLoading(false)
       }
@@ -195,9 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, fetchProfile])
 
   const signOut = async () => {
-    try {
-      console.log('🚪 Fazendo logout...')
-      
+    try {      
       // Criar promise com timeout de 3 segundos
       const signOutPromise = supabase.auth.signOut()
       const timeoutPromise = new Promise((_, reject) => 
@@ -217,7 +212,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      console.log('✅ Limpando estado local...')
       setUser(null)
       setProfile(null)
       setClients([])
@@ -228,13 +222,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('cliente_id')
       }
       
-      console.log('✅ Logout concluído')
     } catch (error) {
       console.error('❌ Erro fatal ao fazer logout:', error)
       // Mesmo com erro, limpar o estado local
       setUser(null)
       setProfile(null)
       setClients([])
+      
+      // Limpar localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user_profile')
+        localStorage.removeItem('selected_cliente_id')
+      }
       throw error
     }
   }

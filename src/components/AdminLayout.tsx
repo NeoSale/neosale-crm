@@ -49,7 +49,7 @@ const navigation: MenuItem[] = [
     children: [
       // { name: 'WhatsApp V1', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
       { name: 'WhatsApp', href: '/integracoes/whatsapp-v2', icon: PaperAirplaneIcon },
-      { name: 'Google Calendar', href: '/integracoes/google-calendar', icon: CalendarIcon },
+      // { name: 'Google Calendar', href: '/integracoes/google-calendar', icon: CalendarIcon },
     ]
   },
   {
@@ -291,13 +291,13 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
             <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
               <img
                 src="/icone-azul.png"
-                alt="NeoSale Logo"
+                alt="NeoCRM Logo"
                 className="w-8 h-8"
               />
             </div>
             {sidebarOpen && (
               <div className="flex flex-col">
-                <h1 className="text-xl font-bold text-primary">NeoSale</h1>
+                <h1 className="text-xl font-bold text-primary">NeoCRM</h1>
               </div>
             )}
           </div>

@@ -1,4 +1,3 @@
-import { getClienteId } from '../utils/cliente-utils';
 import { getValidatedApiUrl } from '../utils/api-config';
 
 let API_BASE_URL: string;
@@ -62,31 +61,48 @@ export interface SendMessageRequest {
 }
 
 class ChatApi {
-  private getHeaders() {
-    const clienteId = getClienteId();
+  private getHeaders(clienteId: string) {
     return {
       'Content-Type': 'application/json',
-      'cliente_id': clienteId || '',
+      'cliente_id': clienteId,
     };
   }
 
-  async getChats(): Promise<ChatResponse> {
+  async getChats(clienteId: string): Promise<ChatResponse> {
+    // Validar se cliente_id está presente
+    if (!clienteId) {
+      throw new Error('cliente_id é obrigatório');
+    }
+
+    const headers = this.getHeaders(clienteId);
+
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers,
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Erro na API de chat:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        headers: headers
+      });
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
 
     return response.json();
   }
 
-  async getMessages(id: string, page: number = 1, limit: number = 50): Promise<ChatMessagesResponse> {
+  async getMessages(id: string, clienteId: string, page: number = 1, limit: number = 50): Promise<ChatMessagesResponse> {
+    if (!clienteId) {
+      throw new Error('cliente_id é obrigatório');
+    }
+
     const response = await fetch(`${API_BASE_URL}/chat/lead/${id}?page=${page}&limit=${limit}`, {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(clienteId),
     });
 
     if (!response.ok) {
@@ -96,10 +112,14 @@ class ChatApi {
     return response.json();
   }
 
-  async sendMessage(data: SendMessageRequest): Promise<any> {
+  async sendMessage(data: SendMessageRequest, clienteId: string): Promise<any> {
+    if (!clienteId) {
+      throw new Error('cliente_id é obrigatório');
+    }
+
     const response = await fetch(`${API_BASE_URL}/chat/sendText`, {
       method: 'POST',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(clienteId),
       body: JSON.stringify(data),
     });
 

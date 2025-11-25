@@ -16,7 +16,8 @@ export const getClienteId = (cliente_id?: string): string | undefined => {
   
   // Verificar se estamos no lado do cliente (browser)
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('cliente_id') || undefined;
+    // Priorizar selected_cliente_id (usado pelo ClienteContext)
+    return localStorage.getItem('selected_cliente_id') || localStorage.getItem('cliente_id') || undefined;
   }
   
   return undefined;
@@ -47,7 +48,7 @@ export const removeClienteId = (): void => {
  */
 export const hasClienteId = (): boolean => {
   if (typeof window !== 'undefined') {
-    const clienteId = localStorage.getItem('cliente_id');
+    const clienteId = localStorage.getItem('selected_cliente_id') || localStorage.getItem('cliente_id');
     return clienteId !== null && clienteId !== '';
   }
   return false;
@@ -59,7 +60,8 @@ export const hasClienteId = (): boolean => {
  */
 export const getCurrentClienteId = (): string | null => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('cliente_id');
+    // Priorizar selected_cliente_id (usado pelo ClienteContext)
+    return localStorage.getItem('selected_cliente_id') || localStorage.getItem('cliente_id');
   }
   return null;
 };

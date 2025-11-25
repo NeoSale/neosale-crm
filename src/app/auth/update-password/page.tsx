@@ -50,7 +50,7 @@ export default function UpdatePasswordPage() {
         {/* Logo/Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            NeoSale CRM
+            NeoCRM
           </h1>
           <p className="text-gray-600">
             Defina sua nova senha

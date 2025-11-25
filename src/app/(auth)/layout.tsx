@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Login - NeoSale CRM",
-  description: "Faça login no NeoSale CRM",
+  title: "Login - NeoCRM",
+  description: "Faça login no NeoCRM",
 };
 
 export default function AuthLayout({

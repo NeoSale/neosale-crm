@@ -193,12 +193,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (selectedClienteId) {
-      console.log('📊 Dashboard: Carregando com cliente_id:', selectedClienteId);
       loadRelatorio();
       loadIntegracoes();
-    } else {
-      console.log('⏳ Dashboard: Aguardando selectedClienteId...');
-    }
+    } 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClienteId]);
 

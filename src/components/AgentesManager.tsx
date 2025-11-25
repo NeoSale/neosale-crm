@@ -8,10 +8,12 @@ import toast from 'react-hot-toast';
 import { Agente, agentesApi } from '../services/agentesApi';
 import { TipoAgente, tipoAgentesApi } from '../services/tipoAgentesApi';
 import { Base, baseApi } from '../services/baseApi';
+import { useCliente } from '../contexts/ClienteContext';
 import Modal from './Modal';
 import { Table, TableColumn, TableBadge, TableToggle, TableActionButton, TableText } from './Table';
 
 const AgentesManager: React.FC = () => {
+  const { selectedClienteId } = useCliente();
   const [agentes, setAgentes] = useState<Agente[]>([]);
   const [tipoAgentes, setTipoAgentes] = useState<TipoAgente[]>([]);
   const [bases, setBases] = useState<Base[]>([]);
@@ -63,12 +65,12 @@ const AgentesManager: React.FC = () => {
     };
   }, [isDropdownOpen]);
 
-  // Carregar dados iniciais
+  // Carregar dados quando selectedClienteId estiver disponível
   useEffect(() => {
-    if (isClient) {
+    if (isClient && selectedClienteId) {
       loadData();
     }
-  }, [isClient]);
+  }, [isClient, selectedClienteId]);
 
   // Fechar modais com ESC
   useEffect(() => {
@@ -101,14 +103,19 @@ const AgentesManager: React.FC = () => {
   }, [isClient, showEditModal, showDeleteModal, showBulkDeleteModal, isDropdownOpen]);
 
   const loadData = async () => {
+    if (!selectedClienteId) {
+      console.warn(' selectedClienteId não disponível');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
       const [agentesResponse, tipoAgentesResponse, basesResponse] = await Promise.all([
-        agentesApi.getAgentes(),
+        agentesApi.getAgentes(selectedClienteId),
         tipoAgentesApi.getTipoAgentes(),
-        baseApi.getBases({ limit: 100 })
+        baseApi.getBases({ limit: 100 }, selectedClienteId)
       ]);
 
       if (agentesResponse.success) {
@@ -173,6 +180,8 @@ const AgentesManager: React.FC = () => {
   };
 
   const handleUpdateAgente = async (updatedData: Partial<Agente>) => {
+    if (!selectedClienteId) return;
+
     try {
       setSaveLoading(true);
       // Adicionar base_id aos dados
@@ -185,11 +194,11 @@ const AgentesManager: React.FC = () => {
 
       if (isCreatingAgente) {
         // Criar novo agente
-        response = await agentesApi.createAgente(dataWithBases as Omit<Agente, 'id'>);
+        response = await agentesApi.createAgente(dataWithBases as Omit<Agente, 'id'>, selectedClienteId);
       } else {
         // Atualizar agente existente
         if (!editingAgente?.id) return;
-        response = await agentesApi.updateAgente(editingAgente.id, dataWithBases);
+        response = await agentesApi.updateAgente(editingAgente.id, dataWithBases, selectedClienteId);
       }
 
       if (response.success) {
@@ -215,11 +224,11 @@ const AgentesManager: React.FC = () => {
   };
 
   const confirmDeleteAgente = async () => {
-    if (!deletingAgente?.id) return;
+    if (!deletingAgente?.id || !selectedClienteId) return;
 
     try {
       setDeleteLoading(deletingAgente.id);
-      const response = await agentesApi.deleteAgente(deletingAgente.id);
+      const response = await agentesApi.deleteAgente(deletingAgente.id, selectedClienteId);
       if (response.success) {
         toast.success('Agente excluído com sucesso!', {
           style: {
@@ -246,11 +255,11 @@ const AgentesManager: React.FC = () => {
   };
 
   const handleToggleAtivo = async (agente: Agente) => {
-    if (!agente.id) return;
+    if (!agente.id || !selectedClienteId) return;
 
     try {
       setToggleAtivoLoading(agente.id);
-      const response = await agentesApi.toggleAgenteAtivo(agente.id, !agente.ativo);
+      const response = await agentesApi.toggleAgenteAtivo(agente.id, !agente.ativo, selectedClienteId);
       if (response.success) {
         toast.success(`Agente ${!agente.ativo ? 'ativado' : 'inativado'} com sucesso!`);
         await loadData();
@@ -266,11 +275,11 @@ const AgentesManager: React.FC = () => {
   };
 
   const handleToggleAgendamento = async (agente: Agente) => {
-    if (!agente.id) return;
+    if (!agente.id || !selectedClienteId) return;
 
     try {
       setToggleAgendamentoLoading(agente.id);
-      const response = await agentesApi.toggleAgenteAgendamento(agente.id, !agente.agendamento);
+      const response = await agentesApi.toggleAgenteAgendamento(agente.id, !agente.agendamento, selectedClienteId);
       if (response.success) {
         toast.success(`Agendamento ${!agente.agendamento ? 'ativado' : 'desativado'} com sucesso!`);
         await loadData();
@@ -312,10 +321,12 @@ const AgentesManager: React.FC = () => {
   };
 
   const confirmBulkDelete = async () => {
+    if (!selectedClienteId) return;
+
     try {
       setBulkDeleteLoading(true);
       const deletePromises = Array.from(selectedAgentes).map(agenteId => 
-        agentesApi.deleteAgente(agenteId)
+        agentesApi.deleteAgente(agenteId, selectedClienteId)
       );
       const results = await Promise.all(deletePromises);
 

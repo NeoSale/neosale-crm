@@ -2,7 +2,6 @@
 
 import ToastInterceptor, { ToastConfig } from './toastInterceptor';
 import { getValidatedApiUrl } from '../utils/api-config';
-import { getClienteId } from '../utils/cliente-utils';
 
 export interface Base {
   id?: string;
@@ -47,8 +46,7 @@ try {
 }
 
 class BasesApiService {
-  private getHeaders(): Record<string, string> {
-    const clienteId = getClienteId();
+  private getHeaders(clienteId?: string): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -63,7 +61,8 @@ class BasesApiService {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    toastConfig?: ToastConfig
+    toastConfig?: ToastConfig,
+    clienteId?: string
   ): Promise<ApiResponse<T>> {
     try {
       // Validar se a API está configurada antes de fazer a requisição
@@ -78,8 +77,13 @@ class BasesApiService {
 
       const fullUrl = `${API_BASE_URL}${endpoint}`;
       
+      // Validar se cliente_id está presente
+      if (!clienteId) {
+        throw new Error('Header cliente_id é obrigatório');
+      }
+
       const finalHeaders = {
-        ...this.getHeaders(),
+        ...this.getHeaders(clienteId),
         ...options.headers,
       };
 
@@ -123,7 +127,7 @@ class BasesApiService {
   }
 
   // Buscar todas as bases com paginação e busca
-  async getBases(params?: ListBasesParams): Promise<ApiResponse<{ bases: Base[]; pagination: PaginationData }>> {
+  async getBases(params?: ListBasesParams, clienteId?: string): Promise<ApiResponse<{ bases: Base[]; pagination: PaginationData }>> {
     const queryParams = new URLSearchParams();
     
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -134,29 +138,29 @@ class BasesApiService {
     
     return this.request<{ bases: Base[]; pagination: PaginationData }>(endpoint, {
       method: 'GET',
-    });
+    }, undefined, clienteId);
   }
 
   // Buscar base por ID
-  async getBaseById(id: string): Promise<ApiResponse<Base>> {
+  async getBaseById(id: string, clienteId: string): Promise<ApiResponse<Base>> {
     return this.request<Base>(`/base/${id}`, {
       method: 'GET',
-    });
+    }, undefined, clienteId);
   }
 
   // Criar nova base
-  async createBase(base: Omit<Base, 'id'>): Promise<ApiResponse<Base>> {
+  async createBase(base: Omit<Base, 'id'>, clienteId: string): Promise<ApiResponse<Base>> {
     return this.request<Base>('/base', {
       method: 'POST',
       body: JSON.stringify(base),
     }, {
       showSuccess: true,
       successMessage: 'Base criada com sucesso!'
-    });
+    }, clienteId);
   }
 
   // Atualizar base
-  async updateBase(id: string, base: Partial<Base>): Promise<ApiResponse<Base>> {
+  async updateBase(id: string, base: Partial<Base>, clienteId: string): Promise<ApiResponse<Base>> {
     const { nome, descricao, cliente_id } = base;
     const baseData = { nome, descricao, cliente_id };
     return this.request<Base>(`/base/${id}`, {
@@ -165,17 +169,17 @@ class BasesApiService {
     }, {
       showSuccess: true,
       successMessage: 'Base atualizada com sucesso!'
-    });
+    }, clienteId);
   }
 
   // Excluir base
-  async deleteBase(id: string): Promise<ApiResponse<void>> {
+  async deleteBase(id: string, clienteId: string): Promise<ApiResponse<void>> {
     return this.request<void>(`/base/${id}`, {
       method: 'DELETE',
     }, {
       showSuccess: true,
       successMessage: 'Base excluída com sucesso!'
-    });
+    }, clienteId);
   }
 }
 

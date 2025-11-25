@@ -21,7 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { chatApi, Chat, ChatMessage } from '../services/chatApi';
 import { leadsApi, Lead } from '../services/leadsApi';
-import { getClienteId } from '../utils/cliente-utils';
+import { useCliente } from '../contexts/ClienteContext';
 import { formatPhone, copyPhone } from '../utils/phone-utils';
 import { ErrorHandler } from '../utils/error-handler';
 import { formatTime } from '../utils/date-utils';
@@ -353,6 +353,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
       );
     });
   };
+  const { selectedClienteId } = useCliente();
   const [leads, setLeads] = useState<Chat[]>([]);
   const [selectedLead, setSelectedLead] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -380,6 +381,12 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
   // Carregar leads
   const loadLeads = async (page: number = 1, append: boolean = false) => {
+    // Verificar se selectedClienteId está disponível
+    if (!selectedClienteId) {
+      console.warn(' selectedClienteId não disponível, aguardando...');
+      return;
+    }
+
     if (page === 1) {
       setLoading(true);
     } else {
@@ -387,7 +394,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
 
     try {
-      const response = await chatApi.getChats();
+      const response = await chatApi.getChats(selectedClienteId);
       if (response.success) {
         if (append) {
           setLeads(prev => [...prev, ...response.data]);
@@ -435,6 +442,8 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
 
   // Carregar mensagens
   const loadMessages = async (id: string, page: number = 1, append: boolean = false) => {
+    if (!selectedClienteId) return;
+
     if (page === 1) {
       setLoadingMessages(true);
     } else {
@@ -442,7 +451,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
     }
 
     try {
-      const response = await chatApi.getMessages(id, page, 50);
+      const response = await chatApi.getMessages(id, selectedClienteId, page, 50);
       if (response.success) {
         if (append) {
           // Adicionar no início da lista (mensagens mais antigas)
@@ -518,7 +527,7 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
         mensagem: contentWithLineBreaks,
         tipo: 'ai',
         source: 'crm',
-      });
+      }, selectedClienteId);
 
       setMessageText('');
       // Recarregar mensagens
@@ -604,6 +613,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   useEffect(() => {
     loadLeads();
   }, []);
+
+  // Carregar leads quando selectedClienteId estiver disponível
+  useEffect(() => {
+    if (selectedClienteId) {
+      loadLeads();
+    }
+  }, [selectedClienteId]);
 
   // Processar initialLeadId para selecionar automaticamente o lead
   useEffect(() => {
@@ -789,13 +805,13 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
                   <span className="text-xs md:text-sm font-medium dark:text-gray-300 hidden sm:inline">Agente</span>
                   <button
                     onClick={async () => {
-                      if (!leadInfo?.id) return;
+                      if (!leadInfo?.id || !selectedClienteId) return;
                       try {
                         const newValue = !leadInfo.ai_habilitada;
-                        const lead_id = getClienteId();
-                        const response = await leadsApi.updateAiHabilitada(leadInfo.id, newValue, lead_id);
+                        const response = await leadsApi.updateAiHabilitada(leadInfo.id, newValue, selectedClienteId);
                         if (response.success) {
                           setLeadInfo({ ...leadInfo, ai_habilitada: newValue });
+                          toast.success(`Agente AI ${newValue ? 'ativado' : 'desativado'}`);
                         }
                       } catch (error) {
                         console.error('Erro ao atualizar Agente AI:', error);

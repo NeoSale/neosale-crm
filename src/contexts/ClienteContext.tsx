@@ -22,7 +22,6 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
       const savedClienteId = localStorage.getItem('selected_cliente_id')
       if (savedClienteId && savedClienteId !== selectedClienteId) {
         setSelectedClienteIdState(savedClienteId)
-        console.log('📍 ClienteContext: Cliente carregado do localStorage:', savedClienteId)
       }
     }
   }, [profile]) // Recarrega quando o profile muda (após login)

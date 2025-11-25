@@ -2,7 +2,6 @@
 
 import ToastInterceptor, { ToastConfig } from './toastInterceptor';
 import { getValidatedApiUrl } from '../utils/api-config';
-import { getClienteId } from '../utils/cliente-utils';
 import { TipoAgente } from './tipoAgentesApi';
 
 export interface Agente {
@@ -47,8 +46,7 @@ try {
 }
 
 class AgentesApiService {
-  private getHeaders(): Record<string, string> {
-    const clienteId = getClienteId();
+  private getHeaders(clienteId?: string): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -63,7 +61,8 @@ class AgentesApiService {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    toastConfig?: ToastConfig
+    toastConfig?: ToastConfig,
+    clienteId?: string
   ): Promise<ApiResponse<T>> {
     try {
       // Validar se a API está configurada antes de fazer a requisição
@@ -78,8 +77,13 @@ class AgentesApiService {
 
       const fullUrl = `${API_BASE_URL}${endpoint}`;
       
+      // Validar se cliente_id está presente
+      if (!clienteId) {
+        throw new Error('Header cliente_id é obrigatório');
+      }
+
       const finalHeaders = {
-        ...this.getHeaders(),
+        ...this.getHeaders(clienteId),
         ...options.headers,
       };
 
@@ -123,32 +127,32 @@ class AgentesApiService {
   }
 
   // Buscar todos os agentes
-  async getAgentes(): Promise<ApiResponse<Agente[]>> {
+  async getAgentes(clienteId: string): Promise<ApiResponse<Agente[]>> {
     return this.request<Agente[]>('/agentes', {
       method: 'GET',
-    });
+    }, undefined, clienteId);
   }
 
   // Buscar agente por ID
-  async getAgenteById(id: string): Promise<ApiResponse<Agente>> {
+  async getAgenteById(id: string, clienteId: string): Promise<ApiResponse<Agente>> {
     return this.request<Agente>(`/agentes/${id}`, {
       method: 'GET',
-    });
+    }, undefined, clienteId);
   }
 
   // Criar novo agente
-  async createAgente(agente: Omit<Agente, 'id'>): Promise<ApiResponse<Agente>> {
+  async createAgente(agente: Omit<Agente, 'id'>, clienteId: string): Promise<ApiResponse<Agente>> {
     return this.request<Agente>('/agentes', {
       method: 'POST',
       body: JSON.stringify(agente),
     }, {
       showSuccess: true,
       successMessage: 'Agente criado com sucesso!'
-    });
+    }, clienteId);
   }
 
   // Atualizar agente
-  async updateAgente(id: string, agente: Partial<Agente>): Promise<ApiResponse<Agente>> {
+  async updateAgente(id: string, agente: Partial<Agente>, clienteId: string): Promise<ApiResponse<Agente>> {
     const { agendamento, ativo, nome, prompt, prompt_agendamento, tipo_agente_id, base_id, updated_at } = agente;
     const agenteData = { agendamento, ativo, nome, prompt, prompt_agendamento, tipo_agente_id, base_id, updated_at };
     return this.request<Agente>(`/agentes/${id}`, {
@@ -157,53 +161,53 @@ class AgentesApiService {
     }, {
       showSuccess: true,
       successMessage: 'Agente atualizado com sucesso!'
-    });
+    }, clienteId);
   }
 
   // Excluir agente
-  async deleteAgente(id: string): Promise<ApiResponse<void>> {
+  async deleteAgente(id: string, clienteId: string): Promise<ApiResponse<void>> {
     return this.request<void>(`/agentes/${id}`, {
       method: 'DELETE',
     }, {
       showSuccess: true,
       successMessage: 'Agente excluído com sucesso!'
-    });
+    }, clienteId);
   }
 
   // Ativar/Inativar agente
-  async toggleAgenteAtivo(id: string, ativo: boolean): Promise<ApiResponse<Agente>> {
+  async toggleAgenteAtivo(id: string, ativo: boolean, clienteId: string): Promise<ApiResponse<Agente>> {
     return this.request<Agente>(`/agentes/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ ativo }),
     }, {
       showSuccess: true,
       successMessage: `Agente ${ativo ? 'ativado' : 'inativado'} com sucesso!`
-    });
+    }, clienteId);
   }
 
   // Ativar/Inativar agendamento do agente
-  async toggleAgenteAgendamento(id: string, agendamento: boolean): Promise<ApiResponse<Agente>> {
+  async toggleAgenteAgendamento(id: string, agendamento: boolean, clienteId: string): Promise<ApiResponse<Agente>> {
     return this.request<Agente>(`/agentes/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ agendamento }),
     }, {
       showSuccess: true,
       successMessage: `Agendamento ${agendamento ? 'ativado' : 'inativado'} para o agente!`
-    });
+    }, clienteId);
   }
 
   // Buscar agentes por tipo
-  async getAgentesByTipo(tipoAgenteId: string): Promise<ApiResponse<Agente[]>> {
+  async getAgentesByTipo(tipoAgenteId: string, clienteId: string): Promise<ApiResponse<Agente[]>> {
     return this.request<Agente[]>(`/agentes?tipo_agente_id=${tipoAgenteId}`, {
       method: 'GET',
-    });
+    }, undefined, clienteId);
   }
 
   // Buscar agentes ativos
-  async getAgentesAtivos(): Promise<ApiResponse<Agente[]>> {
+  async getAgentesAtivos(clienteId: string): Promise<ApiResponse<Agente[]>> {
     return this.request<Agente[]>('/agentes?ativo=true', {
       method: 'GET',
-    });
+    }, undefined, clienteId);
   }
 }
 
