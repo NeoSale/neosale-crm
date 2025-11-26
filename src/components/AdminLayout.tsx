@@ -572,7 +572,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
               </h2>
               
               {/* Combobox de clientes - apenas para super_admin */}
-              {profile?.role === 'super_admin' && (
+              {/* {profile?.role === 'super_admin' && (
                 <div className="ml-6">
                   <select
                     value={selectedCliente}
@@ -591,7 +591,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                     ))}
                   </select>
                 </div>
-              )}
+              )} */}
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />

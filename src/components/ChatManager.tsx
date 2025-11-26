@@ -517,6 +517,11 @@ const ChatManager: React.FC<ChatManagerProps> = ({ initialLeadId }) => {
   const sendMessage = async () => {
     if (!messageText.trim() || !selectedLead || sending) return;
 
+    if (!selectedClienteId) {
+      toast.error('Cliente não selecionado');
+      return;
+    }
+
     setSending(true);
     try {
       // Converter quebras de linha para \n
