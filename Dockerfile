@@ -11,8 +11,10 @@ RUN mkdir -p public
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV ESLINT_NO_DEV_ERRORS=true
-# Variável temporária para o build (será sobrescrita em runtime)
+# Variáveis temporárias para o build (serão sobrescritas em runtime)
 ENV NEXT_PUBLIC_API_URL=http://localhost:3000
+ENV NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key
 
 RUN npm run build
 
