@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, Bars3Icon, Bars3BottomLeftIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import {
   HomeIcon,
   UsersIcon,
@@ -156,26 +156,19 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
   // Função para logout
   const handleLogout = async () => {
-    console.log('🔘 Botão de logout clicado')
     try {
-      console.log('📤 Chamando signOut...')
       await signOut();
-      console.log('🔄 Redirecionando para /login...')
       
       // Tentar com router.push primeiro
       router.push('/login');
       
       // Fallback: forçar redirecionamento após 500ms
       setTimeout(() => {
-        console.log('🔄 Forçando redirecionamento...')
         window.location.href = '/login';
       }, 500);
       
-      console.log('✅ Redirecionamento iniciado')
     } catch (error) {
-      console.error('❌ Erro ao fazer logout:', error);
       // Forçar redirecionamento imediatamente
-      console.log('🔄 Redirecionamento forçado devido a erro')
       window.location.href = '/login';
     }
   };
@@ -306,8 +299,9 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="hidden lg:block p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title="Recolher menu"
               >
-                <ChevronLeftIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                <Bars3BottomLeftIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
               </button>
             )}
             <button
@@ -552,8 +546,9 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                 <button
                   onClick={() => setSidebarOpen(true)}
                   className="hidden lg:block p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300 rounded-md transition-colors"
+                  title="Expandir menu"
                 >
-                  <ChevronRightIcon className="h-5 w-5" />
+                  <Bars3Icon className="h-6 w-6" />
                 </button>
               )}
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">

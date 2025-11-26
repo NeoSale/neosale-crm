@@ -155,19 +155,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user)
-      } else {
-        // Limpar localStorage se não houver sessão
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('user_profile')
-        }
-      }
+    // Timeout de segurança: força loading = false após 1 segundo
+    const safetyTimeout = setTimeout(() => {
       setLoading(false)
-    })
+    }, 100)
+
+    // Get initial session
+    supabase.auth.getSession()
+      .then(({ data: { session } }: { data: { session: Session | null } }) => {
+        clearTimeout(safetyTimeout)
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          fetchProfile(session.user)
+        } else {
+          // Limpar localStorage se não houver sessão
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('user_profile')
+          }
+        }
+        setLoading(false)
+      })
+      .catch((error) => {
+        clearTimeout(safetyTimeout)
+        setLoading(false)
+      })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

@@ -26,7 +26,6 @@ export default function LoginPage() {
 
       if (error) throw error
 
-      toast.success('Login realizado com sucesso!')
       router.push('/')
       router.refresh()
     } catch (error: any) {
@@ -74,7 +73,7 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-gray-800 rounded-2xl shadow-xl p-5 border border-gray-700">
           {/* OAuth Buttons */}
-          <div className="flex items-center justify-center gap-3 mb-4">
+          {/* <div className="flex items-center justify-center gap-3 mb-4">
             <button
               onClick={() => handleOAuthLogin('google')}
               className="flex items-center justify-center w-12 h-12 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors bg-gray-900"
@@ -108,17 +107,17 @@ export default function LoginPage() {
                 <path d="M12.069 12.069H23V23H12.069V12.069z" fill="#ffb900"/>
               </svg>
             </button>
-          </div>
+          </div> */}
 
           {/* Divider */}
-          <div className="relative my-4">
+          {/* <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-600"></div>
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-4 bg-gray-800 text-gray-400">Ou continue com email</span>
             </div>
-          </div>
+          </div> */}
 
           {/* Email Login Form */}
           <form onSubmit={handleEmailLogin} className="space-y-3">

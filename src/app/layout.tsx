@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NeoCRM Admin",
+  title: "NeoCRM",
   description: "Administração do NeoCRM",
 };
 
