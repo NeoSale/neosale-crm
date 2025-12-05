@@ -3,89 +3,63 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { Profile, ClientMember, UserRole } from '@/types/auth'
+import { Profile, UserRole } from '@/types/auth'
 import toast from 'react-hot-toast'
-import { 
-  UserPlus, 
-  Trash2, 
-  Mail, 
+import {
+  UserPlus,
+  Trash2,
+  Mail,
   RefreshCw,
   Users,
   Search,
   X
 } from 'lucide-react'
-
-interface MemberWithProfile extends ClientMember {
-  profile: Profile
-}
+import { useCliente } from '@/contexts/ClienteContext'
+import { profilesApi } from '@/services/profilesApi'
 
 export default function MembersPage() {
-  const { profile, clients } = useAuth()
-  const [members, setMembers] = useState<MemberWithProfile[]>([])
+  const { selectedClienteId } = useCliente();
+  const { profile } = useAuth()
+  const [members, setMembers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [showInviteModal, setShowInviteModal] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<string>('')
-  const supabase = createClient()
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; memberId: string; memberEmail: string }>({ show: false, memberId: '', memberEmail: '' })
 
   const isSuperAdmin = profile?.role === 'super_admin'
   const isAdmin = profile?.role === 'admin' || isSuperAdmin
 
-  useEffect(() => {    
-    if (clients.length > 0 && !selectedClient) {
-      const firstClientId = clients[0].cliente_id
-      setSelectedClient(firstClientId)
-    }
-  }, [clients, selectedClient])
+  // Função para recarregar membros
+  const loadMembers = useCallback(async (clienteId: string | null) => {
+    if (!clienteId) return
 
-  const fetchMembers = useCallback(async () => {
+    setLoading(true)
+
     try {
-      setLoading(true)
-      
-      const { data, error } = await supabase
-        .from('cliente_members')
-        .select('*, profile:profiles(*)')
-        .eq('cliente_id', selectedClient)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('❌ Erro ao carregar membros:', error)
-        throw error
-      }
-
-      setMembers(data as MemberWithProfile[] || [])
-    } catch (error: any) {
+      const data = await profilesApi.getProfiles(clienteId)
+      setMembers(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar membros:', error)
       toast.error('Erro ao carregar membros')
-      console.error('❌ Erro fatal:', error)
     } finally {
       setLoading(false)
     }
-  }, [supabase, selectedClient])
+  }, [])
 
+  // Carregar membros quando o cliente mudar
   useEffect(() => {
-    if (selectedClient) {
-      fetchMembers()
+    if (selectedClienteId) {
+      loadMembers(selectedClienteId)
     }
-  }, [selectedClient, fetchMembers])
+  }, [selectedClienteId, loadMembers])
 
-  const handleInviteMember = async (email: string, role: UserRole) => {
+  const handleInviteMember = async (email: string, role: UserRole, fullName: string) => {
+    if (!selectedClienteId) return
     try {
-      // Send invitation email via Supabase Admin API
-      const response = await fetch('/api/members/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          role,
-          cliente_id: selectedClient,
-        }),
-      })
-
-      if (!response.ok) throw new Error('Erro ao enviar convite')
-
+      await profilesApi.inviteMember(email, role, selectedClienteId, fullName)
       toast.success('Convite enviado com sucesso!')
       setShowInviteModal(false)
-      fetchMembers()
+      loadMembers(selectedClienteId)
     } catch (error: any) {
       toast.error(error.message || 'Erro ao enviar convite')
     }
@@ -93,14 +67,7 @@ export default function MembersPage() {
 
   const handleResendInvite = async (email: string) => {
     try {
-      const response = await fetch('/api/members/resend-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-
-      if (!response.ok) throw new Error('Erro ao reenviar convite')
-
+      await profilesApi.resendInvite(email)
       toast.success('Convite reenviado com sucesso!')
     } catch (error: any) {
       toast.error(error.message || 'Erro ao reenviar convite')
@@ -108,6 +75,7 @@ export default function MembersPage() {
   }
 
   const handleResetPassword = async (email: string) => {
+    const supabase = createClient()
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/update-password`,
@@ -121,19 +89,17 @@ export default function MembersPage() {
     }
   }
 
-  const handleDeleteMember = async (memberId: string, memberEmail: string) => {
-    if (!confirm(`Tem certeza que deseja remover ${memberEmail}?`)) return
+  const openDeleteModal = (memberId: string, memberEmail: string) => {
+    setDeleteModal({ show: true, memberId, memberEmail })
+  }
 
+  const handleDeleteMember = async () => {
+    const { memberId } = deleteModal
     try {
-      const { error } = await supabase
-        .from('cliente_members')
-        .delete()
-        .eq('id', memberId)
-
-      if (error) throw error
-
+      await profilesApi.deleteProfile(memberId)
       toast.success('Membro removido com sucesso!')
-      fetchMembers()
+      setDeleteModal({ show: false, memberId: '', memberEmail: '' })
+      loadMembers(selectedClienteId)
     } catch (error: any) {
       toast.error(error.message || 'Erro ao remover membro')
     }
@@ -141,34 +107,28 @@ export default function MembersPage() {
 
   const handleUpdateRole = async (memberId: string, newRole: UserRole) => {
     try {
-      const { error } = await supabase
-        .from('cliente_members')
-        .update({ role: newRole })
-        .eq('id', memberId)
-
-      if (error) throw error
-
+      await profilesApi.updateRole(memberId, newRole)
       toast.success('Perfil atualizado com sucesso!')
-      fetchMembers()
+      loadMembers(selectedClienteId)
     } catch (error: any) {
       toast.error(error.message || 'Erro ao atualizar perfil')
     }
   }
 
   const filteredMembers = members.filter(member =>
-    member.profile?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.profile?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const getRoleBadge = (role: UserRole) => {
-    const styles = {
+    const styles: Record<string, string> = {
       super_admin: 'bg-purple-100 text-purple-800',
       admin: 'bg-blue-100 text-blue-800',
       member: 'bg-green-100 text-green-800',
       viewer: 'bg-gray-100 text-gray-800',
     }
 
-    const labels = {
+    const labels: Record<string, string> = {
       super_admin: 'Super Admin',
       admin: 'Administrador',
       member: 'Membro',
@@ -176,19 +136,19 @@ export default function MembersPage() {
     }
 
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[role]}`}>
-        {labels[role]}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[role] || styles.viewer}`}>
+        {labels[role] || role}
       </span>
     )
   }
 
-  // Aguardar carregamento do perfil antes de verificar permissões
+  // Aguardar carregamento do perfil
   if (!profile) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <span className="text-sm text-gray-600 dark:text-gray-400">Carregando...</span>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <span className="text-sm text-gray-600">Carregando...</span>
         </div>
       </div>
     )
@@ -197,8 +157,8 @@ export default function MembersPage() {
   if (!isAdmin) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-          <p className="text-red-800 dark:text-red-400">Você não tem permissão para acessar esta página.</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Você não tem permissão para acessar esta página.</p>
         </div>
       </div>
     )
@@ -208,29 +168,9 @@ export default function MembersPage() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Membros</h1>
-        <p className="text-gray-600 dark:text-gray-400">Gerencie os membros da equipe</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Membros</h1>
+        <p className="text-gray-600">Gerencie os membros da equipe</p>
       </div>
-
-      {/* Client Selector */}
-      {clients.length > 1 && (
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Cliente
-          </label>
-          <select
-            value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
-            className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            {clients.map((client) => (
-              <option key={client.cliente_id} value={client.cliente_id}>
-                {(client as any).clientes?.nome || client.cliente_id}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -241,7 +181,7 @@ export default function MembersPage() {
             placeholder="Buscar membros..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <button
@@ -257,22 +197,22 @@ export default function MembersPage() {
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Carregando membros...</span>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <span className="text-sm text-gray-600">Carregando membros...</span>
           </div>
         </div>
       ) : filteredMembers.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-12 text-center">
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
             Nenhum membro encontrado
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-gray-600 mb-4">
             {searchTerm ? 'Tente buscar com outros termos' : 'Comece convidando membros para sua equipe'}
           </p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -297,15 +237,15 @@ export default function MembersPage() {
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-blue-600 font-medium">
-                          {member.profile?.full_name?.[0]?.toUpperCase() || member.profile?.email[0]?.toUpperCase()}
+                          {member.full_name?.[0]?.toUpperCase() || member.email?.[0]?.toUpperCase() || '?'}
                         </span>
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {member.profile?.full_name || 'Sem nome'}
+                          {member.full_name || 'Sem nome'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {member.profile?.email}
+                          {member.email}
                         </div>
                       </div>
                     </div>
@@ -316,7 +256,7 @@ export default function MembersPage() {
                         value={member.role}
                         onChange={(e) => handleUpdateRole(member.id, e.target.value as UserRole)}
                         className="text-sm border border-gray-300 rounded px-2 py-1"
-                        disabled={member.profile?.role === 'super_admin'}
+                        disabled={member.role === 'super_admin'}
                       >
                         <option value="admin">Administrador</option>
                         <option value="member">Membro</option>
@@ -332,22 +272,22 @@ export default function MembersPage() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => handleResendInvite(member.profile?.email)}
+                        onClick={() => handleResendInvite(member.email)}
                         className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         title="Reenviar convite"
                       >
                         <Mail className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleResetPassword(member.profile?.email)}
+                        onClick={() => handleResetPassword(member.email)}
                         className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
                         title="Resetar senha"
                       >
                         <RefreshCw className="w-4 h-4" />
                       </button>
-                      {member.profile?.role !== 'super_admin' && (
+                      {member.role !== 'super_admin' && (
                         <button
-                          onClick={() => handleDeleteMember(member.id, member.profile?.email)}
+                          onClick={() => openDeleteModal(member.id, member.email)}
                           className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                           title="Remover membro"
                         >
@@ -370,25 +310,35 @@ export default function MembersPage() {
           onInvite={handleInviteMember}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <DeleteConfirmModal
+          memberEmail={deleteModal.memberEmail}
+          onClose={() => setDeleteModal({ show: false, memberId: '', memberEmail: '' })}
+          onConfirm={handleDeleteMember}
+        />
+      )}
     </div>
   )
 }
 
-function InviteModal({ 
-  onClose, 
-  onInvite 
-}: { 
+function InviteModal({
+  onClose,
+  onInvite
+}: {
   onClose: () => void
-  onInvite: (email: string, role: UserRole) => void 
+  onInvite: (email: string, role: UserRole, fullName: string) => void
 }) {
   const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<UserRole>('viewer')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    await onInvite(email, role)
+    await onInvite(email, role, fullName)
     setLoading(false)
   }
 
@@ -406,6 +356,21 @@ function InviteModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="invite-name" className="block text-sm font-medium text-gray-700 mb-2">
+              Nome
+            </label>
+            <input
+              id="invite-name"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Nome completo"
+            />
+          </div>
+
           <div>
             <label htmlFor="invite-email" className="block text-sm font-medium text-gray-700 mb-2">
               Email
@@ -459,6 +424,67 @@ function InviteModal({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+function DeleteConfirmModal({
+  memberEmail,
+  onClose,
+  onConfirm
+}: {
+  memberEmail: string
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+
+  const handleConfirm = async () => {
+    setLoading(true)
+    await onConfirm()
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Remover Membro</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-gray-600">
+            Tem certeza que deseja remover <strong>{memberEmail}</strong> da equipe?
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            O usuário será desvinculado do cliente, mas sua conta continuará existindo.
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={loading}
+            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Removendo...' : 'Remover'}
+          </button>
+        </div>
       </div>
     </div>
   )

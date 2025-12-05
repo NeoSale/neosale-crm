@@ -6,24 +6,20 @@ export interface Profile {
   full_name: string | null
   avatar_url: string | null
   role: UserRole
+  cliente_id: string | null
   created_at: string
   updated_at: string
 }
 
-export interface ClientMember {
+export interface Cliente {
   id: string
-  user_id: string
-  cliente_id: string
-  role: UserRole
+  nome: string
   created_at: string
   updated_at: string
-  profile?: Profile
-  clientes?: any
 }
 
 export interface AuthUser {
   id: string
   email: string
   profile: Profile | null
-  clients: ClientMember[]
 }

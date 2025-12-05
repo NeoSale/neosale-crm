@@ -16,9 +16,16 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
   const [reloadTrigger, setReloadTrigger] = useState(0)
   const { profile } = useAuth()
 
-  // Carregar cliente do localStorage ao iniciar E quando o profile mudar
+  // Carregar cliente do profile ou localStorage ao iniciar
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    // Se o usuário tem cliente_id no profile, usar esse
+    if (profile?.cliente_id) {
+      setSelectedClienteIdState(profile.cliente_id)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('selected_cliente_id', profile.cliente_id)
+      }
+    } else if (typeof window !== 'undefined') {
+      // Fallback para localStorage (para super_admin que pode selecionar qualquer cliente)
       const savedClienteId = localStorage.getItem('selected_cliente_id')
       if (savedClienteId && savedClienteId !== selectedClienteId) {
         setSelectedClienteIdState(savedClienteId)
@@ -57,13 +64,10 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
     }
   }, [selectedClienteId, reloadTrigger])
 
-  // Limpar cliente selecionado se não for super_admin
+  // Para usuários não super_admin, usar sempre o cliente_id do profile
   useEffect(() => {
-    if (profile && profile.role !== 'super_admin') {
-      setSelectedClienteIdState(null)
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('selected_cliente_id')
-      }
+    if (profile && profile.role !== 'super_admin' && profile.cliente_id) {
+      setSelectedClienteIdState(profile.cliente_id)
     }
   }, [profile])
 

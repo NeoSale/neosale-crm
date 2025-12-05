@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
-import { Mail, Lock, User, Chrome, Apple } from 'lucide-react'
+import { Mail, Lock, User, Chrome, Apple, Eye, EyeOff } from 'lucide-react'
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState('')
@@ -13,8 +13,109 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isInvitedUser, setIsInvitedUser] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  // Verificar se usuário veio de um convite (magic link/invite)
+  useEffect(() => {
+    const fillUserData = async (user: any) => {
+      // Preencher email
+      if (user.email) {
+        setEmail(user.email)
+      }
+      
+      // Preencher nome do user_metadata
+      let nameToSet = user.user_metadata?.full_name
+      
+      // Se não tem nome no metadata, buscar do profile no banco
+      if (!nameToSet) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', user.id)
+            .single()
+          
+          if (profile?.full_name) {
+            nameToSet = profile.full_name
+          }
+        } catch (err) {
+          console.error('Erro ao buscar profile:', err)
+        }
+      }
+      
+      if (nameToSet) {
+        setFullName(nameToSet)
+      }
+      
+      setIsInvitedUser(true)
+    }
+
+    const checkInvitedUser = async () => {
+      try {
+        // Verificar se há hash na URL (token do magic link/invite)
+        const hash = window.location.hash
+        if (hash && hash.includes('access_token')) {
+          console.log('Token detectado na URL, processando...')
+          
+          // Extrair tokens do hash
+          const hashParams = new URLSearchParams(hash.substring(1))
+          const accessToken = hashParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token')
+          
+          if (accessToken) {
+            // Definir sessão manualmente com os tokens
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken || '',
+            })
+            
+            if (error) {
+              console.error('Erro ao definir sessão:', error)
+              toast.error('Link expirado ou inválido. Solicite um novo convite.')
+              return
+            }
+            
+            if (data.user) {
+              console.log('Sessão estabelecida para:', data.user.email)
+              await fillUserData(data.user)
+              // Limpar hash da URL
+              window.history.replaceState(null, '', window.location.pathname)
+              return
+            }
+          }
+        }
+
+        // Verificar se já tem sessão
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          await fillUserData(session.user)
+          return
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error)
+      }
+    }
+
+    // Listener para mudanças de autenticação (captura quando o token é processado)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email)
+      
+      if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
+        await fillUserData(session.user)
+      }
+    })
+
+    checkInvitedUser()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,6 +133,51 @@ export default function SignUpPage() {
     setLoading(true)
 
     try {
+      // Se é usuário convidado, usar API admin para definir senha
+      if (isInvitedUser) {
+        // Obter usuário atual antes de atualizar
+        const { data: { user: currentUser }, error: getUserError } = await supabase.auth.getUser()
+        
+        console.log('Usuário atual:', currentUser?.email, 'Erro:', getUserError)
+        
+        if (!currentUser) {
+          setLoading(false)
+          toast.error('Sessão expirada. Por favor, use o link de convite novamente.')
+          return
+        }
+
+        console.log('Definindo senha para usuário:', currentUser.email)
+
+        try {
+          // Usar API admin para definir senha (mais confiável)
+          const response = await fetch('/api/members/set-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, full_name: fullName }),
+          })
+
+          const result = await response.json()
+          console.log('Resultado set-password:', result)
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Erro ao definir senha')
+          }
+
+          // Fazer logout para forçar um novo login limpo com a nova senha
+          await supabase.auth.signOut()
+
+          setLoading(false)
+          toast.success('Senha definida com sucesso! Faça login com sua nova senha.')
+          router.push('/login')
+        } catch (err: any) {
+          console.error('Erro ao definir senha:', err)
+          setLoading(false)
+          toast.error(err.message || 'Erro ao definir senha')
+        }
+        return
+      }
+
+      // Fluxo normal de cadastro
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -151,7 +297,7 @@ export default function SignUpPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
+                  className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 disabled:opacity-60"
                   placeholder="Seu nome"
                 />
               </div>
@@ -169,7 +315,8 @@ export default function SignUpPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
+                  disabled
+                  className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 disabled:opacity-60 disabled:cursor-not-allowed"
                   placeholder="seu@email.com"
                 />
               </div>
@@ -183,14 +330,21 @@ export default function SignUpPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
+                  className="w-full pl-9 pr-10 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -202,14 +356,21 @@ export default function SignUpPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
+                  className="w-full pl-9 pr-10 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -218,19 +379,19 @@ export default function SignUpPage() {
               disabled={loading}
               className="w-full bg-blue-600 text-white py-2 text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Criando conta...' : 'Criar conta'}
+              {loading ? 'Criando conta...' : (isInvitedUser ? 'Definir senha' : 'Criar conta')}
             </button>
           </form>
 
           {/* Sign In Link */}
-          <div className="mt-4 text-center">
+          {/* <div className="mt-4 text-center">
             <p className="text-sm text-gray-400">
               Já tem uma conta?{' '}
               <Link href="/login" className="text-blue-400 hover:text-blue-300 font-medium">
                 Fazer login
               </Link>
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

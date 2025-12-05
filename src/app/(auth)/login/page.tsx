@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
-import { Mail, Lock, Chrome, Apple } from 'lucide-react'
+import { Mail, Lock, Chrome, Apple, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -147,13 +148,20 @@ export default function LoginPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
+                  className="w-full pl-9 pr-10 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -176,14 +184,14 @@ export default function LoginPage() {
           </form>
 
           {/* Sign Up Link */}
-          <div className="mt-4 text-center">
+          {/* <div className="mt-4 text-center">
             <p className="text-sm text-gray-400">
               Não tem uma conta?{' '}
               <Link href="/signup" className="text-blue-400 hover:text-blue-300 font-medium">
                 Criar conta
               </Link>
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

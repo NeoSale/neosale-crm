@@ -3,12 +3,12 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, ClientMember } from '@/types/auth'
+import { Profile, Cliente } from '@/types/auth'
 
 interface AuthContextType {
   user: User | null
   profile: Profile | null
-  clients: ClientMember[]
+  cliente: Cliente | null
   loading: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -18,13 +18,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // Função auxiliar para criar perfil a partir do user do Supabase Auth
 function createProfileFromUser(user: User): Profile {
-
   return {
     id: user.id,
     email: user.email || '',
     full_name: user.user_metadata.full_name || user.user_metadata.name || user.email?.split('@')[0] || 'Usuário',
     avatar_url: user.user_metadata.avatar_url || user.user_metadata.picture || null,
     role: user.user_metadata.role as any,
+    cliente_id: user.user_metadata.cliente_id || null,
     created_at: user.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
@@ -33,7 +33,7 @@ function createProfileFromUser(user: User): Profile {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [clients, setClients] = useState<ClientMember[]>([])
+  const [cliente, setCliente] = useState<Cliente | null>(null)
   const [loading, setLoading] = useState(true)
   
   const supabase = createClient()
@@ -52,13 +52,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('❌ Erro ao buscar perfil da tabela profiles:', dbError)
         userProfile = createProfileFromUser(currentUser)
       } else {
-        // Usar dados da tabela profiles (fonte confiável do role)
+        // Usar dados da tabela profiles (fonte confiável do role e cliente_id)
         userProfile = {
           id: dbProfile.id,
           email: dbProfile.email,
           full_name: dbProfile.full_name || currentUser.email?.split('@')[0] || 'Usuário',
           avatar_url: dbProfile.avatar_url || currentUser.user_metadata?.avatar_url || null,
-          role: dbProfile.role, // ROLE CORRETO vem da tabela profiles
+          role: dbProfile.role,
+          cliente_id: dbProfile.cliente_id,
           created_at: dbProfile.created_at,
           updated_at: dbProfile.updated_at
         }
@@ -70,68 +71,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('user_profile', JSON.stringify(userProfile))
       }
 
-      // Buscar associações de clientes
-      try {
-        if (userProfile.role !== 'super_admin') {
-          const { data: clientsData, error: clientsError } = await supabase
-            .from('cliente_members')
-            .select('*, clientes(*)')
-            .eq('user_id', currentUser.id)
-
-          if (!clientsError && clientsData) {
-            setClients(clientsData)
-            
-            if (typeof window !== 'undefined' && clientsData.length > 0) {
-              const savedClienteId = localStorage.getItem('selected_cliente_id')
-              if (!savedClienteId) {
-                const firstClienteId = clientsData[0].cliente_id
-                localStorage.setItem('selected_cliente_id', firstClienteId)
-              }
-            }
-          } else {
-            setClients([])
-          }
-        } else {
-          // Super admin tem acesso a todos os clientes
-          const { data: allClientes, error: allClientesError } = await supabase
+      // Buscar dados do cliente se houver cliente_id
+      if (userProfile.cliente_id) {
+        try {
+          const { data: clienteData, error: clienteError } = await supabase
             .from('clientes')
             .select('*')
+            .eq('id', userProfile.cliente_id)
+            .single()
 
-          if (!allClientesError && allClientes) {
-            // Criar memberships virtuais para super admin
-            const virtualMemberships = allClientes.map((cliente: any) => ({
-              id: `virtual-${cliente.id}`,
-              user_id: currentUser.id,
-              cliente_id: cliente.id,
-              role: 'super_admin' as const,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              clientes: cliente
-            }))
+          if (!clienteError && clienteData) {
+            setCliente(clienteData)
             
-            setClients(virtualMemberships)
-            
-            if (typeof window !== 'undefined' && virtualMemberships.length > 0) {
-              const savedClienteId = localStorage.getItem('selected_cliente_id')
-              if (!savedClienteId) {
-                const firstClienteId = virtualMemberships[0].cliente_id
-                localStorage.setItem('selected_cliente_id', firstClienteId)
-              }
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('selected_cliente_id', clienteData.id)
             }
           } else {
-            setClients([])
+            setCliente(null)
           }
+        } catch (err) {
+          console.log('⚠️ Erro ao carregar cliente:', err)
+          setCliente(null)
         }
-      } catch (err) {
-        console.log('⚠️ Erro ao carregar clientes:', err)
-        setClients([])
+      } else {
+        setCliente(null)
       }
     } catch (error) {
       console.error('❌ Erro ao carregar perfil:', error)
       // Mesmo com erro, criar perfil básico para não bloquear o usuário
       const basicProfile = createProfileFromUser(currentUser)
       setProfile(basicProfile)
-      setClients([])
+      setCliente(null)
     }
   }, [supabase])
 
@@ -188,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchProfile(session.user)
         } else {
           setProfile(null)
-          setClients([])
+          setCliente(null)
           // Limpar localStorage quando não houver sessão
           if (typeof window !== 'undefined') {
             localStorage.removeItem('user_profile')
@@ -225,12 +195,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setUser(null)
       setProfile(null)
-      setClients([])
+      setCliente(null)
       
       // Limpar localStorage
       if (typeof window !== 'undefined') {
         localStorage.removeItem('selected_cliente_id')
-        localStorage.removeItem('cliente_id')
+        localStorage.removeItem('user_profile')
       }
       
     } catch (error) {
@@ -238,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Mesmo com erro, limpar o estado local
       setUser(null)
       setProfile(null)
-      setClients([])
+      setCliente(null)
       
       // Limpar localStorage
       if (typeof window !== 'undefined') {
@@ -254,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         profile,
-        clients,
+        cliente,
         loading,
         signOut,
         refreshProfile,
