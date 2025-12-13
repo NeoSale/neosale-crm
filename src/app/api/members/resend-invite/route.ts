@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // URL base da aplicação
 const getAppUrl = () => {
@@ -40,29 +41,30 @@ export async function POST(request: Request) {
       redirectTo: `${getAppUrl()}/signup`,
     })
 
-    // Se falhar (ex: SMTP não configurado), gerar magic link
+    // Se falhar (ex: usuário já existe), tentar enviar magic link (OTP) de verdade
     if (inviteError) {
-      console.warn('inviteUserByEmail falhou, gerando magic link:', inviteError.message)
+      console.warn('inviteUserByEmail falhou, tentando enviar magic link via OTP:', inviteError.message)
 
-      const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-        type: 'magiclink',
+      const otpClient = createAdminClient(supabaseUrl, supabaseAnonKey)
+      const { error: otpError } = await otpClient.auth.signInWithOtp({
         email,
         options: {
-          redirectTo: `${getAppUrl()}/signup`,
-        }
+          emailRedirectTo: `${getAppUrl()}/signup`,
+        },
       })
 
-      if (linkError) {
-        throw linkError
+      if (otpError) {
+        return NextResponse.json(
+          {
+            error: `Falha ao reenviar convite por email. Motivo: ${inviteError.message}. Falha ao enviar magic link: ${otpError.message}`,
+          },
+          { status: 500 }
+        )
       }
 
-      if (linkData?.properties?.action_link) {
-        console.log('📧 Magic link gerado para reenvio:', linkData.properties.action_link)
-      }
-
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: true,
-        message: 'Magic link gerado (verifique o console em desenvolvimento)'
+        message: 'Email reenviado com sucesso!'
       })
     }
 

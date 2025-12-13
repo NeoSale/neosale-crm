@@ -20,19 +20,63 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      console.log('Tentando login com:', email)
+      
+      // Usar fetch direto para API do Supabase (evita travamento do cliente)
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnonKey!,
+        },
+        body: JSON.stringify({ email, password }),
       })
+      
+      const result = await response.json()
+      console.log('Resultado login:', result.user?.email || result.error_description)
+      
+      if (!response.ok) {
+        throw new Error(result.error_description || result.msg || 'Credenciais inválidas')
+      }
+      
+      // Salvar sessão no localStorage para o cliente Supabase usar
+      if (result.access_token) {
+        const projectRef = new URL(supabaseUrl!).hostname.split('.')[0]
+        const storageKey = `sb-${projectRef}-auth-token`
+        
+        localStorage.setItem(storageKey, JSON.stringify({
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+          expires_at: Math.floor(Date.now() / 1000) + result.expires_in,
+          expires_in: result.expires_in,
+          token_type: 'bearer',
+          user: result.user,
+        }))
+        console.log('Sessão salva em localStorage')
+        
+        // Salvar perfil básico no localStorage para o AuthContext usar imediatamente
+        localStorage.setItem('user_profile', JSON.stringify({
+          id: result.user.id,
+          email: result.user.email,
+          full_name: result.user.user_metadata?.full_name || result.user.email?.split('@')[0] || 'Usuário',
+          avatar_url: result.user.user_metadata?.avatar_url || null,
+          role: result.user.user_metadata?.role || null,
+          cliente_id: result.user.user_metadata?.cliente_id || null,
+          created_at: result.user.created_at,
+          updated_at: new Date().toISOString(),
+        }))
+      }
 
-      if (error) throw error
-
-      router.push('/')
-      router.refresh()
+      toast.success('Login realizado com sucesso!')
+      // Usar window.location para garantir redirecionamento
+      window.location.href = '/'
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao fazer login')
-    } finally {
+      console.error('Erro no login:', error)
       setLoading(false)
+      toast.error(error.message || 'Erro ao fazer login')
     }
   }
 

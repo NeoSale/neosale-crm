@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -16,22 +16,52 @@ export default function SignUpPage() {
   const [isInvitedUser, setIsInvitedUser] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  // Armazenar dados do usuário convidado usando ref (síncrono, não depende de re-render)
+  const invitedUserDataRef = useRef<{ userId: string; accessToken: string } | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  const fetchWithTimeout = async (input: RequestInfo | URL, init?: RequestInit, timeoutMs = 15000) => {
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
+      return await fetch(input, {
+        ...init,
+        signal: controller.signal,
+      })
+    } finally {
+      window.clearTimeout(timeoutId)
+    }
+  }
 
   // Verificar se usuário veio de um convite (magic link/invite)
   useEffect(() => {
     const fillUserData = async (user: any) => {
+      console.log('fillUserData chamado com:', user?.email, user?.user_metadata)
+      
+      // IMPORTANTE: Setar isInvitedUser primeiro para garantir UI correta
+      setIsInvitedUser(true)
+      
       // Preencher email
       if (user.email) {
+        console.log('Setando email:', user.email)
         setEmail(user.email)
+      }
+      
+      // Função para validar se o nome é válido (não é email)
+      const isValidName = (name: string | null | undefined): boolean => {
+        if (!name) return false
+        // Se parece com email, não é um nome válido
+        if (name.includes('@')) return false
+        return true
       }
       
       // Preencher nome do user_metadata
       let nameToSet = user.user_metadata?.full_name
       
-      // Se não tem nome no metadata, buscar do profile no banco
-      if (!nameToSet) {
+      // Se não tem nome válido no metadata, buscar do profile no banco
+      if (!isValidName(nameToSet)) {
         try {
           const { data: profile } = await supabase
             .from('profiles')
@@ -39,62 +69,169 @@ export default function SignUpPage() {
             .eq('id', user.id)
             .single()
           
-          if (profile?.full_name) {
+          console.log('Profile do banco:', profile)
+          if (profile && isValidName(profile.full_name)) {
             nameToSet = profile.full_name
+          } else {
+            nameToSet = null // Não usar email como nome
           }
         } catch (err) {
           console.error('Erro ao buscar profile:', err)
         }
       }
       
-      if (nameToSet) {
+      if (isValidName(nameToSet)) {
+        console.log('Setando nome:', nameToSet)
         setFullName(nameToSet)
       }
-      
-      setIsInvitedUser(true)
     }
 
     const checkInvitedUser = async () => {
       try {
         // Verificar se há hash na URL (token do magic link/invite)
         const hash = window.location.hash
+        const searchParams = new URLSearchParams(window.location.search)
+        
+        console.log('Verificando convite - hash:', hash, 'search:', window.location.search)
+        
+        // Verificar se há erro no hash (link expirado, inválido, etc)
+        if (hash) {
+          const hashParams = new URLSearchParams(hash.substring(1))
+          const errorCode = hashParams.get('error_code')
+          const errorDescription = hashParams.get('error_description')
+          
+          if (errorCode) {
+            console.error('Erro no link:', errorCode, errorDescription)
+            const message = errorCode === 'otp_expired' 
+              ? 'O link expirou. Por favor, solicite um novo convite.'
+              : (errorDescription?.replace(/\+/g, ' ') || 'Link inválido. Solicite um novo convite.')
+            toast.error(message)
+            // Limpar hash da URL
+            window.history.replaceState(null, '', window.location.pathname)
+            return
+          }
+        }
+        
+        // Alguns links de convite usam query params ao invés de hash
+        const accessTokenFromQuery = searchParams.get('access_token')
+        const refreshTokenFromQuery = searchParams.get('refresh_token')
+        
         if (hash && hash.includes('access_token')) {
-          console.log('Token detectado na URL, processando...')
+          console.log('Token detectado no hash, processando...')
           
           // Extrair tokens do hash
           const hashParams = new URLSearchParams(hash.substring(1))
           const accessToken = hashParams.get('access_token')
           const refreshToken = hashParams.get('refresh_token')
           
+          console.log('accessToken extraído:', accessToken ? 'sim (length: ' + accessToken.length + ')' : 'não')
+          
           if (accessToken) {
-            // Definir sessão manualmente com os tokens
+            // Decodificar JWT para extrair dados do usuário (não depende de setSession)
+            try {
+              const payload = JSON.parse(atob(accessToken.split('.')[1]))
+              console.log('JWT payload:', payload)
+              
+              const userId = payload.sub
+              const userEmail = payload.email
+              
+              if (userId && userEmail) {
+                console.log('Dados extraídos do JWT - userId:', userId, 'email:', userEmail)
+                
+                // Armazenar dados para uso no submit
+                invitedUserDataRef.current = { userId, accessToken }
+                console.log('invitedUserDataRef setado (JWT):', invitedUserDataRef.current)
+                
+                // Setar estado de usuário convidado
+                setIsInvitedUser(true)
+                setEmail(userEmail)
+                
+                // Tentar buscar nome do profile
+                try {
+                  const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', userId)
+                    .single()
+                  
+                  if (profile?.full_name && !profile.full_name.includes('@')) {
+                    setFullName(profile.full_name)
+                  }
+                } catch (e) {
+                  console.log('Não foi possível buscar profile')
+                }
+                
+                // Limpar hash da URL
+                window.history.replaceState(null, '', window.location.pathname)
+                return
+              }
+            } catch (jwtError) {
+              console.error('Erro ao decodificar JWT:', jwtError)
+            }
+            
+            // Fallback: tentar setSession (pode travar)
+            console.log('Tentando setSession como fallback...')
             const { data, error } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken || '',
             })
             
-            if (error) {
-              console.error('Erro ao definir sessão:', error)
-              toast.error('Link expirado ou inválido. Solicite um novo convite.')
-              return
-            }
-            
-            if (data.user) {
+            if (!error && data.user) {
               console.log('Sessão estabelecida para:', data.user.email)
+              invitedUserDataRef.current = { userId: data.user.id, accessToken }
               await fillUserData(data.user)
-              // Limpar hash da URL
               window.history.replaceState(null, '', window.location.pathname)
               return
             }
           }
+        } else if (accessTokenFromQuery) {
+          console.log('Token detectado na query string, processando...')
+          
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessTokenFromQuery,
+            refresh_token: refreshTokenFromQuery || '',
+          })
+          
+          if (error) {
+            console.error('Erro ao definir sessão:', error)
+            toast.error('Link expirado ou inválido. Solicite um novo convite.')
+            return
+          }
+          
+          if (data.user) {
+            console.log('Sessão estabelecida para:', data.user.email)
+            // IMPORTANTE: Armazenar userId e accessToken usando ref (síncrono)
+            invitedUserDataRef.current = { userId: data.user.id, accessToken: accessTokenFromQuery }
+            console.log('invitedUserDataRef setado (query):', invitedUserDataRef.current)
+            await fillUserData(data.user)
+            // Limpar query da URL
+            window.history.replaceState(null, '', window.location.pathname)
+            return
+          }
         }
 
-        // Verificar se já tem sessão
+        // Verificar se já tem sessão existente
         const { data: { session } } = await supabase.auth.getSession()
+        console.log('Sessão existente:', session?.user?.email)
         
-        if (session?.user) {
+        if (session?.user && session.access_token) {
+          // Setar ref com dados da sessão existente
+          invitedUserDataRef.current = { userId: session.user.id, accessToken: session.access_token }
+          console.log('invitedUserDataRef setado (sessão existente):', invitedUserDataRef.current)
           await fillUserData(session.user)
           return
+        }
+        
+        // Fallback: verificar se veio do callback com parâmetros na URL
+        const invitedParam = searchParams.get('invited')
+        const emailParam = searchParams.get('email')
+        
+        if (invitedParam === 'true' && emailParam) {
+          console.log('Usuário convidado via parâmetros URL:', emailParam)
+          setIsInvitedUser(true)
+          setEmail(emailParam)
+          // Limpar query da URL
+          window.history.replaceState(null, '', window.location.pathname)
         }
       } catch (error) {
         console.error('Erro ao verificar sessão:', error)
@@ -105,7 +242,10 @@ export default function SignUpPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email)
       
-      if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
+      if (session?.user && session.access_token && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
+        // Setar ref com dados da sessão
+        invitedUserDataRef.current = { userId: session.user.id, accessToken: session.access_token }
+        console.log('invitedUserDataRef setado (onAuthStateChange):', invitedUserDataRef.current)
         await fillUserData(session.user)
       }
     })
@@ -119,6 +259,8 @@ export default function SignUpPage() {
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    console.log('handleEmailSignUp - isInvitedUser:', isInvitedUser, 'email:', email)
 
     if (password !== confirmPassword) {
       toast.error('As senhas não coincidem')
@@ -135,44 +277,117 @@ export default function SignUpPage() {
     try {
       // Se é usuário convidado, usar API admin para definir senha
       if (isInvitedUser) {
-        // Obter usuário atual antes de atualizar
-        const { data: { user: currentUser }, error: getUserError } = await supabase.auth.getUser()
-        
-        console.log('Usuário atual:', currentUser?.email, 'Erro:', getUserError)
-        
-        if (!currentUser) {
+        // Usar dados armazenados do usuário convidado (ref é síncrono)
+        const userData = invitedUserDataRef.current
+        if (!userData) {
+          console.error('invitedUserDataRef.current não disponível')
           setLoading(false)
           toast.error('Sessão expirada. Por favor, use o link de convite novamente.')
           return
         }
 
-        console.log('Definindo senha para usuário:', currentUser.email)
+        console.log('Definindo senha para usuário com dados armazenados:', userData.userId)
 
         try {
-          // Usar API admin para definir senha (mais confiável)
-          const response = await fetch('/api/members/set-password', {
+          console.log('Chamando /api/members/set-password com token armazenado...')
+          
+          // Usar API admin para definir senha - passar userId e token diretamente
+          const response = await fetchWithTimeout('/api/members/set-password', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password, full_name: fullName }),
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${userData.accessToken}`,
+            },
+            body: JSON.stringify({ 
+              password, 
+              full_name: fullName,
+              user_id: userData.userId 
+            }),
           })
 
-          const result = await response.json()
+          if (response.redirected) {
+            throw new Error('Sua sessão não foi reconhecida pelo servidor. Abra novamente o link de convite e tente de novo.')
+          }
+
+          const contentType = response.headers.get('content-type') || ''
+          const isJson = contentType.includes('application/json')
+
+          const result = isJson
+            ? await response.json().catch(() => ({}))
+            : await response.text().catch(() => '')
+
+          if (!isJson) {
+            throw new Error('Resposta inesperada do servidor ao definir senha (não retornou JSON).')
+          }
+
           console.log('Resultado set-password:', result)
 
           if (!response.ok) {
-            throw new Error(result.error || 'Erro ao definir senha')
+            throw new Error((result as any)?.error || 'Erro ao definir senha')
           }
 
-          // Fazer logout para forçar um novo login limpo com a nova senha
-          await supabase.auth.signOut()
-
-          setLoading(false)
-          toast.success('Senha definida com sucesso! Faça login com sua nova senha.')
-          router.push('/login')
+          // Sucesso! Fazer login automático com a nova senha
+          console.log('Senha definida, fazendo login automático...')
+          
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          
+          const loginResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseAnonKey!,
+            },
+            body: JSON.stringify({ email, password }),
+          })
+          
+          const loginResult = await loginResponse.json()
+          console.log('Resultado login automático:', loginResult.user?.email || loginResult.error_description)
+          
+          if (loginResponse.ok && loginResult.access_token) {
+            // Salvar sessão no localStorage
+            const projectRef = new URL(supabaseUrl!).hostname.split('.')[0]
+            const storageKey = `sb-${projectRef}-auth-token`
+            
+            localStorage.setItem(storageKey, JSON.stringify({
+              access_token: loginResult.access_token,
+              refresh_token: loginResult.refresh_token,
+              expires_at: Math.floor(Date.now() / 1000) + loginResult.expires_in,
+              expires_in: loginResult.expires_in,
+              token_type: 'bearer',
+              user: loginResult.user,
+            }))
+            
+            // Salvar perfil no localStorage
+            localStorage.setItem('user_profile', JSON.stringify({
+              id: loginResult.user.id,
+              email: loginResult.user.email,
+              full_name: fullName || loginResult.user.user_metadata?.full_name || loginResult.user.email?.split('@')[0] || 'Usuário',
+              avatar_url: loginResult.user.user_metadata?.avatar_url || null,
+              role: loginResult.user.user_metadata?.role || null,
+              cliente_id: loginResult.user.user_metadata?.cliente_id || null,
+              created_at: loginResult.user.created_at,
+              updated_at: new Date().toISOString(),
+            }))
+            
+            setLoading(false)
+            toast.success('Senha definida e login realizado com sucesso!')
+            router.push('/')
+          } else {
+            // Fallback: redirecionar para login se o login automático falhar
+            setLoading(false)
+            toast.success('Senha definida com sucesso! Faça login com sua nova senha.')
+            window.location.href = '/login'
+          }
         } catch (err: any) {
           console.error('Erro ao definir senha:', err)
           setLoading(false)
-          toast.error(err.message || 'Erro ao definir senha')
+          const isAbort = err?.name === 'AbortError'
+          toast.error(
+            isAbort
+              ? 'A operação demorou demais. Tente novamente.'
+              : (err.message || 'Erro ao definir senha')
+          )
         }
         return
       }
@@ -297,6 +512,7 @@ export default function SignUpPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
+                  autoComplete="off"
                   className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-400 disabled:opacity-60"
                   placeholder="Seu nome"
                 />
@@ -379,7 +595,7 @@ export default function SignUpPage() {
               disabled={loading}
               className="w-full bg-blue-600 text-white py-2 text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Criando conta...' : (isInvitedUser ? 'Definir senha' : 'Criar conta')}
+              {loading ? (isInvitedUser ? 'Definindo senha...' : 'Criando conta...') : (isInvitedUser ? 'Definir senha' : 'Criar conta')}
             </button>
           </form>
 

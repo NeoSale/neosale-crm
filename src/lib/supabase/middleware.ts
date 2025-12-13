@@ -31,22 +31,29 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/signup') &&
-    !request.nextUrl.pathname.startsWith('/reset-password') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  // TEMPORÁRIO: Desabilitar verificação de autenticação no middleware
+  // O AuthContext no cliente vai gerenciar a autenticação
+  // Isso permite que o login funcione sem depender de cookies SSR
+  
+  // Debug: listar cookies
+  const allCookies = request.cookies.getAll()
+  console.log('Middleware - cookies:', allCookies.map(c => c.name).join(', '))
+  
+  // Verificar se há token de autenticação nos cookies
+  const hasAuthCookie = allCookies.some(c => c.name.includes('auth-token'))
+  
+  if (hasAuthCookie) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    
+    console.log('Middleware - user:', user?.email || 'não autenticado')
+  } else {
+    console.log('Middleware - sem cookie de auth, permitindo acesso (AuthContext vai verificar)')
   }
+  
+  // Por enquanto, não redirecionar - deixar o AuthContext gerenciar
+  // O redirecionamento será feito no cliente se necessário
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:

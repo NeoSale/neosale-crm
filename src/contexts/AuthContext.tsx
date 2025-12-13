@@ -134,18 +134,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession()
       .then(({ data: { session } }: { data: { session: Session | null } }) => {
         clearTimeout(safetyTimeout)
-        setUser(session?.user ?? null)
+        
         if (session?.user) {
+          setUser(session.user)
           fetchProfile(session.user)
+          setLoading(false)
         } else {
-          // Limpar localStorage se não houver sessão
+          // Fallback: verificar se há sessão salva manualmente no localStorage
           if (typeof window !== 'undefined') {
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+            if (supabaseUrl) {
+              const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
+              const storageKey = `sb-${projectRef}-auth-token`
+              const savedSession = localStorage.getItem(storageKey)
+              
+              if (savedSession) {
+                try {
+                  const parsed = JSON.parse(savedSession)
+                  console.log('AuthContext - sessão encontrada no localStorage:', parsed.user?.email)
+                  
+                  if (parsed.access_token && parsed.user) {
+                    // Tentar restaurar a sessão no cliente Supabase
+                    supabase.auth.setSession({
+                      access_token: parsed.access_token,
+                      refresh_token: parsed.refresh_token,
+                    }).then((result: { data: { user: User | null; session: Session | null }; error: Error | null }) => {
+                      if (result.error) {
+                        console.error('Erro ao restaurar sessão:', result.error)
+                        localStorage.removeItem(storageKey)
+                        localStorage.removeItem('user_profile')
+                        setLoading(false)
+                      } else if (result.data.user) {
+                        console.log('Sessão restaurada com sucesso:', result.data.user.email)
+                        setUser(result.data.user)
+                        fetchProfile(result.data.user)
+                        setLoading(false)
+                      }
+                    })
+                    return // Aguardar o setSession
+                  }
+                } catch (e) {
+                  console.error('Erro ao parsear sessão do localStorage:', e)
+                }
+              }
+            }
             localStorage.removeItem('user_profile')
           }
+          setUser(null)
+          setLoading(false)
         }
-        setLoading(false)
       })
-      .catch((error) => {
+      .catch(() => {
         clearTimeout(safetyTimeout)
         setLoading(false)
       })

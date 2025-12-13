@@ -19,7 +19,13 @@ export async function GET(request: Request) {
                            user.app_metadata?.provider === 'email' && !user.confirmed_at
       
       if (isInvitedUser || next.includes('signup')) {
-        return NextResponse.redirect(`${origin}/signup`)
+        // Passar email como parâmetro para garantir que o signup consiga identificar o usuário
+        const signupUrl = new URL(`${origin}/signup`)
+        signupUrl.searchParams.set('invited', 'true')
+        if (user.email) {
+          signupUrl.searchParams.set('email', user.email)
+        }
+        return NextResponse.redirect(signupUrl.toString())
       }
     }
   }
