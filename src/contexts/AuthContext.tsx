@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { createClient, getSupabaseConfig } from '@/lib/supabase/client'
 import { Profile, Cliente } from '@/types/auth'
@@ -35,10 +35,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [loading, setLoading] = useState(true)
+  const fetchingProfileRef = useRef<string | null>(null)
   
   const supabase = createClient()
 
   const fetchProfile = useCallback(async (currentUser: User) => {
+    // Evitar chamadas duplicadas para o mesmo usuário
+    if (fetchingProfileRef.current === currentUser.id) {
+      console.log('⏭️ fetchProfile já em andamento para:', currentUser.email)
+      return
+    }
+    fetchingProfileRef.current = currentUser.id
+    
     try {    
       console.log('🔍 Buscando perfil para:', currentUser.id, currentUser.email)
       
@@ -107,40 +115,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const basicProfile = createProfileFromUser(currentUser)
       setProfile(basicProfile)
       setCliente(null)
+    } finally {
+      // Limpar ref após completar (com delay para evitar chamadas imediatas)
+      setTimeout(() => {
+        fetchingProfileRef.current = null
+      }, 1000)
     }
   }, [supabase])
 
   const refreshProfile = useCallback(async () => {
     if (user) {
+      // Limpar ref para forçar refresh
+      fetchingProfileRef.current = null
       await fetchProfile(user)
     }
   }, [user, fetchProfile])
 
   useEffect(() => {
-    // Carregar perfil do localStorage primeiro (para evitar perder o role)
+    // Carregar perfil e user temporário do localStorage primeiro
+    // Isso evita redirecionamento prematuro para /login enquanto a sessão é verificada
     if (typeof window !== 'undefined') {
       const savedProfile = localStorage.getItem('user_profile')
       if (savedProfile) {
         try {
           const parsedProfile = JSON.parse(savedProfile)
           setProfile(parsedProfile)
+          // Criar user temporário para evitar redirecionamento
+          if (parsedProfile.id && parsedProfile.email) {
+            console.log('📦 Carregando user temporário do localStorage:', parsedProfile.email)
+            setUser({ id: parsedProfile.id, email: parsedProfile.email } as User)
+          }
         } catch (error) {
           console.error('❌ Erro ao carregar perfil do localStorage:', error)
         }
       }
     }
 
-    // Timeout de segurança: força loading = false após 1 segundo
+    // Timeout de segurança: força loading = false após 3 segundos
     const safetyTimeout = setTimeout(() => {
+      console.log('⚠️ Safety timeout - forçando loading = false')
       setLoading(false)
-    }, 100)
+    }, 3000)
 
     // Get initial session
+    console.log('🔄 AuthContext - buscando sessão...')
     supabase.auth.getSession()
       .then(({ data: { session } }: { data: { session: Session | null } }) => {
         clearTimeout(safetyTimeout)
+        console.log('📦 AuthContext - getSession resultado:', session?.user?.email || 'sem sessão')
         
         if (session?.user) {
+          console.log('✅ AuthContext - sessão encontrada, setando user')
           setUser(session.user)
           fetchProfile(session.user)
           setLoading(false)

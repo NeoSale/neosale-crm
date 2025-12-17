@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient, getSupabaseConfig } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import { Mail, Lock, Chrome, Apple, Eye, EyeOff } from 'lucide-react'
 
@@ -22,43 +22,28 @@ export default function LoginPage() {
     try {
       console.log('Tentando login com:', email)
       
-      // Usar fetch direto para API do Supabase (evita travamento do cliente)
-      // Usa getSupabaseConfig para obter valores de runtime em produção
-      const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig()
-      
-      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey!,
-        },
-        body: JSON.stringify({ email, password }),
+      // Usar cliente Supabase diretamente
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       })
       
-      const result = await response.json()
-      console.log('Resultado login:', result.user?.email || result.error_description)
-      
-      if (!response.ok) {
-        throw new Error(result.error_description || result.msg || 'Credenciais inválidas')
+      if (error) {
+        throw error
       }
       
-      // Configurar sessão no cliente Supabase (isso configura os cookies corretamente)
-      if (result.access_token) {
-        await supabase.auth.setSession({
-          access_token: result.access_token,
-          refresh_token: result.refresh_token,
-        })
-        console.log('Sessão configurada no cliente Supabase')
-        
-        // Salvar perfil básico no localStorage para o AuthContext usar imediatamente
+      console.log('Login bem-sucedido:', data.user?.email)
+      
+      // Salvar perfil básico no localStorage para o AuthContext usar imediatamente
+      if (data.user) {
         localStorage.setItem('user_profile', JSON.stringify({
-          id: result.user.id,
-          email: result.user.email,
-          full_name: result.user.user_metadata?.full_name || result.user.email?.split('@')[0] || 'Usuário',
-          avatar_url: result.user.user_metadata?.avatar_url || null,
-          role: result.user.user_metadata?.role || null,
-          cliente_id: result.user.user_metadata?.cliente_id || null,
-          created_at: result.user.created_at,
+          id: data.user.id,
+          email: data.user.email,
+          full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Usuário',
+          avatar_url: data.user.user_metadata?.avatar_url || null,
+          role: data.user.user_metadata?.role || null,
+          cliente_id: data.user.user_metadata?.cliente_id || null,
+          created_at: data.user.created_at,
           updated_at: new Date().toISOString(),
         }))
       }
