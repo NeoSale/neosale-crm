@@ -40,11 +40,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = useCallback(async (currentUser: User) => {
     try {    
+      console.log('🔍 Buscando perfil para:', currentUser.id, currentUser.email)
+      
       const { data: dbProfile, error: dbError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single()
+      
+      console.log('📦 Resultado da query profiles:', { dbProfile, dbError })
       
       let userProfile: Profile
       
@@ -63,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: dbProfile.created_at,
           updated_at: dbProfile.updated_at
         }
+        console.log('✅ Perfil carregado do banco:', userProfile)
       }
       
       setProfile(userProfile)

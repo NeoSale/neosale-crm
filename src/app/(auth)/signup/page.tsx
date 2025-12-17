@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import toast from 'react-hot-toast'
 import { Mail, Lock, User, Chrome, Apple, Eye, EyeOff } from 'lucide-react'
 
@@ -239,7 +240,7 @@ export default function SignUpPage() {
     }
 
     // Listener para mudanças de autenticação (captura quando o token é processado)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       console.log('Auth state changed:', event, session?.user?.email)
       
       if (session?.user && session.access_token && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {

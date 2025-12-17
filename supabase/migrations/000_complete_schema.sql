@@ -240,10 +240,12 @@ END $$;
 -- 10. SET SUPER ADMIN
 -- =============================================================================
 
--- Set super_admin role for the main admin user (upsert)
-INSERT INTO profiles (email, role)
-VALUES ('neosaleai@gmail.com', 'super_admin')
-ON CONFLICT (email) DO UPDATE SET role = 'super_admin';
+-- Set super_admin role for the main admin user
+-- Note: The user must already exist in auth.users (created via signup or dashboard)
+-- The profile is created automatically by the handle_new_user trigger
+UPDATE profiles
+SET role = 'super_admin'
+WHERE email = 'neosaleai@gmail.com';
 
 -- =============================================================================
 -- DONE
