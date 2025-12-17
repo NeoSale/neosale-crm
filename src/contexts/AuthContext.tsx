@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, getSupabaseConfig } from '@/lib/supabase/client'
 import { Profile, Cliente } from '@/types/auth'
 
 interface AuthContextType {
@@ -42,11 +42,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {    
       console.log('🔍 Buscando perfil para:', currentUser.id, currentUser.email)
       
-      const { data: dbProfile, error: dbError } = await supabase
+      // Adicionar timeout para evitar travamento
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single()
+      
+      const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout ao buscar perfil')), 10000)
+      )
+      
+      const { data: dbProfile, error: dbError } = await Promise.race([profilePromise, timeoutPromise])
       
       console.log('📦 Resultado da query profiles:', { dbProfile, dbError })
       
@@ -147,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           // Fallback: verificar se há sessão salva manualmente no localStorage
           if (typeof window !== 'undefined') {
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+            const { url: supabaseUrl } = getSupabaseConfig()
             if (supabaseUrl) {
               const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
               const storageKey = `sb-${projectRef}-auth-token`

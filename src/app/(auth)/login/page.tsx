@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, getSupabaseConfig } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import { Mail, Lock, Chrome, Apple, Eye, EyeOff } from 'lucide-react'
 
@@ -23,8 +23,8 @@ export default function LoginPage() {
       console.log('Tentando login com:', email)
       
       // Usar fetch direto para API do Supabase (evita travamento do cliente)
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      // Usa getSupabaseConfig para obter valores de runtime em produção
+      const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig()
       
       const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
         method: 'POST',

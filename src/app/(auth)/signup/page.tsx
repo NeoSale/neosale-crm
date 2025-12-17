@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, getSupabaseConfig } from '@/lib/supabase/client'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import toast from 'react-hot-toast'
 import { Mail, Lock, User, Chrome, Apple, Eye, EyeOff } from 'lucide-react'
@@ -330,8 +330,7 @@ export default function SignUpPage() {
           // Sucesso! Fazer login automático com a nova senha
           console.log('Senha definida, fazendo login automático...')
           
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-          const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig()
           
           const loginResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
             method: 'POST',

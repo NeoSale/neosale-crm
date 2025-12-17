@@ -4,7 +4,8 @@ let supabaseClient: ReturnType<typeof createBrowserClient> | null = null
 
 // Função para obter as variáveis do Supabase
 // Next.js substitui process.env.NEXT_PUBLIC_* em tempo de build, então precisamos acessar diretamente
-function getSupabaseConfig(): { url: string; anonKey: string } {
+// Exportada para uso em outras partes do código (ex: login page)
+export function getSupabaseConfig(): { url: string; anonKey: string } {
   // Valores do build-time (Next.js substitui essas referências literais)
   let url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   let anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
