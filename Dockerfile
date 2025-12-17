@@ -1,7 +1,13 @@
-# Etapa 1: Build com variáveis de ambiente do EasyPanel
+# Etapa 1: Build com variáveis de ambiente
 FROM node:18-alpine AS builder
 
 WORKDIR /app
+
+# Build args para variáveis NEXT_PUBLIC_* (substituídas em build-time pelo Next.js)
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_APP_URL
 
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -11,10 +17,11 @@ RUN mkdir -p public
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV ESLINT_NO_DEV_ERRORS=true
-# Variáveis temporárias para o build (serão sobrescritas em runtime)
-ENV NEXT_PUBLIC_API_URL=http://localhost:3000
-ENV NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key
+# Usar os build args como variáveis de ambiente durante o build
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 
 RUN npm run build
 
