@@ -34,6 +34,8 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        {/* Runtime config para variáveis de ambiente em produção */}
+        <script src="/runtime-config.js" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
