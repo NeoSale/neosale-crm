@@ -6,7 +6,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export async function GET(request: NextRequest) {
   try {
-    const clienteId = request.headers.get('x-cliente-id')
+    const clienteId = request.headers.get('cliente_id')
     
     if (!clienteId) {
       return NextResponse.json(

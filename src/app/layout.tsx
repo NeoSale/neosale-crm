@@ -34,25 +34,6 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        {/* Runtime config para variáveis de ambiente em produção - carrega síncronamente */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                var xhr = new XMLHttpRequest();
-                xhr.open('GET', '/runtime-config.js', false);
-                try {
-                  xhr.send();
-                  if (xhr.status === 200) {
-                    eval(xhr.responseText);
-                  }
-                } catch (e) {
-                  console.warn('Failed to load runtime-config.js:', e);
-                }
-              })();
-            `,
-          }}
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: `

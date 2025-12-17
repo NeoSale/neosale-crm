@@ -345,18 +345,11 @@ export default function SignUpPage() {
           console.log('Resultado login automático:', loginResult.user?.email || loginResult.error_description)
           
           if (loginResponse.ok && loginResult.access_token) {
-            // Salvar sessão no localStorage
-            const projectRef = new URL(supabaseUrl!).hostname.split('.')[0]
-            const storageKey = `sb-${projectRef}-auth-token`
-            
-            localStorage.setItem(storageKey, JSON.stringify({
+            // Configurar sessão no cliente Supabase (isso configura os cookies corretamente)
+            await supabase.auth.setSession({
               access_token: loginResult.access_token,
               refresh_token: loginResult.refresh_token,
-              expires_at: Math.floor(Date.now() / 1000) + loginResult.expires_in,
-              expires_in: loginResult.expires_in,
-              token_type: 'bearer',
-              user: loginResult.user,
-            }))
+            })
             
             // Salvar perfil no localStorage
             localStorage.setItem('user_profile', JSON.stringify({

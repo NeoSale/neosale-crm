@@ -42,20 +42,13 @@ export default function LoginPage() {
         throw new Error(result.error_description || result.msg || 'Credenciais inválidas')
       }
       
-      // Salvar sessão no localStorage para o cliente Supabase usar
+      // Configurar sessão no cliente Supabase (isso configura os cookies corretamente)
       if (result.access_token) {
-        const projectRef = new URL(supabaseUrl!).hostname.split('.')[0]
-        const storageKey = `sb-${projectRef}-auth-token`
-        
-        localStorage.setItem(storageKey, JSON.stringify({
+        await supabase.auth.setSession({
           access_token: result.access_token,
           refresh_token: result.refresh_token,
-          expires_at: Math.floor(Date.now() / 1000) + result.expires_in,
-          expires_in: result.expires_in,
-          token_type: 'bearer',
-          user: result.user,
-        }))
-        console.log('Sessão salva em localStorage')
+        })
+        console.log('Sessão configurada no cliente Supabase')
         
         // Salvar perfil básico no localStorage para o AuthContext usar imediatamente
         localStorage.setItem('user_profile', JSON.stringify({

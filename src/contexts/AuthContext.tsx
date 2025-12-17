@@ -42,18 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {    
       console.log('🔍 Buscando perfil para:', currentUser.id, currentUser.email)
       
-      // Adicionar timeout para evitar travamento
-      const profilePromise = supabase
+      const { data: dbProfile, error: dbError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single()
-      
-      const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout ao buscar perfil')), 10000)
-      )
-      
-      const { data: dbProfile, error: dbError } = await Promise.race([profilePromise, timeoutPromise])
       
       console.log('📦 Resultado da query profiles:', { dbProfile, dbError })
       

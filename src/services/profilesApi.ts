@@ -3,9 +3,17 @@
 import { Profile, UserRole } from '@/types/auth';
 import ToastInterceptor, { ToastConfig } from './toastInterceptor';
 import { getClienteId } from '../utils/cliente-utils';
+import { getValidatedApiUrl } from '../utils/api-config';
 
-// Usar path relativo para endpoints internos do Next.js (evita CORS)
-const API_BASE_URL = '/api';
+// Validar e obter URL da API de forma segura
+let API_BASE_URL: string;
+try {
+  API_BASE_URL = getValidatedApiUrl();
+} catch (error) {
+  console.error('Erro na configuração da API de Profiles:', error);
+  // Em caso de erro, usar uma URL que causará erro explícito
+  API_BASE_URL = '';
+}
 
 // Interface para resposta da API
 interface ApiResponse<T> {
@@ -40,7 +48,7 @@ class ProfilesApiService {
       };
 
       if (clienteId) {
-        defaultHeaders['x-cliente-id'] = clienteId;
+        defaultHeaders['cliente_id'] = clienteId;
       }
 
       const response = await fetch(url, {
@@ -99,7 +107,7 @@ class ProfilesApiService {
   async getProfiles(clienteId?: string, toastConfig?: ToastConfig): Promise<Profile[]> {
     const headers: Record<string, string> = {};
     if (clienteId) {
-      headers['x-cliente-id'] = clienteId;
+      headers['cliente_id'] = clienteId;
     }
 
     const response = await this.request<Profile[]>('/profiles', {
