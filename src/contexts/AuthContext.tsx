@@ -50,11 +50,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {    
       console.log('🔍 Buscando perfil para:', currentUser.id, currentUser.email)
       
-      const { data: dbProfile, error: dbError } = await supabase
+      // Query com timeout de 5 segundos
+      const queryPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single()
+      
+      const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
+        setTimeout(() => {
+          console.log('⏱️ Timeout na query de perfil')
+          resolve({ data: null, error: { message: 'Query timeout' } })
+        }, 5000)
+      })
+      
+      const { data: dbProfile, error: dbError } = await Promise.race([queryPromise, timeoutPromise])
       
       console.log('📦 Resultado da query profiles:', { dbProfile, dbError })
       
@@ -134,12 +144,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Carregar perfil e user temporário do localStorage primeiro
     // Isso evita redirecionamento prematuro para /login enquanto a sessão é verificada
+    let hasLocalProfile = false
     if (typeof window !== 'undefined') {
       const savedProfile = localStorage.getItem('user_profile')
       if (savedProfile) {
         try {
           const parsedProfile = JSON.parse(savedProfile)
           setProfile(parsedProfile)
+          hasLocalProfile = true
           // Criar user temporário para evitar redirecionamento
           if (parsedProfile.id && parsedProfile.email) {
             console.log('📦 Carregando user temporário do localStorage:', parsedProfile.email)
@@ -167,6 +179,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           console.log('✅ AuthContext - sessão encontrada, setando user')
           setUser(session.user)
+          // Sempre buscar perfil do banco para garantir role atualizado
+          // Limpar ref para permitir nova busca
+          fetchingProfileRef.current = null
           fetchProfile(session.user)
           setLoading(false)
         } else {
