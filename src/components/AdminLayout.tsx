@@ -61,19 +61,19 @@ const navigation: MenuItem[] = [
     ]
   },
   {
-    name: 'Follow Up',
-    icon: SpeakerWaveIcon,
+    name: 'Mensagens Automáticas',
+    icon: PaperAirplaneIcon,
     children: [
       {
         name: 'Relatórios',
         icon: ChartBarIcon,
         children: [
-          { name: 'Geral', href: '/followup/relatorio/geral', icon: PresentationChartBarIcon },
-          { name: 'Por Dia', href: '/followup/relatorio/por-dia', icon: DocumentChartBarIcon },
+          { name: 'Geral', href: '/automaticMessages/relatorio/geral', icon: PresentationChartBarIcon },
+          { name: 'Por Dia', href: '/automaticMessages/relatorio/por-dia', icon: DocumentChartBarIcon },
         ]
       },
-      { name: 'Mensagens', href: '/followup/mensagens', icon: PaperAirplaneIcon },
-      { name: 'Configurações', href: '/followup/configuracoes', icon: CogIcon },
+      { name: 'Mensagens', href: '/automaticMessages/mensagens', icon: PaperAirplaneIcon },
+      { name: 'Configurações', href: '/automaticMessages/configuracoes', icon: CogIcon },
     ]
   },
   // {
@@ -563,12 +563,15 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                                 pathname === '/followup/mensagens' ? 'Follow Up - Mensagens' :
                                   pathname === '/followup/agendamento' ? 'Follow Up - Agendamento' :
                                     pathname.startsWith('/followup') ? 'Follow Up' :
-                                      pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
-                                        pathname.startsWith('/integracoes') ? 'Integrações' :
-                                          pathname === '/reports' ? 'Relatórios' :
-                                            pathname === '/documents' ? 'Documentos' :
-                                              pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
-                                                pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
+                                      pathname === '/automaticMessages/configuracoes' ? 'Mensagens Automáticas - Configurações' :
+                                        pathname === '/automaticMessages/mensagens' ? 'Mensagens Automáticas - Mensagens' :
+                                          pathname.startsWith('/automaticMessages') ? 'Mensagens Automáticas' :
+                                            pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
+                                              pathname.startsWith('/integracoes') ? 'Integrações' :
+                                                pathname === '/reports' ? 'Relatórios' :
+                                                  pathname === '/documents' ? 'Documentos' :
+                                                    pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
+                                                      pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
               </h2>
               
               {/* Combobox de clientes - apenas para super_admin */}

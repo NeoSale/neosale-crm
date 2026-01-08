@@ -106,7 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!clienteError && clienteData) {
             setCliente(clienteData)
             
-            if (typeof window !== 'undefined') {
+            // Só setar selected_cliente_id automaticamente se NÃO for super_admin
+            // Super_admin pode selecionar qualquer cliente manualmente
+            if (typeof window !== 'undefined' && userProfile.role !== 'super_admin') {
               localStorage.setItem('selected_cliente_id', clienteData.id)
             }
           } else {

@@ -18,14 +18,24 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
 
   // Carregar cliente do profile ou localStorage ao iniciar
   useEffect(() => {
-    // Se o usuário tem cliente_id no profile, usar esse
-    if (profile?.cliente_id) {
+    // Super_admin pode selecionar qualquer cliente, então priorizar localStorage
+    if (profile?.role === 'super_admin') {
+      if (typeof window !== 'undefined') {
+        const savedClienteId = localStorage.getItem('selected_cliente_id')
+        if (savedClienteId && savedClienteId !== selectedClienteId) {
+          setSelectedClienteIdState(savedClienteId)
+        }
+        // Se não tem nada no localStorage, não setar nada (permite ver todos)
+      }
+    } 
+    // Para outros usuários, usar o cliente_id do profile
+    else if (profile?.cliente_id) {
       setSelectedClienteIdState(profile.cliente_id)
       if (typeof window !== 'undefined') {
         localStorage.setItem('selected_cliente_id', profile.cliente_id)
       }
     } else if (typeof window !== 'undefined') {
-      // Fallback para localStorage (para super_admin que pode selecionar qualquer cliente)
+      // Fallback para localStorage
       const savedClienteId = localStorage.getItem('selected_cliente_id')
       if (savedClienteId && savedClienteId !== selectedClienteId) {
         setSelectedClienteIdState(savedClienteId)
