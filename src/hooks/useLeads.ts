@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { leadsApi, Lead } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
+import { useCliente } from '../contexts/ClienteContext';
 
 export interface LeadsStats {
   total: number;
@@ -47,16 +48,18 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const { selectedClienteId } = useCliente();
 
   // Verificar se estamos no lado do cliente
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Obter cliente_id usando o utilitário global
+  // Obter cliente_id usando o utilitário global ou do contexto
   const currentClienteId = useCallback(() => {
-    return getClienteId(cliente_id);
-  }, [cliente_id]);
+    // Prioridade: 1. selectedClienteId do contexto, 2. cliente_id passado como prop, 3. getClienteId
+    return selectedClienteId || getClienteId(cliente_id);
+  }, [cliente_id, selectedClienteId]);
 
 
 
@@ -426,6 +429,13 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
       setStats(localStats);
     }
   }, [leads]);
+
+  // Recarregar dados quando o cliente selecionado mudar
+  useEffect(() => {
+    if (isClient && selectedClienteId !== undefined) {
+      fetchLeads();
+    }
+  }, [selectedClienteId, isClient, fetchLeads]);
 
   return {
     leads,

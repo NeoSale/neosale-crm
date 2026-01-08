@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, Bars3Icon, Bars3BottomLeftIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import {
   HomeIcon,
   UsersIcon,
@@ -20,7 +20,11 @@ import {
 import { APP_VERSION } from '../utils/app-version';
 import ThemeToggle from './ThemeToggle';
 import { clientesApi, Cliente } from '../services/clientesApi';
-import { BookOpenIcon, Bot, CalendarIcon, DatabaseIcon } from 'lucide-react';
+import { BookOpenIcon, Bot, CalendarIcon, DatabaseIcon, LogOut, UserCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useCliente } from '../contexts/ClienteContext';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -45,7 +49,7 @@ const navigation: MenuItem[] = [
     children: [
       // { name: 'WhatsApp V1', href: '/integracoes/whatsapp', icon: PaperAirplaneIcon },
       { name: 'WhatsApp', href: '/integracoes/whatsapp-v2', icon: PaperAirplaneIcon },
-      { name: 'Google Calendar', href: '/integracoes/google-calendar', icon: CalendarIcon },
+      // { name: 'Google Calendar', href: '/integracoes/google-calendar', icon: CalendarIcon },
     ]
   },
   {
@@ -83,7 +87,9 @@ const navigation: MenuItem[] = [
     name: 'Configurações',
     icon: CogIcon,
     children: [
+      { name: 'Perfil', href: '/configuracoes/perfil', icon: UsersIcon },
       { name: 'Negócio', href: '/configuracoes/negocio', icon: CogIcon },
+      { name: 'Membros', href: '/members', icon: UsersIcon },
     ]
   },
 ];
@@ -107,6 +113,10 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isInChat, setIsInChat] = useState(false);
+  const { user, profile, signOut } = useAuth();
+  const { selectedClienteId, setSelectedClienteId } = useCliente();
+  const router = useRouter();
+  const supabase = createClient();
   
   // Escutar mudanças de estado do chat
   useEffect(() => {
@@ -141,16 +151,25 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   // Função para lidar com a seleção de cliente
   const handleClienteChange = (clienteId: string) => {
     setSelectedCliente(clienteId);
-    if (clienteId) {
-      // Salvar no localStorage
-      localStorage.setItem('cliente_id', clienteId);
-      // Recarregar a página para atualizar os dados
-      window.location.reload();
-    } else {
-      // Remover do localStorage se nenhum cliente for selecionado
-      localStorage.removeItem('cliente_id');
-      // Recarregar a página para limpar os dados
-      window.location.reload();
+    setSelectedClienteId(clienteId || null);
+  };
+
+  // Função para logout
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      
+      // Tentar com router.push primeiro
+      router.push('/login');
+      
+      // Fallback: forçar redirecionamento após 500ms
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 500);
+      
+    } catch (error) {
+      // Forçar redirecionamento imediatamente
+      window.location.href = '/login';
     }
   };
 
@@ -162,6 +181,15 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
     return url.pathname + url.search;
   };
 
+  // Sincronizar selectedCliente com selectedClienteId do contexto
+  useEffect(() => {
+    if (selectedClienteId) {
+      setSelectedCliente(selectedClienteId);
+    } else {
+      setSelectedCliente('');
+    }
+  }, [selectedClienteId]);
+
   // Verificar parâmetro cliente_id na URL e carregar do localStorage
   useEffect(() => {
     const clienteIdFromUrl = searchParams.get('cliente_id');
@@ -169,19 +197,14 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
     if (clienteIdFromUrl) {
       // Se há cliente_id na URL, usar ele e bloquear o select
       setSelectedCliente(clienteIdFromUrl);
+      setSelectedClienteId(clienteIdFromUrl);
       setClienteFromUrl(true);
       setCurrentClienteId(clienteIdFromUrl);
-      localStorage.setItem('cliente_id', clienteIdFromUrl);
     } else {
-      // Se não há cliente_id na URL, verificar localStorage e permitir troca
-      const savedClienteId = localStorage.getItem('cliente_id');
-      if (savedClienteId) {
-        setSelectedCliente(savedClienteId);
-      }
       setClienteFromUrl(false);
       setCurrentClienteId('');
     }
-  }, [searchParams]);
+  }, [searchParams, setSelectedClienteId]);
 
   // Carregar clientes quando o tooltip for aberto
   useEffect(() => {
@@ -251,7 +274,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
           'bg-white dark:bg-gray-900 shadow-lg transition-all duration-300 ease-in-out flex flex-col',
           'fixed lg:relative inset-y-0 left-0 z-50',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-          sidebarOpen ? 'w-46' : 'w-15'
+          sidebarOpen ? 'w-54' : 'w-15'
         )}
         suppressHydrationWarning
       >
@@ -261,13 +284,13 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
             <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
               <img
                 src="/icone-azul.png"
-                alt="NeoSale Logo"
+                alt="NeoCRM Logo"
                 className="w-8 h-8"
               />
             </div>
             {sidebarOpen && (
               <div className="flex flex-col">
-                <h1 className="text-xl font-bold text-primary">NeoSale</h1>
+                <h1 className="text-xl font-bold text-primary">NeoCRM</h1>
               </div>
             )}
           </div>
@@ -276,8 +299,9 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="hidden lg:block p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title="Recolher menu"
               >
-                <ChevronLeftIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                <Bars3BottomLeftIcon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
               </button>
             )}
             <button
@@ -522,8 +546,9 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                 <button
                   onClick={() => setSidebarOpen(true)}
                   className="hidden lg:block p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-300 rounded-md transition-colors"
+                  title="Expandir menu"
                 >
-                  <ChevronRightIcon className="h-5 w-5" />
+                  <Bars3Icon className="h-6 w-6" />
                 </button>
               )}
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -545,6 +570,28 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                                               pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
                                                 pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
               </h2>
+              
+              {/* Combobox de clientes - apenas para super_admin */}
+              {/* {profile?.role === 'super_admin' && (
+                <div className="ml-6">
+                  <select
+                    value={selectedCliente}
+                    onChange={(e) => handleClienteChange(e.target.value)}
+                    onFocus={loadClientes}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm min-w-[200px]"
+                    disabled={loadingClientes}
+                  >
+                    <option value="">
+                      {loadingClientes ? 'Carregando...' : 'Todos os clientes'}
+                    </option>
+                    {clientes.map((cliente) => (
+                      <option key={cliente.id} value={cliente.id}>
+                        {cliente.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )} */}
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
@@ -565,42 +612,61 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
                 {showTooltip && (
                   <div className="absolute right-0 top-10 w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
-                    {/* Nome do usuário */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Usuário
-                      </label>
-                      <div className="text-sm text-gray-900 dark:text-gray-100 font-semibold">
-                        Admin
+                    {/* Nome do usuário e perfil */}
+                    <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                          <UserCircle className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {profile?.full_name || user?.email?.split('@')[0] || 'Usuário'}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {user?.email}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          profile?.role === 'super_admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                          profile?.role === 'admin' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                          profile?.role === 'member' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          profile?.role === 'viewer' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                        }`}>
+                          {profile?.role}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Select de clientes */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Cliente
-                      </label>
-                      <select
-                        value={selectedCliente}
-                        onChange={(e) => handleClienteChange(e.target.value)}
-                        className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${clienteFromUrl ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''
-                          }`}
-                        disabled={loadingClientes || (clienteFromUrl && !window.location.hostname.includes('localhost'))}
-                        title={clienteFromUrl && !window.location.hostname.includes('localhost') ? 'Cliente definido via URL - não é possível alterar' : ''}
-                      >
-                        <option value="">
-                          {loadingClientes ? 'Carregando...' : 'Selecione um cliente'}
-                        </option>
-                        {clientes.map((cliente) => (
-                          <option key={cliente.id} value={cliente.id}>
-                            {cliente.nome}
+                    {/* Select de clientes - apenas para super_admin */}
+                    {profile?.role === 'super_admin' && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Cliente
+                        </label>
+                        <select
+                          value={selectedCliente}
+                          onChange={(e) => handleClienteChange(e.target.value)}
+                          className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${clienteFromUrl ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed' : ''
+                            }`}
+                          disabled={loadingClientes || (clienteFromUrl && !window.location.hostname.includes('localhost'))}
+                          title={clienteFromUrl && !window.location.hostname.includes('localhost') ? 'Cliente definido via URL - não é possível alterar' : ''}
+                        >
+                          <option value="">
+                            {loadingClientes ? 'Carregando...' : 'Todos os clientes'}
                           </option>
-                        ))}
-                      </select>
-                    </div>
+                          {clientes.map((cliente) => (
+                            <option key={cliente.id} value={cliente.id}>
+                              {cliente.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
                     {/* Versão do sistema */}
-                    <div className="mb-2">
+                    <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Versão do Sistema
                       </label>
@@ -609,13 +675,27 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                       </div>
                     </div>
 
-                    {/* Botão para fechar */}
-                    <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
+                    {/* Botões de ação */}
+                    <div className="space-y-2">
                       <button
-                        onClick={() => setShowTooltip(false)}
-                        className="px-3 py-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
+                        onClick={() => {
+                          setShowTooltip(false);
+                          router.push('/configuracoes/perfil');
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                       >
-                        Fechar
+                        <UserCircle className="w-4 h-4" />
+                        Editar Perfil
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowTooltip(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sair
                       </button>
                     </div>
                   </div>

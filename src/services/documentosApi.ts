@@ -2,7 +2,6 @@
 
 import ToastInterceptor, { ToastConfig } from './toastInterceptor';
 import { getValidatedApiUrl } from '../utils/api-config';
-import { getClienteId } from '../utils/cliente-utils';
 
 export interface Documento {
   id?: string;
@@ -58,8 +57,7 @@ try {
 }
 
 class DocumentosApiService {
-  private getHeaders(): Record<string, string> {
-    const clienteId = getClienteId();
+  private getHeaders(clienteId?: string): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -74,7 +72,8 @@ class DocumentosApiService {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    toastConfig?: ToastConfig
+    toastConfig?: ToastConfig,
+    clienteId?: string
   ): Promise<ApiResponse<T>> {
     try {
       // Validar se a API está configurada antes de fazer a requisição
@@ -87,10 +86,14 @@ class DocumentosApiService {
         throw new Error(errorMessage);
       }
 
+      if (!clienteId) {
+        throw new Error('Header cliente_id é obrigatório');
+      }
+
       const fullUrl = `${API_BASE_URL}${endpoint}`;
       
       const finalHeaders = {
-        ...this.getHeaders(),
+        ...this.getHeaders(clienteId),
         ...options.headers,
       };
 
@@ -134,7 +137,7 @@ class DocumentosApiService {
   }
 
   // Listar documentos com paginação e busca
-  async getDocumentos(params?: ListDocumentosParams): Promise<ApiResponse<{ documentos: Documento[]; pagination: PaginationData }>> {
+  async getDocumentos(params?: ListDocumentosParams, clienteId?: string): Promise<ApiResponse<{ documentos: Documento[]; pagination: PaginationData }>> {
     const queryParams = new URLSearchParams();
     
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -145,54 +148,54 @@ class DocumentosApiService {
     
     return this.request<{ documentos: Documento[]; pagination: PaginationData }>(endpoint, {
       method: 'GET',
-    });
+    }, undefined, clienteId);
   }
 
   // Buscar documento por ID
-  async getDocumentoById(id: string): Promise<ApiResponse<Documento>> {
+  async getDocumentoById(id: string, clienteId?: string): Promise<ApiResponse<Documento>> {
     return this.request<Documento>(`/documentos/${id}`, {
       method: 'GET',
-    });
+    }, undefined, clienteId);
   }
 
   // Criar novo documento
-  async createDocumento(documento: Omit<Documento, 'id'>): Promise<ApiResponse<Documento>> {
+  async createDocumento(documento: Omit<Documento, 'id'>, clienteId?: string): Promise<ApiResponse<Documento>> {
     return this.request<Documento>('/documentos', {
       method: 'POST',
       body: JSON.stringify(documento),
     }, {
       showSuccess: true,
       successMessage: 'Documento criado com sucesso!'
-    });
+    }, clienteId);
   }
 
   // Atualizar documento
-  async updateDocumento(id: string, documento: Partial<Documento>): Promise<ApiResponse<Documento>> {
+  async updateDocumento(id: string, documento: Partial<Documento>, clienteId?: string): Promise<ApiResponse<Documento>> {
     return this.request<Documento>(`/documentos/${id}`, {
       method: 'PUT',
       body: JSON.stringify(documento),
     }, {
       showSuccess: true,
       successMessage: 'Documento atualizado com sucesso!'
-    });
+    }, clienteId);
   }
 
   // Excluir documento (soft delete)
-  async deleteDocumento(id: string): Promise<ApiResponse<void>> {
+  async deleteDocumento(id: string, clienteId?: string): Promise<ApiResponse<void>> {
     return this.request<void>(`/documentos/${id}`, {
       method: 'DELETE',
     }, {
       showSuccess: true,
       successMessage: 'Documento excluído com sucesso!'
-    });
+    }, clienteId);
   }
 
   // Buscar documentos similares
-  async buscarSimilares(params: BuscarSimilaresParams): Promise<ApiResponse<Documento[]>> {
+  async buscarSimilares(params: BuscarSimilaresParams, clienteId?: string): Promise<ApiResponse<Documento[]>> {
     return this.request<Documento[]>('/documentos/buscar-similares', {
       method: 'POST',
       body: JSON.stringify(params),
-    });
+    }, undefined, clienteId);
   }
 }
 

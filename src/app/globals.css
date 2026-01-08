@@ -46,6 +46,17 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+@layer base {
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  button[disabled] {
+    cursor: not-allowed;
+  }
+}
+
 /* Ensure Tailwind primary colors are applied correctly */
 .bg-primary {
   background-color: #403CCF !important;

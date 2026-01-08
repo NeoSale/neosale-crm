@@ -19,8 +19,10 @@ import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { clientesApi, Cliente } from '@/services/clientesApi';
 import { Table, TableColumn, TableActionButton, TableText } from './Table';
+import { useCliente } from '@/contexts/ClienteContext';
 
 const BaseManager: React.FC = () => {
+    const { selectedClienteId } = useCliente();
     const [bases, setBases] = useState<Base[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -46,11 +48,13 @@ const BaseManager: React.FC = () => {
     }, []);
 
     const loadBases = async (showLoadingState = true) => {
+        if (!selectedClienteId) return;
+        
         if (showLoadingState) {
             setLoading(true);
         }
         try {
-            const response = await baseApi.getBases();
+            const response = await baseApi.getBases(undefined, selectedClienteId);
             if (response.success && response.data) {
                 const sortedBases = [...response.data.bases].sort((a, b) => {
                     const dateA = a.created_at || '';
@@ -96,14 +100,14 @@ const BaseManager: React.FC = () => {
                     nome: localFormData.nome,
                     descricao: localFormData.descricao,
                     cliente_id: localFormData.cliente_id
-                });
+                }, localFormData.cliente_id);
                 toast.success('Base atualizada com sucesso!');
             } else {
                 await baseApi.createBase({
                     nome: localFormData.nome,
                     descricao: localFormData.descricao,
                     cliente_id: localFormData.cliente_id
-                });
+                }, localFormData.cliente_id);
                 toast.success('Base criada com sucesso!');
             }
             loadBases(false);
@@ -130,9 +134,9 @@ const BaseManager: React.FC = () => {
     };
 
     const confirmDelete = async () => {
-        if (deleteConfirm.id) {
+        if (deleteConfirm.id && selectedClienteId) {
             try {
-                await baseApi.deleteBase(deleteConfirm.id);
+                await baseApi.deleteBase(deleteConfirm.id, selectedClienteId);
                 toast.success('Base deletada com sucesso!');
                 loadBases(false);
                 setDeleteConfirm({ show: false, id: null });

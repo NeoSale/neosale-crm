@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script para build e push da imagem Docker do NeoSale CRM
+# Script para build e push da imagem Docker do NeoCRM
 # Versiona automaticamente a aplicação e a imagem Docker
 
 # Cores para output
@@ -45,7 +45,7 @@ increment_version() {
 }
 
 # Verificar se deve incrementar versão
-echo -e "${BLUE}🚀 NeoSale CRM - Build & Deploy Automático${NC}"
+echo -e "${BLUE}🚀 NeoCRM - Build & Deploy Automático${NC}"
 echo -e "${YELLOW}🔄 Como deseja incrementar a versão?${NC}"
 echo "1) Patch (0.1.0 -> 0.1.1) - Correções de bugs e pequenos ajustes"
 echo "2) Minor (0.1.0 -> 0.2.0) - Novas funcionalidades"
@@ -253,7 +253,7 @@ fi
 VERSION=$NEW_VERSION
 echo -e "${GREEN}🚀 Usando versão: $VERSION${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}🐳 Iniciando build da imagem Docker do NeoSale CRM${NC}"
+echo -e "${GREEN}🐳 Iniciando build da imagem Docker do NeoCRM${NC}"
 
 # Verificar e iniciar o Docker se necessário
 echo -e "${YELLOW}🐳 Verificando Docker...${NC}"
@@ -270,6 +270,28 @@ fi
 
 # Build da imagem
 echo -e "${YELLOW}📦 Fazendo build da imagem...${NC}"
+
+# Carregar variáveis do .env.production se existir
+if [ -f ".env.production" ]; then
+    echo -e "${YELLOW}📋 Carregando variáveis de .env.production...${NC}"
+    export $(grep -v '^#' .env.production | xargs)
+fi
+
+# Verificar se as variáveis necessárias estão definidas
+if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+    echo -e "${RED}❌ NEXT_PUBLIC_SUPABASE_URL não está definida!${NC}"
+    echo -e "${YELLOW}💡 Defina no .env.production ou como variável de ambiente${NC}"
+    exit 1
+fi
+
+if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+    echo -e "${RED}❌ NEXT_PUBLIC_SUPABASE_ANON_KEY não está definida!${NC}"
+    echo -e "${YELLOW}💡 Defina no .env.production ou como variável de ambiente${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Variáveis de ambiente carregadas${NC}"
+
 if [ "$EASYPANEL_SUPPORT" = "true" ]; then
     echo -e "${YELLOW}📦 Build otimizado para EasyPanel${NC}"
     docker build \
@@ -277,6 +299,9 @@ if [ "$EASYPANEL_SUPPORT" = "true" ]; then
         --cache-from $IMAGE_NAME:latest \
         --build-arg BUILDKIT_INLINE_CACHE=1 \
         --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}" \
+        --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}" \
+        --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+        --build-arg NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-}" \
         --build-arg NODE_ENV="${NODE_ENV}" \
         --build-arg NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}" \
         -t $IMAGE_NAME:$VERSION \
@@ -284,6 +309,9 @@ if [ "$EASYPANEL_SUPPORT" = "true" ]; then
 else
     docker build \
         --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}" \
+        --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}" \
+        --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+        --build-arg NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-}" \
         --build-arg NODE_ENV="${NODE_ENV}" \
         --build-arg NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}" \
         -t $IMAGE_NAME:$VERSION \

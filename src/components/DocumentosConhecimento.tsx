@@ -16,11 +16,13 @@ import {
 import { Search } from 'lucide-react';
 import { documentosApi, Documento } from '../services/documentosApi';
 import { baseApi, Base } from '../services/baseApi';
+import { useCliente } from '../contexts/ClienteContext';
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { Table, TableColumn, TableActionButton, TableText, TableBadge } from './Table';
 
 const DocumentosConhecimento: React.FC = () => {
+    const { selectedClienteId } = useCliente();
     const [documentos, setDocumentos] = useState<Documento[]>([]);
     const [bases, setBases] = useState<Base[]>([]);
     const [loading, setLoading] = useState(false);
@@ -49,9 +51,11 @@ const DocumentosConhecimento: React.FC = () => {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        loadDocumentos();
-        loadBases();
-    }, [currentPage, itemsPerPage, searchTerm]);
+        if (selectedClienteId) {
+            loadDocumentos();
+            loadBases();
+        }
+    }, [currentPage, itemsPerPage, searchTerm, selectedClienteId]);
 
     // Fechar dropdown ao clicar fora
     useEffect(() => {
@@ -71,6 +75,11 @@ const DocumentosConhecimento: React.FC = () => {
     }, [isDropdownOpen]);
 
     const loadDocumentos = async (showLoadingState = true) => {
+        if (!selectedClienteId) {
+            console.warn('⚠️ selectedClienteId não disponível');
+            return;
+        }
+
         if (showLoadingState) {
             setLoading(true);
         } else {
@@ -81,7 +90,7 @@ const DocumentosConhecimento: React.FC = () => {
                 page: currentPage,
                 limit: itemsPerPage,
                 search: searchTerm || undefined,
-            });
+            }, selectedClienteId);
             
             if (response.success && response.data) {
                 setDocumentos(response.data.documentos || []);
@@ -102,8 +111,12 @@ const DocumentosConhecimento: React.FC = () => {
     };
 
     const loadBases = async () => {
+        if (!selectedClienteId) {
+            console.warn('⚠️ selectedClienteId não disponível');
+            return;
+        }
         try {
-            const response = await baseApi.getBases({ limit: 100 });
+            const response = await baseApi.getBases({ limit: 100 }, selectedClienteId);
             if (response.success && response.data) {
                 setBases(response.data.bases || []);
             }
@@ -144,6 +157,8 @@ const DocumentosConhecimento: React.FC = () => {
             return;
         }
 
+        if (!selectedClienteId) return;
+
         setSubmitting(true);
 
         try {
@@ -159,9 +174,9 @@ const DocumentosConhecimento: React.FC = () => {
             }
 
             if (editingDocumento?.id) {
-                await documentosApi.updateDocumento(editingDocumento.id, dataToSend);
+                await documentosApi.updateDocumento(editingDocumento.id, dataToSend, selectedClienteId);
             } else {
-                await documentosApi.createDocumento(dataToSend as Omit<Documento, 'id'>);
+                await documentosApi.createDocumento(dataToSend as Omit<Documento, 'id'>, selectedClienteId);
             }
             loadDocumentos(false);
             resetForm();
@@ -190,10 +205,10 @@ const DocumentosConhecimento: React.FC = () => {
     };
 
     const confirmDelete = async () => {
-        if (deleteConfirm.id) {
+        if (deleteConfirm.id && selectedClienteId) {
             setDeleting(true);
             try {
-                await documentosApi.deleteDocumento(deleteConfirm.id);
+                await documentosApi.deleteDocumento(deleteConfirm.id, selectedClienteId);
                 loadDocumentos(false);
                 setDeleteConfirm({ show: false, id: null });
             } catch (error) {
@@ -289,8 +304,10 @@ const DocumentosConhecimento: React.FC = () => {
                 return;
             }
 
+            if (!selectedClienteId) return;
+
             // Buscar o documento completo com o base64
-            const response = await documentosApi.getDocumentoById(documento.id);
+            const response = await documentosApi.getDocumentoById(documento.id, selectedClienteId);
             
             if (!response.success || !response.data || !response.data.base64) {
                 toast.error('Arquivo não disponível para download.');

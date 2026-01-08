@@ -27,8 +27,10 @@ import {
 import Modal from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { agentesApi, Agente } from '@/services/agentesApi';
+import { useCliente } from '@/contexts/ClienteContext';
 
 const WhatsAppIntegration: React.FC = () => {
+  const { selectedClienteId } = useCliente();
   const [instances, setInstances] = useState<EvolutionInstance[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -281,8 +283,10 @@ const WhatsAppIntegration: React.FC = () => {
   };
 
   const loadAgentes = async () => {
+    if (!selectedClienteId) return;
+    
     try {
-      const response = await agentesApi.getAgentes();
+      const response = await agentesApi.getAgentes(selectedClienteId);
       setAgentes(response.data);
     } catch (error) {
       console.error('Erro ao carregar agentes:', error);

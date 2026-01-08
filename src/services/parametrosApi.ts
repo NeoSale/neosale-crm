@@ -45,7 +45,7 @@ class ParametrosApiService {
       const url = `${API_BASE_URL}${endpoint}`;
       const defaultHeaders = {
         'Content-Type': 'application/json',
-        'X-Cliente-ID': clienteId,
+        'cliente_id': clienteId,
       };
 
       const response = await fetch(url, {

@@ -353,7 +353,6 @@ const LeadsManager: React.FC = () => {
     });
 
     // Converter para array e ordenar por quantidade (decrescente)
-    console.log(stats);
     return Object.values(stats).sort((a, b) => b.count - a.count);
   };
 
@@ -1018,8 +1017,13 @@ const LeadsManager: React.FC = () => {
               alt={`Foto de ${lead.nome}`}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                const target = e.currentTarget as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                const icon = parent?.querySelector('svg');
+                if (icon) {
+                  icon.classList.remove('hidden');
+                }
               }}
             />
           ) : null}

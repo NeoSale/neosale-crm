@@ -1,6 +1,6 @@
 {
   "name": "neosale-crm",
-  "description": "NeoSale CRM - Sistema de gerenciamento de leads e mensagens",
+  "description": "NeoCRM - Sistema de gerenciamento de leads e mensagens",
   "image": "brunobspaiva/neosale-crm:latest",
   "ports": {
     "3000": {

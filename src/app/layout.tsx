@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NeoSale CRM Admin",
-  description: "Administração do NeoSale CRM",
+  title: "NeoCRM",
+  description: "Administração do NeoCRM",
 };
 
 export default function RootLayout({
@@ -34,7 +34,6 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <script src="/runtime-config.js" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -44,7 +43,7 @@ export default function RootLayout({
                   if (theme === 'dark') {
                     document.documentElement.classList.add('dark');
                     document.documentElement.style.colorScheme = 'dark';
-                  }
+                  } 
                 } catch (e) {}
               })();
             `,

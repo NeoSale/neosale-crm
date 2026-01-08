@@ -123,7 +123,7 @@ function waitForDocker(maxAttempts = 12, interval = 5000) {
 // Função principal
 async function main() {
   try {
-    log('🚀 NeoSale CRM - Verificador de Docker', 'blue');
+    log('🚀 NeoCRM - Verificador de Docker', 'blue');
     log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'blue');
     
     // Verificar se o Docker já está rodando

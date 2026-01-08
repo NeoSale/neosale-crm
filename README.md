@@ -1,4 +1,4 @@
-# NeoSale CRM - Sistema de Upload de Leads
+# NeoCRM - Sistema de Upload de Leads
 
 Uma aplicação web moderna para upload e gerenciamento de planilhas de leads, construída com React, Next.js e Tailwind CSS.
 
