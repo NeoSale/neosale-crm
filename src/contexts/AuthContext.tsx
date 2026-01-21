@@ -1,8 +1,8 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
-import { createClient, getSupabaseConfig } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { Profile, Cliente } from '@/types/auth'
 
 interface AuthContextType {
@@ -16,146 +16,73 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Função auxiliar para criar perfil a partir do user do Supabase Auth
-function createProfileFromUser(user: User): Profile {
-  return {
-    id: user.id,
-    email: user.email || '',
-    full_name: user.user_metadata.full_name || user.user_metadata.name || user.email?.split('@')[0] || 'Usuário',
-    avatar_url: user.user_metadata.avatar_url || user.user_metadata.picture || null,
-    role: user.user_metadata.role as any,
-    cliente_id: user.user_metadata.cliente_id || null,
-    created_at: user.created_at || new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [loading, setLoading] = useState(true)
-  const fetchingProfileRef = useRef<string | null>(null)
   
   const supabase = createClient()
 
-  const fetchProfile = useCallback(async (currentUser: User) => {
-    // Evitar chamadas duplicadas para o mesmo usuário
-    if (fetchingProfileRef.current === currentUser.id) {
-      console.log('⏭️ fetchProfile já em andamento para:', currentUser.email)
-      return
-    }
-    fetchingProfileRef.current = currentUser.id
-    
+  // Função para buscar perfil do banco - chamada APENAS no login ou refreshProfile
+  const fetchProfileFromDB = useCallback(async (currentUser: User): Promise<Profile | null> => {
     try {    
-      console.log('🔍 Buscando perfil para:', currentUser.id, currentUser.email)
+      console.log('🔍 Buscando perfil do banco para:', currentUser.email)
       
-      // Query com timeout de 5 segundos
-      const queryPromise = supabase
+      const { data: dbProfile, error: dbError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single()
       
-      const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) => {
-        setTimeout(() => {
-          console.log('⏱️ Timeout na query de perfil')
-          resolve({ data: null, error: { message: 'Query timeout' } })
-        }, 5000)
-      })
-      
-      const { data: dbProfile, error: dbError } = await Promise.race([queryPromise, timeoutPromise])
-      
-      console.log('📦 Resultado da query profiles:', { dbProfile, dbError })
-      
-      let userProfile: Profile
-      
       if (dbError || !dbProfile) {
-        console.error('❌ Erro ao buscar perfil da tabela profiles:', dbError)
-        userProfile = createProfileFromUser(currentUser)
-      } else {
-        // Usar dados da tabela profiles (fonte confiável do role e cliente_id)
-        userProfile = {
-          id: dbProfile.id,
-          email: dbProfile.email,
-          full_name: dbProfile.full_name || currentUser.email?.split('@')[0] || 'Usuário',
-          avatar_url: dbProfile.avatar_url || currentUser.user_metadata?.avatar_url || null,
-          role: dbProfile.role,
-          cliente_id: dbProfile.cliente_id,
-          created_at: dbProfile.created_at,
-          updated_at: dbProfile.updated_at
-        }
-        console.log('✅ Perfil carregado do banco:', userProfile)
+        console.error('❌ Erro ao buscar perfil:', dbError)
+        return null
       }
       
-      setProfile(userProfile)
+      const userProfile: Profile = {
+        id: dbProfile.id,
+        email: dbProfile.email,
+        full_name: dbProfile.full_name || currentUser.email?.split('@')[0] || 'Usuário',
+        avatar_url: dbProfile.avatar_url || null,
+        role: dbProfile.role,
+        cliente_id: dbProfile.cliente_id,
+        created_at: dbProfile.created_at,
+        updated_at: dbProfile.updated_at
+      }
       
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('user_profile', JSON.stringify(userProfile))
-      }
-
-      // Buscar dados do cliente se houver cliente_id
-      if (userProfile.cliente_id) {
-        try {
-          const { data: clienteData, error: clienteError } = await supabase
-            .from('clientes')
-            .select('*')
-            .eq('id', userProfile.cliente_id)
-            .single()
-
-          if (!clienteError && clienteData) {
-            setCliente(clienteData)
-            
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('selected_cliente_id', clienteData.id)
-            }
-          } else {
-            setCliente(null)
-          }
-        } catch (err) {
-          console.log('⚠️ Erro ao carregar cliente:', err)
-          setCliente(null)
-        }
-      } else {
-        setCliente(null)
-      }
+      console.log('✅ Perfil carregado do banco:', userProfile)
+      return userProfile
     } catch (error) {
       console.error('❌ Erro ao carregar perfil:', error)
-      // Mesmo com erro, criar perfil básico para não bloquear o usuário
-      const basicProfile = createProfileFromUser(currentUser)
-      setProfile(basicProfile)
-      setCliente(null)
-    } finally {
-      // Limpar ref após completar (com delay para evitar chamadas imediatas)
-      setTimeout(() => {
-        fetchingProfileRef.current = null
-      }, 1000)
+      return null
     }
   }, [supabase])
 
+  // Função para forçar refresh do perfil (busca do banco)
   const refreshProfile = useCallback(async () => {
     if (user) {
-      // Limpar ref para forçar refresh
-      fetchingProfileRef.current = null
-      await fetchProfile(user)
+      const dbProfile = await fetchProfileFromDB(user)
+      if (dbProfile) {
+        setProfile(dbProfile)
+        localStorage.setItem('user_profile', JSON.stringify(dbProfile))
+      }
     }
-  }, [user, fetchProfile])
+  }, [user, fetchProfileFromDB])
 
   useEffect(() => {
-    // Carregar perfil e user temporário do localStorage primeiro
-    // Isso evita redirecionamento prematuro para /login enquanto a sessão é verificada
-    let hasLocalProfile = false
+    // 1. Carregar perfil do localStorage PRIMEIRO (evita redirecionamento e busca desnecessária)
+    let localProfile: Profile | null = null
     if (typeof window !== 'undefined') {
       const savedProfile = localStorage.getItem('user_profile')
       if (savedProfile) {
         try {
-          const parsedProfile = JSON.parse(savedProfile)
-          setProfile(parsedProfile)
-          hasLocalProfile = true
-          // Criar user temporário para evitar redirecionamento
-          if (parsedProfile.id && parsedProfile.email) {
-            console.log('📦 Carregando user temporário do localStorage:', parsedProfile.email)
-            setUser({ id: parsedProfile.id, email: parsedProfile.email } as User)
+          localProfile = JSON.parse(savedProfile)
+          if (localProfile) {
+            console.log('📦 Usando perfil do localStorage:', localProfile.email, 'role:', localProfile.role)
+            setProfile(localProfile)
+            // Criar user temporário para evitar redirecionamento
+            setUser({ id: localProfile.id, email: localProfile.email } as User)
           }
         } catch (error) {
           console.error('❌ Erro ao carregar perfil do localStorage:', error)
@@ -163,98 +90,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Timeout de segurança: força loading = false após 3 segundos
-    const safetyTimeout = setTimeout(() => {
-      console.log('⚠️ Safety timeout - forçando loading = false')
-      setLoading(false)
-    }, 3000)
-
-    // Get initial session
-    console.log('🔄 AuthContext - buscando sessão...')
+    // 2. Verificar sessão do Supabase
+    console.log('🔄 AuthContext - verificando sessão...')
     supabase.auth.getSession()
       .then(({ data: { session } }: { data: { session: Session | null } }) => {
-        clearTimeout(safetyTimeout)
-        console.log('📦 AuthContext - getSession resultado:', session?.user?.email || 'sem sessão')
+        console.log('📦 AuthContext - sessão:', session?.user?.email || 'sem sessão')
         
         if (session?.user) {
-          console.log('✅ AuthContext - sessão encontrada, setando user')
           setUser(session.user)
-          // Sempre buscar perfil do banco para garantir role atualizado
-          // Limpar ref para permitir nova busca
-          fetchingProfileRef.current = null
-          fetchProfile(session.user)
-          setLoading(false)
-        } else {
-          // Fallback: verificar se há sessão salva manualmente no localStorage
-          if (typeof window !== 'undefined') {
-            const { url: supabaseUrl } = getSupabaseConfig()
-            if (supabaseUrl) {
-              const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
-              const storageKey = `sb-${projectRef}-auth-token`
-              const savedSession = localStorage.getItem(storageKey)
-              
-              if (savedSession) {
-                try {
-                  const parsed = JSON.parse(savedSession)
-                  console.log('AuthContext - sessão encontrada no localStorage:', parsed.user?.email)
-                  
-                  if (parsed.access_token && parsed.user) {
-                    // Tentar restaurar a sessão no cliente Supabase
-                    supabase.auth.setSession({
-                      access_token: parsed.access_token,
-                      refresh_token: parsed.refresh_token,
-                    }).then((result: { data: { user: User | null; session: Session | null }; error: Error | null }) => {
-                      if (result.error) {
-                        console.error('Erro ao restaurar sessão:', result.error)
-                        localStorage.removeItem(storageKey)
-                        localStorage.removeItem('user_profile')
-                        setLoading(false)
-                      } else if (result.data.user) {
-                        console.log('Sessão restaurada com sucesso:', result.data.user.email)
-                        setUser(result.data.user)
-                        fetchProfile(result.data.user)
-                        setLoading(false)
-                      }
-                    })
-                    return // Aguardar o setSession
-                  }
-                } catch (e) {
-                  console.error('Erro ao parsear sessão do localStorage:', e)
-                }
-              }
-            }
-            localStorage.removeItem('user_profile')
+          // Se já tem perfil no localStorage com role, usar ele
+          // Não buscar do banco novamente
+          if (localProfile?.role) {
+            console.log('✅ Usando perfil do localStorage (já tem role)')
           }
-          setUser(null)
-          setLoading(false)
-        }
-      })
-      .catch(() => {
-        clearTimeout(safetyTimeout)
-        setLoading(false)
-      })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          await fetchProfile(session.user)
+          // Se não tem perfil local ou não tem role, buscar do banco
+          else if (!localProfile || !localProfile.role) {
+            console.log('🔄 Perfil local sem role, buscando do banco...')
+            fetchProfileFromDB(session.user).then(dbProfile => {
+              if (dbProfile) {
+                setProfile(dbProfile)
+                localStorage.setItem('user_profile', JSON.stringify(dbProfile))
+              }
+            })
+          }
         } else {
-          setProfile(null)
-          setCliente(null)
-          // Limpar localStorage quando não houver sessão
-          if (typeof window !== 'undefined') {
+          // Sem sessão - limpar tudo
+          if (localProfile) {
+            console.log('⚠️ Sem sessão mas tem perfil local - limpando')
             localStorage.removeItem('user_profile')
             localStorage.removeItem('selected_cliente_id')
           }
+          setUser(null)
+          setProfile(null)
+        }
+        setLoading(false)
+      })
+      .catch((error: Error) => {
+        console.error('❌ Erro ao verificar sessão:', error)
+        setLoading(false)
+      })
+
+    // 3. Escutar mudanças de autenticação (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        console.log('🔔 Auth state change:', event, session?.user?.email)
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          setUser(session.user)
+          // No login, buscar perfil do banco e salvar no localStorage
+          const dbProfile = await fetchProfileFromDB(session.user)
+          if (dbProfile) {
+            setProfile(dbProfile)
+            localStorage.setItem('user_profile', JSON.stringify(dbProfile))
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setProfile(null)
+          setCliente(null)
+          localStorage.removeItem('user_profile')
+          localStorage.removeItem('selected_cliente_id')
         }
         setLoading(false)
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase, fetchProfile])
+  }, [supabase, fetchProfileFromDB])
 
   const signOut = async () => {
     try {      
