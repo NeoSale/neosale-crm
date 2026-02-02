@@ -1,288 +1,210 @@
-# NeoCRM - Sistema de Upload de Leads
+# 📊 NeoSale CRM
 
-Uma aplicação web moderna para upload e gerenciamento de planilhas de leads, construída com React, Next.js e Tailwind CSS.
+Dashboard CRM de gerenciamento de leads com agentes de IA, integração Evolution API (WhatsApp) e funcionalidades avançadas de vendas.
 
-## 🚀 Tecnologias Utilizadas
+**Versão:** 1.18.14 | **Status:** Ativo | **Stack:** Next.js 15 (Turbopack) + React 19 + Tailwind CSS 4
 
-- **React 18** - Biblioteca para interfaces de usuário
-- **Next.js 15** - Framework React com App Router
-- **TypeScript** - Tipagem estática para JavaScript
-- **Tailwind CSS v4** - Framework CSS utilitário
-- **Lucide React** - Biblioteca de ícones
-- **SheetJS (xlsx)** - Parser de planilhas Excel
-
-## 🎨 Identidade Visual
-
-- **Cor Primária**: `#403CCF` (azul roxo escuro)
-- **Cor Secundária**: `#FBFAFF` (branco com leve toque lilás)
-- Design clean, sofisticado e moderno
-
-## 🚀 Funcionalidades
-
-### 📊 Gerenciamento de Leads
-- **Tabela de Leads**: Visualização completa de todos os leads cadastrados
-- **Busca em Tempo Real**: Filtro por nome, email, empresa e outros campos
-- **Estatísticas Dinâmicas**: Contadores automáticos de leads por status
-- **Atualização Automática**: Sincronização com API em tempo real
-
-### 📤 Importação de Dados
-- **Upload de Planilhas Excel**: Suporte para arquivos `.xlsx` e `.xls`
-- **Drag & Drop**: Interface intuitiva para arrastar e soltar arquivos
-- **Preview de Dados**: Visualização dos leads antes da importação
-- **Importação em Lote**: Adição de múltiplos leads simultaneamente
-
-### 🔌 Integração com API
-- **Consulta de Leads**: Busca dados da API REST em `http://localhost:3000`
-- **Fallback Local**: Dados de exemplo quando API não está disponível
-- **Tratamento de Erros**: Notificações claras sobre status da conexão
-- **Cache Local**: Armazenamento temporário para melhor performance
-
-### 🎨 Interface e UX
-- **Design Responsivo**: Interface adaptável para diferentes dispositivos
-- **Estados de Loading**: Feedback visual durante processamento
-- **Validação Automática**: Detecção de campos e validação de dados
-- **Notificações**: Alertas de sucesso e erro para ações do usuário
-
-## 🛠️ Instalação e Execução
+## 🚀 Início Rápido
 
 ### Pré-requisitos
-- Node.js 18+ 
-- npm ou yarn
+- Node.js 20+
+- npm 10+
+- Acesso à API NeoSale (localhost:3000)
+- Credenciais Supabase (para autenticação)
 
-### Passos para executar
+### Instalação
 
-1. **Clone o repositório**
-   ```bash
-   git clone <url-do-repositorio>
-   cd neosale-crm
-   ```
+```bash
+npm install
+```
 
-2. **Instale as dependências**
-   ```bash
-   npm install
-   ```
+### Desenvolvimento
 
-3. **Execute o servidor de desenvolvimento**
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev
+```
 
-4. **Acesse a aplicação**
-   Abra [http://localhost:3000](http://localhost:3000) no seu navegador
+Acesse `http://localhost:3000`
+
+### Build & Produção
+
+```bash
+npm run build
+npm start
+```
+
+## 📋 Scripts Disponíveis
+
+| Comando | Descrição |
+|---------|-----------|
+| `npm run dev` | Inicia com Turbopack (fast refresh) |
+| `npm run build` | Build otimizado |
+| `npm start` | Executa em produção |
+| `npm run lint` | ESLint + TypeScript check |
+| `npm run deploy` | Deploy automático (Docker + EasyPanel) |
+| `npm run deploy:patch` | Force patch version |
+| `npm run deploy:minor` | Force minor version |
+| `npm run deploy:major` | Force major version |
 
 ## 📁 Estrutura do Projeto
 
 ```
 src/
-├── app/
-│   ├── globals.css          # Estilos globais e configuração do Tailwind
-│   ├── layout.tsx           # Layout principal da aplicação
-│   └── page.tsx             # Página inicial
-├── components/
-│   ├── LeadsManager.tsx     # Gerenciador principal de leads
-│   ├── UploadLeads.tsx      # Componente de upload de planilhas
-│   └── LeadTable.tsx        # Componente de visualização de leads
-├── hooks/
-│   └── useLeads.ts          # Hook personalizado para gerenciar leads
-└── services/
-    └── leadsApi.ts          # Serviço de integração com API REST
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # Páginas de autenticação
+│   ├── api/               # Routes de API local
+│   ├── agentes/           # Dashboard de agentes IA
+│   ├── configuracoes/     # Painel de configurações
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/            # 20+ componentes
+│   ├── Dashboard.tsx
+│   ├── LeadsManager.tsx
+│   ├── ChatManager.tsx
+│   ├── AgentesManager.tsx
+│   └── DataTable.tsx
+├── services/              # 18+ API clients
+│   ├── leadsApi.ts
+│   ├── chatApi.ts
+│   ├── evolutionApi.ts
+│   └── ...
+├── contexts/             # Auth, Cliente, Theme
+├── hooks/                # Custom React hooks
+├── lib/                  # Utilities
+├── types/                # TypeScript types
+└── middleware.ts         # Auth middleware
 ```
 
-## 🔌 API Integration
+## 🎯 Recursos Principais
 
-### Endpoints Esperados
+### Gerenciamento de Leads
+- ✅ CRUD completo (criar, editar, deletar, buscar)
+- ✅ Importação em bulk (Excel/CSV)
+- ✅ Exportação de dados
+- ✅ Filtros avançados e busca
+- ✅ Estatísticas em tempo real
 
-O sistema espera uma API REST rodando em `http://localhost:3000` com os seguintes endpoints:
+### Chat & Mensagens
+- ✅ Histórico de conversas
+- ✅ Integração Evolution API (WhatsApp)
+- ✅ Agentes IA automáticos (SDR, Closer, Support)
+- ✅ Transferência entre agentes
 
-```
-GET    /api/leads              # Buscar todos os leads
-GET    /api/leads/:id          # Buscar lead por ID
-POST   /api/leads              # Criar novo lead
-POST   /api/leads/bulk         # Criar múltiplos leads
-PUT    /api/leads/:id          # Atualizar lead
-DELETE /api/leads/:id          # Deletar lead
-GET    /api/leads/search       # Buscar leads com filtros
-GET    /api/leads/stats        # Obter estatísticas dos leads
-```
+### Agentes IA
+- ✅ **SDR Agent** - Qualificação de leads (SPIN Selling)
+- ✅ **Closer Agent** - Fechamento de vendas
+- ✅ **Support Agent** - Atendimento pós-venda
 
-### Documentação Swagger
+### Integrações
+- ✅ Evolution API (WhatsApp)
+- ✅ Google Calendar (agendamentos)
+- ✅ Supabase (autenticação + banco)
+- ✅ API NeoSale (backend)
 
-A documentação completa da API deve estar disponível em:
-`http://localhost:3000/api-docs/`
+## 🔧 Configuração
 
-### Fallback Mode
+### Environment Variables
 
-Quando a API não estiver disponível, o sistema automaticamente:
-- Exibe dados de exemplo para demonstração
-- Mostra notificação de "modo offline"
-- Permite operações locais temporárias
-- Mantém funcionalidade de upload e preview
+Crie `.env.local`:
 
-## 🎨 Configuração do Tailwind CSS
-
-O projeto utiliza Tailwind CSS v4 com cores personalizadas configuradas em `globals.css`:
-
-```css
-:root {
-  --primary: #403CCF;
-  --secondary: #FBFAFF;
-}
-
-@theme inline {
-  --color-primary: var(--primary);
-  --color-secondary: var(--secondary);
-}
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=seu_projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima
 ```
 
-## 📦 Componentes Principais
+Veja [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) para completo.
 
-### UploadLeads
-Componente responsável pelo upload e processamento de planilhas:
-- Gerenciamento de estado do arquivo
-- Parsing com SheetJS
-- Validação de formato
-- Interface drag & drop
+## 📚 Documentação
 
-### LeadTable
-Componente para exibição dos dados importados:
-- Tabela responsiva
-- Estatísticas automáticas
-- Preview limitado
-- Design elegante
+- [SETUP.md](docs/SETUP.md) - Setup detalhado
+- [ENVIRONMENT.md](docs/ENVIRONMENT.md) - Variáveis de ambiente
+- [FEATURES.md](docs/FEATURES.md) - Features e funcionalidades
+- [API.md](docs/API.md) - Integração com API backend
 
-### Table (Componente Reutilizável)
-Componente genérico de tabela para uso em toda a aplicação:
+## 🚢 Deployment
 
-**Características:**
-- ✅ TypeScript Generics para tipagem forte
-- ✅ Seleção múltipla com checkboxes
-- ✅ Modo compacto para melhor aproveitamento de espaço
-- ✅ Estados de loading e empty
-- ✅ Alinhamento customizável de colunas
-- ✅ Renderização customizada por célula
-
-**Componentes Auxiliares:**
-- `TableBadge` - Badges coloridos para status (blue, green, purple, red, yellow, gray)
-- `TableToggle` - Switches/toggles responsivos com loading state
-- `TableActionButton` - Botões de ação com ícones e loading
-- `TableText` - Texto com truncate automático e tooltips
-
-**Exemplo de Uso:**
-```tsx
-import { Table, TableColumn, TableBadge, TableToggle, TableActionButton } from '@/components/Table';
-
-const columns: TableColumn<Agente>[] = [
-  {
-    key: 'nome',
-    header: 'Nome',
-    render: (item) => <TableText>{item.nome}</TableText>,
-  },
-  {
-    key: 'ativo',
-    header: 'Ativo',
-    align: 'center',
-    render: (item) => (
-      <TableToggle
-        checked={item.ativo}
-        onChange={() => handleToggle(item)}
-      />
-    ),
-  },
-  {
-    key: 'acoes',
-    header: 'Ações',
-    width: 'w-16',
-    render: (item) => (
-      <div className="flex items-center gap-0.5">
-        <TableActionButton
-          onClick={() => handleEdit(item)}
-          icon={<Edit size={14} />}
-          title="Editar"
-        />
-      </div>
-    ),
-  },
-];
-
-<Table
-  columns={columns}
-  data={items}
-  keyExtractor={(item) => item.id}
-  selectable
-  selectedItems={selectedItems}
-  onSelectItem={handleSelectItem}
-  onSelectAll={handleSelectAll}
-  compact
-/>
-```
-
-**Props Principais:**
-- `columns` - Array de definições de colunas
-- `data` - Array de dados a exibir
-- `keyExtractor` - Função para extrair chave única
-- `selectable` - Habilita seleção múltipla
-- `compact` - Modo compacto (padrão: true)
-- `loading` - Estado de carregamento
-- `emptyMessage` - Mensagem quando não há dados
-
-**Padrões de Estilo:**
-- Espaçamento: `px-2 py-2` (compacto)
-- Fonte: `text-xs` (compacto)
-- Toggles: `h-4 w-8` (compacto)
-- Ícones: `14px` (compacto)
-- Badges: `px-1.5 py-0.5`
-- Gaps: `gap-0.5`
-
-## 🔧 Scripts Disponíveis
-
-- `npm run dev` - Inicia o servidor de desenvolvimento
-- `npm run build` - Gera build de produção
-- `npm run start` - Inicia servidor de produção
-- `npm run lint` - Executa linting do código
-
-## 📝 Próximos Passos
-
-- [ ] Integração com API backend
-- [ ] Validação avançada de dados
-- [ ] Mapeamento de campos
-- [ ] Histórico de uploads
-- [ ] Exportação de dados
-- [ ] Autenticação de usuários
-
-## 🚀 Deploy
-
-### Deploy Automatizado
-
-Para fazer o deploy da aplicação:
+### Docker
 
 ```bash
-npm run deploy
+npm run deploy              # Auto-detecta versão
+npm run deploy:patch        # 1.18.14 → 1.18.15
+npm run deploy:minor        # 1.18.14 → 1.19.0
+npm run deploy:major        # 1.18.14 → 2.0.0
 ```
 
-Este comando irá:
-- Fazer build da aplicação
-- Criar e enviar a imagem Docker
-- Preparar para deploy em produção
+**Processo:**
+1. Detecta versão (git commits)
+2. Atualiza `package.json`
+3. Build Docker image
+4. Push para Docker Hub
+5. Commit + tag no Git
+6. Deploy automático em EasyPanel (se token configurado)
 
-### Deploy no EasyPanel
+Veja [../../DEPLOYMENT.md](../../neosale-docs/DEPLOYMENT.md) para detalhes.
 
-Para deploy no EasyPanel, consulte o guia específico: [EASYPANEL-SETUP.md](./EASYPANEL-SETUP.md)
+## 📦 Dependências Principais
 
-**Configuração rápida:**
-1. Use a imagem: `brunobspaiva/neosale-crm:latest`
-2. Configure a variável: `NEXT_PUBLIC_API_URL=<sua-url-da-api>`
-3. Mapeie a porta: `3000:80`
+- **next:** Turbopack enabled
+- **react:** v19
+- **@dnd-kit:** Drag & drop
+- **@supabase:** Auth + Database
+- **tailwindcss:** Styling
+- **xlsx:** Excel import/export
+- **react-datepicker:** Date picker
+- **react-hot-toast:** Notifications
 
-### Documentação Adicional
+## 🤝 Contribuindo
 
-- [DEPLOY.md](./DEPLOY.md) - Deploy geral e Docker Hub
-- [README-Docker.md](./README-Docker.md) - Configuração Docker detalhada
-- [EASYPANEL-SETUP.md](./EASYPANEL-SETUP.md) - Configuração específica para EasyPanel
+1. Crie branch: `git checkout -b feature/sua-feature`
+2. Commit: `git commit -m 'feat: descrição'`
+3. Push: `git push origin feature/sua-feature`
+4. Pull Request
 
-## 🤝 Contribuição
+## 🐛 Troubleshooting
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
+### API não responde
+```bash
+# Verifique se API está rodando
+cd ../neosale-api
+npm run dev
+```
 
-## 📄 Licença
+### Erro de autenticação
+```bash
+# Verifique variáveis Supabase em .env.local
+# Verifique se Supabase está acessível
+```
 
-Este projeto está sob a licença MIT.
+### Build lento (Turbopack)
+```bash
+# Limpe cache
+rm -rf .next
+npm run dev
+```
+
+## 📊 Monitoramento
+
+### Performance
+- Check bundle size: `npm run build` (mostra tamanho por rota)
+- Performance profiling: F12 → Performance tab
+
+### Logs
+- Verificar console (F12)
+- Logs de API em backend
+- Supabase logs no painel
+
+## 📝 Licença
+
+MIT
+
+## 📞 Suporte
+
+- **Issues:** GitHub Issues
+- **Email:** dev@neosale.io
+- **Docs:** [neosale-docs/](../neosale-docs)
+
+---
+
+**Mantido por:** Equipe NeoSale
+**Última atualização:** Fevereiro 2026
