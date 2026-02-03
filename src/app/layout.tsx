@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Poppins, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "../components/ClientLayout";
 import { VersionLogger } from "../utils/version";
@@ -7,9 +7,10 @@ import { VersionLogger } from "../utils/version";
 // Log da versão no servidor
 VersionLogger.logServerVersion();
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -69,7 +70,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${poppins.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
         <ClientLayout>

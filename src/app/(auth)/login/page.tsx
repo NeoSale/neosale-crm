@@ -80,7 +80,7 @@ export default function LoginPage() {
         <div className="text-center mb-4">
           <div className="flex justify-center mb-2">
             <img
-              src="/icone-azul.png"
+              src="/icone-branco-cut.png"
               alt="NeoCRM Logo"
               className="w-12 h-12"
             />

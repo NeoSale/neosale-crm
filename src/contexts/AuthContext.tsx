@@ -90,9 +90,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 2. Verificar sessão do Supabase
+    // 2. Verificar sessão do Supabase com timeout
     console.log('🔄 AuthContext - verificando sessão...')
-    supabase.auth.getSession()
+    const sessionTimeout = new Promise<{ data: { session: Session | null } }>((resolve) => {
+      setTimeout(() => {
+        console.warn('⚠️ Timeout ao verificar sessão do Supabase')
+        resolve({ data: { session: null } })
+      }, 5000)
+    })
+    
+    Promise.race([supabase.auth.getSession(), sessionTimeout])
       .then(({ data: { session } }: { data: { session: Session | null } }) => {
         console.log('📦 AuthContext - sessão:', session?.user?.email || 'sem sessão')
         

@@ -19,7 +19,7 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'Arial', 'Helvetica', 'sans-serif'],
+        sans: ['var(--font-poppins)', 'Arial', 'Helvetica', 'sans-serif'],
         mono: ['var(--font-geist-mono)', 'monospace'],
       },
     },
