@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { Profile, Cliente } from '@/types/auth'
@@ -16,13 +16,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Cliente Supabase singleton - criado uma única vez
+const supabase = createClient()
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [cliente, setCliente] = useState<Cliente | null>(null)
   const [loading, setLoading] = useState(true)
-  
-  const supabase = createClient()
+  const initialized = useRef(false)
 
   // Função para buscar perfil do banco - chamada APENAS no login ou refreshProfile
   const fetchProfileFromDB = useCallback(async (currentUser: User): Promise<Profile | null> => {
@@ -71,6 +73,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfileFromDB])
 
   useEffect(() => {
+    // Evitar múltiplas inicializações
+    if (initialized.current) {
+      return
+    }
+    initialized.current = true
+
     // 1. Carregar perfil do localStorage PRIMEIRO (evita redirecionamento e busca desnecessária)
     let localProfile: Profile | null = null
     if (typeof window !== 'undefined') {
@@ -83,6 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(localProfile)
             // Criar user temporário para evitar redirecionamento
             setUser({ id: localProfile.id, email: localProfile.email } as User)
+            // Se já tem perfil local válido, podemos terminar o loading mais cedo
+            setLoading(false)
           }
         } catch (error) {
           console.error('❌ Erro ao carregar perfil do localStorage:', error)
@@ -90,23 +100,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // 2. Verificar sessão do Supabase com timeout
+    // 2. Verificar sessão do Supabase em background (não bloqueia se já tem perfil local)
     console.log('🔄 AuthContext - verificando sessão...')
-    const sessionTimeout = new Promise<{ data: { session: Session | null } }>((resolve) => {
-      setTimeout(() => {
-        console.warn('⚠️ Timeout ao verificar sessão do Supabase')
-        resolve({ data: { session: null } })
-      }, 5000)
-    })
-    
-    Promise.race([supabase.auth.getSession(), sessionTimeout])
+
+    supabase.auth.getSession()
       .then(({ data: { session } }: { data: { session: Session | null } }) => {
         console.log('📦 AuthContext - sessão:', session?.user?.email || 'sem sessão')
-        
+
         if (session?.user) {
           setUser(session.user)
           // Se já tem perfil no localStorage com role, usar ele
-          // Não buscar do banco novamente
           if (localProfile?.role) {
             console.log('✅ Usando perfil do localStorage (já tem role)')
           }
@@ -120,28 +123,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
             })
           }
-        } else {
-          // Sem sessão - limpar tudo
-          if (localProfile) {
-            console.log('⚠️ Sem sessão mas tem perfil local - limpando')
-            localStorage.removeItem('user_profile')
-            localStorage.removeItem('selected_cliente_id')
-          }
+        } else if (!localProfile) {
+          // Sem sessão E sem perfil local - usuário realmente não está autenticado
+          console.log('⚠️ Sem sessão e sem perfil local')
           setUser(null)
           setProfile(null)
         }
+        // Se tem localProfile mas não tem sessão, manter o localProfile
+        // A sessão pode ter expirado mas o usuário ainda pode estar navegando
         setLoading(false)
       })
       .catch((error: Error) => {
         console.error('❌ Erro ao verificar sessão:', error)
-        setLoading(false)
+        // Se der erro mas tem perfil local, manter o usuário logado
+        if (!localProfile) {
+          setLoading(false)
+        }
       })
 
     // 3. Escutar mudanças de autenticação (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         console.log('🔔 Auth state change:', event, session?.user?.email)
-        
+
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user)
           // No login, buscar perfil do banco e salvar no localStorage
@@ -162,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase, fetchProfileFromDB])
+  }, [fetchProfileFromDB])
 
   const signOut = async () => {
     try {      

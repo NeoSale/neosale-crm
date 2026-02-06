@@ -26,6 +26,11 @@ export interface Lead {
   origem?: string | { id?: string; nome?: string; [key: string]: any };
   ai_habilitada?: boolean;
   profile_picture_url?: string;
+  vendedor?: {
+    id: string;
+    full_name: string;
+    email: string;
+  } | null;
   [key: string]: any;
 }
 
@@ -171,19 +176,25 @@ class LeadsApiService {
   }
 
   // Buscar todos os leads
-  async getLeads(cliente_id?: string): Promise<ApiResponse<Lead[]>> {
+  async getLeads(cliente_id?: string, vendedor_id?: string): Promise<ApiResponse<Lead[]>> {
     const headers: Record<string, string> = {};
 
     if (cliente_id) {
       headers['cliente_id'] = cliente_id;
     }
-    
+
+    // Build URL with query params
+    let url = '/leads';
+    if (vendedor_id) {
+      url += `?vendedor_id=${vendedor_id}`;
+    }
+
     const requestOptions: RequestInit = {
       method: 'GET',
       headers
     };
-    
-    return this.request<Lead[]>('/leads', requestOptions, {
+
+    return this.request<Lead[]>(url, requestOptions, {
       showSuccess: false, // Não mostrar toast para busca
       showError: true,
     });

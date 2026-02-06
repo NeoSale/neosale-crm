@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
 
 interface ClienteContextType {
@@ -15,28 +15,33 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
   const [selectedClienteId, setSelectedClienteIdState] = useState<string | null>(null)
   const [reloadTrigger, setReloadTrigger] = useState(0)
   const { profile } = useAuth()
+  const initializedFromStorage = useRef(false)
 
-  // Carregar cliente do profile ou localStorage ao iniciar
+  // Inicializar do localStorage no cliente (evita problemas de hidratação SSR)
   useEffect(() => {
-    // Se o usuário tem cliente_id no profile, usar esse
-    if (profile?.cliente_id) {
+    if (initializedFromStorage.current) return
+    initializedFromStorage.current = true
+
+    const saved = localStorage.getItem('selected_cliente_id')
+    if (saved) {
+      console.log('📦 ClienteContext: Carregando cliente do localStorage:', saved)
+      setSelectedClienteIdState(saved)
+    } else if (profile?.cliente_id) {
+      // Fallback apenas se não houver valor salvo
+      console.log('📦 ClienteContext: Usando cliente do profile (fallback):', profile.cliente_id)
       setSelectedClienteIdState(profile.cliente_id)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('selected_cliente_id', profile.cliente_id)
-      }
-    } else if (typeof window !== 'undefined') {
-      // Fallback para localStorage (para super_admin que pode selecionar qualquer cliente)
-      const savedClienteId = localStorage.getItem('selected_cliente_id')
-      if (savedClienteId && savedClienteId !== selectedClienteId) {
-        setSelectedClienteIdState(savedClienteId)
-      }
+      localStorage.setItem('selected_cliente_id', profile.cliente_id)
     }
-  }, [profile]) // Recarrega quando o profile muda (após login)
+  }, [profile])
 
   // Função para alterar o cliente selecionado
   const setSelectedClienteId = useCallback((clienteId: string | null) => {
+    // Log com stack trace para identificar quem está chamando
+    console.log('🔄 setSelectedClienteId chamado com:', clienteId)
+    console.trace('Stack trace:')
+
     setSelectedClienteIdState(clienteId)
-    
+
     if (typeof window !== 'undefined') {
       if (clienteId) {
         localStorage.setItem('selected_cliente_id', clienteId)
@@ -44,7 +49,7 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('selected_cliente_id')
       }
     }
-    
+
     // Disparar evento de recarga de dados
     setReloadTrigger(prev => prev + 1)
   }, [])
@@ -63,13 +68,6 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
       window.dispatchEvent(event)
     }
   }, [selectedClienteId, reloadTrigger])
-
-  // Para usuários não super_admin, usar sempre o cliente_id do profile
-  useEffect(() => {
-    if (profile && profile.role !== 'super_admin' && profile.cliente_id) {
-      setSelectedClienteIdState(profile.cliente_id)
-    }
-  }, [profile])
 
   return (
     <ClienteContext.Provider

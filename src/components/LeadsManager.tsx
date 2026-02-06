@@ -10,6 +10,8 @@ import toast from 'react-hot-toast';
 import { useLeads, ImportError } from '../hooks/useLeads';
 import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
+import { usePermissions } from '../hooks/usePermissions';
+import { useAuth } from '../contexts/AuthContext';
 import { formatPhone, removePhonePrefix, formatPhoneDisplay } from '../utils/phone-utils';
 import { validateCNPJForForm, applyCNPJMask, validateCPFForForm, applyCPFMask } from '../utils/document-validation';
 import { formatDateTime } from '../utils/date-utils';
@@ -101,10 +103,10 @@ const OrigemText: React.FC<OrigemTextProps> = ({ text, variant = 'gray' }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const elementRef = useRef<HTMLDivElement>(null);
-  
+
   // Extrair primeira palavra
   const firstWord = text.split(/[\s\n]/)[0];
-  
+
   const handleMouseEnter = () => {
     if (elementRef.current) {
       const rect = elementRef.current.getBoundingClientRect();
@@ -296,7 +298,14 @@ const getQualificacaoDisplay = (qualificacao: any) => {
 };
 
 const LeadsManager: React.FC = () => {
-  const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, addMultipleLeadsWithDetails, updateLead, deleteLead } = useLeads();
+  // Permission and auth hooks
+  const { user } = useAuth();
+  const { canViewAssignedLeadsOnly } = usePermissions();
+
+  // If user is a salesperson, pass their user ID to filter leads
+  const vendedorId = canViewAssignedLeadsOnly ? user?.id : undefined;
+
+  const { leads: hookLeads, stats, totalFromApi, loading, error, refreshLeads, addLead, addMultipleLeads, addMultipleLeadsWithDetails, updateLead, deleteLead } = useLeads(undefined, vendedorId);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loadingTable, setLoadingTable] = useState<boolean>(false);
   const [savingLead, setSavingLead] = useState<boolean>(false);
@@ -1077,6 +1086,24 @@ const LeadsManager: React.FC = () => {
         const origemLower = origemText.toLowerCase();
         const variant = origemLower.includes('whatsapp') ? 'green' : origemLower.includes('site') ? 'blue' : 'gray';
         return <OrigemText text={origemText} variant={variant} />;
+      },
+    },
+    {
+      key: 'vendedor',
+      header: 'Vendedor',
+      render: (lead) => {
+        if (!lead.vendedor) return <TableText>-</TableText>;
+        const firstName = lead.vendedor.full_name?.split(' ')[0] || 'Vendedor';
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+              <UserIcon className="w-3 h-3 text-purple-600" />
+            </div>
+            <TableText truncate maxWidth="max-w-[120px]" title={lead.vendedor.full_name}>
+              {firstName}
+            </TableText>
+          </div>
+        );
       },
     },
     {

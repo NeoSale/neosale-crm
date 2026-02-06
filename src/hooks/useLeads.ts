@@ -41,7 +41,7 @@ export interface UseLeadsReturn {
   }) => Promise<{ leads: Lead[]; total: number; page: number; limit: number; }>;
 }
 
-export const useLeads = (cliente_id?: string): UseLeadsReturn => {
+export const useLeads = (cliente_id?: string, vendedor_id?: string): UseLeadsReturn => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<LeadsStats | null>(null);
   const [totalFromApi, setTotalFromApi] = useState<number>(0);
@@ -60,6 +60,11 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
     // Prioridade: 1. selectedClienteId do contexto, 2. cliente_id passado como prop, 3. getClienteId
     return selectedClienteId || getClienteId(cliente_id);
   }, [cliente_id, selectedClienteId]);
+
+  // Get current vendedor_id
+  const currentVendedorId = useCallback(() => {
+    return vendedor_id;
+  }, [vendedor_id]);
 
 
 
@@ -130,13 +135,14 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
   // Função para buscar leads da API
   const fetchLeads = useCallback(async () => {
     if (!isClient) return;
-    
+
     try {
       setLoading(true);
       setError(null);
 
       const clienteId = currentClienteId();
-      const response = await leadsApi.getLeads(clienteId);
+      const vendedorId = currentVendedorId();
+      const response = await leadsApi.getLeads(clienteId, vendedorId);
       if (response.success && response.data) {
         setLeads(response.data);
         setTotalFromApi(response.total || response.data.length);
@@ -151,7 +157,7 @@ export const useLeads = (cliente_id?: string): UseLeadsReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isClient, currentClienteId]);
+  }, [isClient, currentClienteId, currentVendedorId]);
 
 
 

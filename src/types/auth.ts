@@ -1,4 +1,25 @@
-export type UserRole = 'super_admin' | 'admin' | 'member' | 'viewer'
+export type UserRole =
+  | 'super_admin'
+  | 'admin'
+  | 'manager'
+  | 'salesperson'
+  | 'member'
+  | 'viewer'
+
+export type Permission =
+  | 'leads:view_all'
+  | 'leads:view_assigned'
+  | 'leads:create'
+  | 'leads:edit'
+  | 'leads:delete'
+  | 'leads:assign'
+  | 'leads:transfer'
+  | 'reports:view'
+  | 'reports:export'
+  | 'settings:view'
+  | 'settings:manage'
+  | 'users:view'
+  | 'users:manage'
 
 export interface Profile {
   id: string

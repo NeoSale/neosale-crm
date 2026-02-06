@@ -16,6 +16,7 @@ import {
   LinkIcon,
   PresentationChartBarIcon,
   DocumentChartBarIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { APP_VERSION } from '../utils/app-version';
 import ThemeToggle from './ThemeToggle';
@@ -23,6 +24,7 @@ import { clientesApi, Cliente } from '../services/clientesApi';
 import { BookOpenIcon, Bot, CalendarIcon, DatabaseIcon, LogOut, UserCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCliente } from '../contexts/ClienteContext';
+import { usePermissions } from '../hooks/usePermissions';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
@@ -36,6 +38,7 @@ interface MenuItem {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   current?: boolean;
   children?: MenuItem[];
+  minRole?: 'super_admin' | 'admin' | 'manager' | 'salesperson' | 'member' | 'viewer';
 }
 
 const navigation: MenuItem[] = [
@@ -84,11 +87,20 @@ const navigation: MenuItem[] = [
   //   ]
   // },
   {
+    name: 'Relatórios',
+    icon: ChartBarIcon,
+    minRole: 'manager',
+    children: [
+      { name: 'Distribuição', href: '/relatorios/distribuicao', icon: UserGroupIcon, minRole: 'manager' },
+    ]
+  },
+  {
     name: 'Configurações',
     icon: CogIcon,
     children: [
       { name: 'Perfil', href: '/configuracoes/perfil', icon: UsersIcon },
       { name: 'Negócio', href: '/configuracoes/negocio', icon: CogIcon },
+      { name: 'Notificações', href: '/configuracoes/notificacoes', icon: BellIcon, minRole: 'admin' },
       { name: 'Membros', href: '/members', icon: UsersIcon },
     ]
   },
@@ -115,8 +127,22 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
   const [isInChat, setIsInChat] = useState(false);
   const { user, profile, signOut } = useAuth();
   const { selectedClienteId, setSelectedClienteId } = useCliente();
+  const { isAtLeast } = usePermissions();
   const router = useRouter();
   const supabase = createClient();
+
+  // Filter navigation items based on user permissions
+  const filterMenuByRole = (items: MenuItem[]): MenuItem[] => {
+    return items
+      .filter(item => !item.minRole || isAtLeast(item.minRole))
+      .map(item => ({
+        ...item,
+        children: item.children ? filterMenuByRole(item.children) : undefined
+      }))
+      .filter(item => !item.children || item.children.length > 0);
+  };
+
+  const filteredNavigation = filterMenuByRole(navigation);
   
   // Escutar mudanças de estado do chat
   useEffect(() => {
@@ -233,7 +259,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
   // Automaticamente expandir o menu que contém a página atual
   useEffect(() => {
-    const menuWithActivePage = navigation.find(item =>
+    const menuWithActivePage = filteredNavigation.find(item =>
       item.children?.some(child => pathname === child.href)
     );
 
@@ -315,7 +341,7 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 px-2 py-4 space-y-1">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
             const hasActiveChild = item.children?.some(child =>
@@ -565,10 +591,13 @@ function AdminLayoutContent({ children }: AdminLayoutProps) {
                                     pathname.startsWith('/followup') ? 'Follow Up' :
                                       pathname === '/integracoes/whatsapp' ? 'WhatsApp' :
                                         pathname.startsWith('/integracoes') ? 'Integrações' :
-                                          pathname === '/reports' ? 'Relatórios' :
-                                            pathname === '/documents' ? 'Documentos' :
-                                              pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
-                                                pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
+                                          pathname === '/relatorios/distribuicao' ? 'Relatório de Distribuição' :
+                                            pathname.startsWith('/relatorios') ? 'Relatórios' :
+                                              pathname === '/reports' ? 'Relatórios' :
+                                                pathname === '/documents' ? 'Documentos' :
+                                                  pathname === '/configuracoes/notificacoes' ? 'Configurações - Notificações' :
+                                                    pathname === '/configuracoes/negocio' ? 'Configurações - Negócio' :
+                                                      pathname === '/configuracoes' ? 'Configurações' : 'Dashboard'}
               </h2>
               
               {/* Combobox de clientes - apenas para super_admin */}
