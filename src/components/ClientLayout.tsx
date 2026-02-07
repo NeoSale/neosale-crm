@@ -7,7 +7,7 @@ import AdminLayout from "./AdminLayout";
 import VersionLoggerComponent from "./VersionLogger";
 import ApiConfigChecker from "./ApiConfigChecker";
 import { ThemeProvider } from "../contexts/ThemeContext";
-import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { AuthProvider, useAuth } from "@neosale/auth";
 import { ClienteProvider } from "../contexts/ClienteContext";
 
 interface ClientLayoutProps {

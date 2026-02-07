@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@neosale/auth'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import { UserCircle, Mail, User, Shield, Save, Loader2 } from 'lucide-react'

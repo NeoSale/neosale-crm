@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@neosale/auth'
 import { Profile, UserRole } from '@/types/auth'
 import toast from 'react-hot-toast'
 import {

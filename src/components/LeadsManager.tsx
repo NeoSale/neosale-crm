@@ -11,7 +11,7 @@ import { useLeads, ImportError } from '../hooks/useLeads';
 import { Lead, leadsApi } from '../services/leadsApi';
 import { getClienteId } from '../utils/cliente-utils';
 import { usePermissions } from '../hooks/usePermissions';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@neosale/auth';
 import { formatPhone, removePhonePrefix, formatPhoneDisplay } from '../utils/phone-utils';
 import { validateCNPJForForm, applyCNPJMask, validateCPFForForm, applyCPFMask } from '../utils/document-validation';
 import { formatDateTime } from '../utils/date-utils';

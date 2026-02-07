@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@neosale/auth'
 import { useCliente } from '@/contexts/ClienteContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useRequireAuth } from '@/hooks/useRequireAuth'

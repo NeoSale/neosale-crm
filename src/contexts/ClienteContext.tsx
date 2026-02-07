@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
-import { useAuth } from './AuthContext'
+import { useAuth } from '@neosale/auth'
 
 interface ClienteContextType {
   selectedClienteId: string | null

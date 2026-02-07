@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@neosale/auth'
 import { UserRole, Permission } from '@/types/auth'
 
 /**

@@ -67,23 +67,15 @@ export interface ApiResponse<T = any> {
     total?: number;
 }
 
-// Validar e obter URL da API de forma segura
-let API_BASE_URL: string;
-try {
-    API_BASE_URL = getValidatedApiUrl();
-} catch (error) {
-    console.error('Erro na configuração da API de Leads:', error);
-    // Em caso de erro, usar uma URL que causará erro explícito
-    API_BASE_URL = '';
-}
-
 class EvolutionApiV2Service {
     private async makeRequest<T>(
         endpoint: string,
         options: RequestInit = {}
     ): Promise<ApiResponse<T>> {
         try {
-            const url = `${API_BASE_URL}${endpoint}`;
+            // Obter URL em tempo de execução (não no momento da importação)
+            const apiBaseUrl = getValidatedApiUrl();
+            const url = `${apiBaseUrl}${endpoint}`;
             const cliente_id = getCurrentClienteId();
 
             const headers: HeadersInit = {

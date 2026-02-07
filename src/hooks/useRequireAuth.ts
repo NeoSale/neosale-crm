@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@neosale/auth'
 import { UserRole } from '@/types/auth'
 
 export function useRequireAuth(requiredRole?: UserRole) {
