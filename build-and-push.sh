@@ -338,24 +338,82 @@ if [ $? -eq 0 ]; then
     # Deploy automático no EasyPanel via Deployment Trigger
     echo -e "${YELLOW}🚀 Iniciando deploy automático no EasyPanel...${NC}"
 
-    # URL do deployment trigger do EasyPanel
+    # Configurações do deploy
     EASYPANEL_DEPLOY_TRIGGER="http://159.203.110.18:3000/api/deploy/99e857e21b01c9dbc187c5dfcbd4cb4497d1434f8ad45bfb"
+    APP_HEALTH_URL="https://crm-hml.neosaleai.com.br/login"
+    MAX_RETRIES=3
+    WAIT_TIME=60  # segundos para aguardar o deploy
+    HEALTH_CHECK_RETRIES=5
+    HEALTH_CHECK_INTERVAL=10  # segundos entre cada tentativa de health check
 
-    echo -e "${YELLOW}📡 Disparando deploy da versão $VERSION no EasyPanel...${NC}"
+    # Função para disparar deploy
+    trigger_deploy() {
+        echo -e "${YELLOW}📡 Disparando deploy no EasyPanel...${NC}"
+        DEPLOY_RESPONSE=$(curl -s -X POST "$EASYPANEL_DEPLOY_TRIGGER" 2>&1)
+        return $?
+    }
 
-    # Fazer requisição POST para o deployment trigger
-    DEPLOY_RESPONSE=$(curl -s -X POST "$EASYPANEL_DEPLOY_TRIGGER" 2>&1)
-    DEPLOY_EXIT_CODE=$?
+    # Função para verificar se a aplicação está no ar
+    check_health() {
+        local attempt=1
+        while [ $attempt -le $HEALTH_CHECK_RETRIES ]; do
+            echo -e "${YELLOW}🔍 Verificando saúde da aplicação (tentativa $attempt/$HEALTH_CHECK_RETRIES)...${NC}"
 
-    if [ $DEPLOY_EXIT_CODE -eq 0 ]; then
-        echo -e "${GREEN}✅ Deploy disparado com sucesso no EasyPanel!${NC}"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_HEALTH_URL" 2>/dev/null)
+
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "307" ]; then
+                echo -e "${GREEN}✅ Aplicação está respondendo (HTTP $HTTP_CODE)${NC}"
+                return 0
+            fi
+
+            echo -e "${YELLOW}⏳ Aplicação não respondeu (HTTP $HTTP_CODE). Aguardando ${HEALTH_CHECK_INTERVAL}s...${NC}"
+            sleep $HEALTH_CHECK_INTERVAL
+            attempt=$((attempt + 1))
+        done
+
+        echo -e "${RED}❌ Aplicação não está respondendo após $HEALTH_CHECK_RETRIES tentativas${NC}"
+        return 1
+    }
+
+    # Loop de deploy com retry
+    deploy_attempt=1
+    deploy_success=false
+
+    while [ $deploy_attempt -le $MAX_RETRIES ]; do
+        echo -e "${BLUE}━━━ Deploy Attempt $deploy_attempt/$MAX_RETRIES ━━━${NC}"
+
+        # Disparar deploy
+        trigger_deploy
+
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅ Deploy disparado com sucesso!${NC}"
+            echo -e "${YELLOW}⏳ Aguardando ${WAIT_TIME}s para o deploy completar...${NC}"
+            sleep $WAIT_TIME
+
+            # Verificar saúde da aplicação
+            if check_health; then
+                deploy_success=true
+                break
+            else
+                echo -e "${YELLOW}⚠️  Aplicação não está saudável. ${NC}"
+                if [ $deploy_attempt -lt $MAX_RETRIES ]; then
+                    echo -e "${YELLOW}🔄 Tentando redeploy...${NC}"
+                fi
+            fi
+        else
+            echo -e "${RED}❌ Erro ao disparar deploy${NC}"
+        fi
+
+        deploy_attempt=$((deploy_attempt + 1))
+    done
+
+    if [ "$deploy_success" = true ]; then
+        echo -e "${GREEN}🎉 Deploy concluído e aplicação está no ar!${NC}"
         echo -e "${GREEN}📦 Versão: $VERSION${NC}"
-        echo -e "${GREEN}🔄 O EasyPanel irá puxar a imagem: $DOCKER_USERNAME/$IMAGE_NAME:latest${NC}"
-        echo -e "${YELLOW}💡 Aguarde alguns minutos para o deploy completar${NC}"
+        echo -e "${GREEN}🌐 URL: $APP_HEALTH_URL${NC}"
     else
-        echo -e "${YELLOW}⚠️  Não foi possível disparar deploy automático no EasyPanel${NC}"
-        echo -e "${YELLOW}📋 Resposta: $DEPLOY_RESPONSE${NC}"
-        echo -e "${YELLOW}💡 Faça o deploy manual no painel do EasyPanel${NC}"
+        echo -e "${RED}❌ Deploy falhou após $MAX_RETRIES tentativas${NC}"
+        echo -e "${YELLOW}💡 Verifique o EasyPanel manualmente: http://159.203.110.18:3000${NC}"
     fi
 else
     echo -e "${RED}❌ Erro ao enviar tag latest${NC}"
