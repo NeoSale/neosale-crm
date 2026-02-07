@@ -1,39 +1,51 @@
 /**
  * Utilitário para configuração e validação da API
+ * Resiliente durante build-time (Next.js static generation)
  */
 
 import { getApiUrl } from "./runtime-config";
 
+// Placeholder URL for build-time (Next.js static generation)
+const BUILD_TIME_PLACEHOLDER = 'https://placeholder.api.com';
+
+/**
+ * Checks if we're in a build/SSR context (not browser)
+ */
+function isBuildTime(): boolean {
+  return typeof window === 'undefined';
+}
+
 /**
  * Obtém e valida a URL da API
+ * Durante build-time retorna placeholder para não quebrar a geração estática
  * @returns URL válida da API
- * @throws Error se a URL não estiver configurada adequadamente
  */
 export function getValidatedApiUrl(): string {
   const apiUrl = getApiUrl();
-  
-  // Verificar se a variável está definida
-  if (!apiUrl) {
-    const errorMsg = '❌ NEXT_PUBLIC_API_URL não está configurada. Verifique suas variáveis de ambiente.';
-    console.error(errorMsg);
-    throw new Error(errorMsg);
+
+  // During build-time, return placeholder to not break static generation
+  if (isBuildTime() && !apiUrl) {
+    return BUILD_TIME_PLACEHOLDER;
   }
-  
-  // Verificar se não é uma string vazia
-  if (apiUrl.trim() === '') {
-    const errorMsg = '❌ NEXT_PUBLIC_API_URL está vazia. Configure uma URL válida.';
-    console.error(errorMsg);
-    throw new Error(errorMsg);
+
+  // At runtime (browser), validate properly
+  if (!apiUrl || apiUrl.trim() === '') {
+    // In browser, this is a real error
+    if (!isBuildTime()) {
+      console.error('❌ NEXT_PUBLIC_API_URL não está configurada. Verifique suas variáveis de ambiente.');
+    }
+    return BUILD_TIME_PLACEHOLDER;
   }
-  
-  // Verificar se é uma URL válida
+
+  // Validate URL format
   try {
     new URL(apiUrl);
     return apiUrl;
-  } catch (error) {
-    const errorMsg = `❌ NEXT_PUBLIC_API_URL inválida: ${apiUrl}. Configure uma URL válida (ex: https://api.exemplo.com)`;
-    console.error(errorMsg);
-    throw new Error(errorMsg);
+  } catch {
+    if (!isBuildTime()) {
+      console.error(`❌ NEXT_PUBLIC_API_URL inválida: ${apiUrl}`);
+    }
+    return BUILD_TIME_PLACEHOLDER;
   }
 }
 

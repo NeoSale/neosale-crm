@@ -1,14 +1,22 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Placeholder values for build-time
+const BUILD_PLACEHOLDER_URL = 'https://placeholder.supabase.co'
+const BUILD_PLACEHOLDER_KEY = 'placeholder-key'
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
 
+  // Get URL and key with fallback to placeholders during build
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || BUILD_PLACEHOLDER_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || BUILD_PLACEHOLDER_KEY
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
