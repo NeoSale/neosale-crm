@@ -270,50 +270,18 @@ fi
 
 # Build da imagem
 echo -e "${YELLOW}📦 Fazendo build da imagem...${NC}"
-
-# Carregar variáveis do .env.production se existir
-if [ -f ".env.production" ]; then
-    echo -e "${YELLOW}📋 Carregando variáveis de .env.production...${NC}"
-    export $(grep -v '^#' .env.production | xargs)
-fi
-
-# Verificar se as variáveis necessárias estão definidas
-if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ]; then
-    echo -e "${RED}❌ NEXT_PUBLIC_SUPABASE_URL não está definida!${NC}"
-    echo -e "${YELLOW}💡 Defina no .env.production ou como variável de ambiente${NC}"
-    exit 1
-fi
-
-if [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
-    echo -e "${RED}❌ NEXT_PUBLIC_SUPABASE_ANON_KEY não está definida!${NC}"
-    echo -e "${YELLOW}💡 Defina no .env.production ou como variável de ambiente${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}✅ Variáveis de ambiente carregadas${NC}"
+echo -e "${YELLOW}💡 Variáveis NEXT_PUBLIC_* serão injetadas em runtime via EasyPanel${NC}"
 
 if [ "$EASYPANEL_SUPPORT" = "true" ]; then
-    echo -e "${YELLOW}📦 Build otimizado para EasyPanel${NC}"
+    echo -e "${YELLOW}📦 Build otimizado para EasyPanel (runtime config)${NC}"
     docker build \
         --platform linux/amd64 \
         --cache-from $IMAGE_NAME:latest \
         --build-arg BUILDKIT_INLINE_CACHE=1 \
-        --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}" \
-        --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}" \
-        --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
-        --build-arg NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-}" \
-        --build-arg NODE_ENV="${NODE_ENV}" \
-        --build-arg NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}" \
         -t $IMAGE_NAME:$VERSION \
         .
 else
     docker build \
-        --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-}" \
-        --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}" \
-        --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
-        --build-arg NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-}" \
-        --build-arg NODE_ENV="${NODE_ENV}" \
-        --build-arg NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}" \
         -t $IMAGE_NAME:$VERSION \
         .
 fi
