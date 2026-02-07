@@ -5,6 +5,7 @@ declare global {
   interface Window {
     __RUNTIME_CONFIG__?: {
       NEXT_PUBLIC_API_URL?: string;
+      NEXT_PUBLIC_APP_URL?: string;
       NEXT_PUBLIC_SUPABASE_URL?: string;
       NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
     };
@@ -34,6 +35,14 @@ function getConfig(key: keyof NonNullable<Window['__RUNTIME_CONFIG__']>, default
  */
 export function getApiUrl(): string {
   return getConfig('NEXT_PUBLIC_API_URL', '');
+}
+
+/**
+ * Gets App URL from runtime or environment config
+ * @returns App URL
+ */
+export function getAppUrl(): string {
+  return getConfig('NEXT_PUBLIC_APP_URL', '');
 }
 
 /**

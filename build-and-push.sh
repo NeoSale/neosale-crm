@@ -367,40 +367,27 @@ if [ $? -eq 0 ]; then
         echo -e "${YELLOW}⚠️  Erro ao criar tag git ou tag já existe${NC}"
     fi
     
-    # Deploy automático no EasyPanel
+    # Deploy automático no EasyPanel via Deployment Trigger
     echo -e "${YELLOW}🚀 Iniciando deploy automático no EasyPanel...${NC}"
-    
-    # Configurações do EasyPanel (ajuste conforme necessário)
-    EASYPANEL_URL="https://evolution-api-neosale-crm.mrzt3w.easypanel.host"
-    EASYPANEL_PROJECT="neosale-crm"
-    EASYPANEL_TOKEN="seu_token_aqui"  # Token fixo no código
-    
-    # Verificar se o token está definido
-    if [ -z "$EASYPANEL_TOKEN" ] || [ "$EASYPANEL_TOKEN" = "seu_token_aqui" ]; then
-        echo -e "${YELLOW}⚠️  EASYPANEL_TOKEN não configurado. Pulando deploy automático.${NC}"
-        echo -e "${YELLOW}💡 Para habilitar deploy automático, configure o token no arquivo build-and-push.sh${NC}"
+
+    # URL do deployment trigger do EasyPanel
+    EASYPANEL_DEPLOY_TRIGGER="http://159.203.110.18:3000/api/deploy/99e857e21b01c9dbc187c5dfcbd4cb4497d1434f8ad45bfb"
+
+    echo -e "${YELLOW}📡 Disparando deploy da versão $VERSION no EasyPanel...${NC}"
+
+    # Fazer requisição POST para o deployment trigger
+    DEPLOY_RESPONSE=$(curl -s -X POST "$EASYPANEL_DEPLOY_TRIGGER" 2>&1)
+    DEPLOY_EXIT_CODE=$?
+
+    if [ $DEPLOY_EXIT_CODE -eq 0 ]; then
+        echo -e "${GREEN}✅ Deploy disparado com sucesso no EasyPanel!${NC}"
+        echo -e "${GREEN}📦 Versão: $VERSION${NC}"
+        echo -e "${GREEN}🔄 O EasyPanel irá puxar a imagem: $DOCKER_USERNAME/$IMAGE_NAME:latest${NC}"
+        echo -e "${YELLOW}💡 Aguarde alguns minutos para o deploy completar${NC}"
     else
-        # Fazer deploy via API do EasyPanel
-        echo -e "${YELLOW}📡 Fazendo deploy da versão $VERSION no EasyPanel...${NC}"
-        
-        # Comando curl para trigger do deploy (ajuste conforme a API do EasyPanel)
-        DEPLOY_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer $EASYPANEL_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{
-                \"image\": \"$DOCKER_USERNAME/$IMAGE_NAME:$VERSION\",
-                \"project\": \"$EASYPANEL_PROJECT\"
-            }" \
-            "$EASYPANEL_URL/api/deploy" 2>/dev/null)
-        
-        if [ $? -eq 0 ]; then
-            echo -e "${GREEN}✅ Deploy iniciado com sucesso no EasyPanel!${NC}"
-            echo -e "${GREEN}🌐 URL: $EASYPANEL_URL${NC}"
-            echo -e "${GREEN}📦 Versão deployada: $VERSION${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Não foi possível fazer deploy automático no EasyPanel${NC}"
-            echo -e "${YELLOW}💡 Faça o deploy manual em: $EASYPANEL_URL${NC}"
-        fi
+        echo -e "${YELLOW}⚠️  Não foi possível disparar deploy automático no EasyPanel${NC}"
+        echo -e "${YELLOW}📋 Resposta: $DEPLOY_RESPONSE${NC}"
+        echo -e "${YELLOW}💡 Faça o deploy manual no painel do EasyPanel${NC}"
     fi
 else
     echo -e "${RED}❌ Erro ao enviar tag latest${NC}"
