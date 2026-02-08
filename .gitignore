@@ -45,3 +45,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# docker build temp packages
+neosale-auth-pkg/
+neosale-ui-pkg/
+neosale-ui.tgz
+neosale-auth.tgz

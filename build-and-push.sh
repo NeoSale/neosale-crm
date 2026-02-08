@@ -268,6 +268,23 @@ else
     echo -e "${GREEN}✅ Docker já está rodando${NC}"
 fi
 
+# Preparar pacotes locais do monorepo para o Docker (via npm pack)
+echo -e "${YELLOW}📦 Preparando pacotes locais (@neosale/auth, @neosale/ui)...${NC}"
+
+rm -f neosale-ui.tgz neosale-auth.tgz
+
+# Pack @neosale/ui
+echo -e "${YELLOW}  → Empacotando @neosale/ui...${NC}"
+(cd ../neosale-ui && npm pack --pack-destination ../neosale-crm)
+mv neosale-ui-*.tgz neosale-ui.tgz
+
+# Build + Pack @neosale/auth
+echo -e "${YELLOW}  → Buildando e empacotando @neosale/auth...${NC}"
+(cd ../neosale-auth && npm run build && npm pack --pack-destination ../neosale-crm)
+mv neosale-auth-*.tgz neosale-auth.tgz
+
+echo -e "${GREEN}✅ Pacotes locais preparados${NC}"
+
 # Build da imagem
 echo -e "${YELLOW}📦 Fazendo build da imagem...${NC}"
 echo -e "${YELLOW}💡 Variáveis NEXT_PUBLIC_* serão injetadas em runtime via EasyPanel${NC}"
@@ -275,8 +292,8 @@ echo -e "${YELLOW}💡 Variáveis NEXT_PUBLIC_* serão injetadas em runtime via 
 if [ "$EASYPANEL_SUPPORT" = "true" ]; then
     echo -e "${YELLOW}📦 Build otimizado para EasyPanel (runtime config)${NC}"
     docker build \
+        --no-cache \
         --platform linux/amd64 \
-        --cache-from $IMAGE_NAME:latest \
         --build-arg BUILDKIT_INLINE_CACHE=1 \
         -t $IMAGE_NAME:$VERSION \
         .
@@ -286,7 +303,12 @@ else
         .
 fi
 
-if [ $? -eq 0 ]; then
+BUILD_EXIT=$?
+
+# Limpar pacotes temporários
+rm -f neosale-ui.tgz neosale-auth.tgz
+
+if [ $BUILD_EXIT -eq 0 ]; then
     echo -e "${GREEN}✅ Build concluído com sucesso!${NC}"
 else
     echo -e "${RED}❌ Erro no build da imagem${NC}"
