@@ -1,7 +1,7 @@
 /**
  * Versão da aplicação extraída do package.json
  * Este arquivo é atualizado automaticamente durante o build
- * Última atualização: 2026-02-07T15:20:49.943Z
+ * Última atualização: 2026-02-08T01:10:17.513Z
  */
 export const APP_VERSION = '1.19.8';
 export const APP_NAME = 'NeoCRM';

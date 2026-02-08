@@ -8,12 +8,11 @@ import { VersionLogger } from '../utils/version';
  */
 export default function VersionLoggerComponent() {
   useEffect(() => {
-    // Exibir versão no console do navegador
     VersionLogger.logClientVersion();
-    
-    // Adicionar informações à janela global para debug
+
     if (typeof window !== 'undefined') {
       (window as any).__APP_VERSION__ = VersionLogger.getAppInfo();
+      localStorage.setItem('app_version', VersionLogger.getVersion());
     }
   }, []);
 

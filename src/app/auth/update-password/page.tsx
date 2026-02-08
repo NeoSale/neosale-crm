@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 import { Lock } from 'lucide-react'
@@ -10,7 +9,6 @@ export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -36,7 +34,9 @@ export default function UpdatePasswordPage() {
       if (error) throw error
 
       toast.success('Senha atualizada com sucesso!')
-      router.push('/login')
+      const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:5000'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      window.location.href = `${authUrl}/login?redirect_url=${encodeURIComponent(appUrl)}`
     } catch (error: any) {
       toast.error(error.message || 'Erro ao atualizar senha')
     } finally {

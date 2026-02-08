@@ -10,7 +10,6 @@ import { ThemeToggle } from '@neosale/ui'
 import { AccountMenuSidebar } from '@neosale/auth'
 import { usePermissions } from '@/hooks/usePermissions'
 import { clientesApi, Cliente } from '@/services/clientesApi'
-import { APP_VERSION } from '@/utils/app-version'
 import {
   HomeIcon,
   UsersIcon,
@@ -239,10 +238,7 @@ export default function Sidebar() {
           <img src="/icone-azul.png" alt="NeoCRM Logo" className="w-8 h-8" />
         </div>
         {!collapsed && (
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold text-primary">NeoCRM</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">v{APP_VERSION}</p>
-          </div>
+          <h1 className="text-lg font-bold text-primary">NeoCRM</h1>
         )}
       </div>
 

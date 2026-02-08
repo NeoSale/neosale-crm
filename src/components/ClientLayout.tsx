@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import AdminLayout from "./AdminLayout";
@@ -16,14 +16,16 @@ interface ClientLayoutProps {
 
 function ProtectedContent({ children, isAuthPage }: { children: React.ReactNode; isAuthPage: boolean }) {
   const { user, loading } = useAuth();
-  const router = useRouter();
 
-  // Redireciona para login se não autenticado (fallback do middleware)
+  // Redireciona para auth externo se não autenticado (fallback do middleware)
   useEffect(() => {
     if (!isAuthPage && !loading && !user) {
-      router.replace('/login');
+      const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:5000'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      const redirectUrl = encodeURIComponent(appUrl)
+      window.location.href = `${authUrl}/login?redirect_url=${redirectUrl}`
     }
-  }, [user, loading, isAuthPage, router]);
+  }, [user, loading, isAuthPage]);
 
   // Mostra loading inicial em páginas protegidas
   if (!isAuthPage && loading) {
@@ -37,7 +39,7 @@ function ProtectedContent({ children, isAuthPage }: { children: React.ReactNode;
     );
   }
 
-  // Se não autenticado após loading, não renderiza (aguarda redirecionamento)
+  // Se não autenticado após loading, não renderiza (aguarda redirecionamento externo)
   if (!isAuthPage && !user) {
     return null;
   }
@@ -61,10 +63,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   const pathname = usePathname();
   
   // Páginas que não devem ter o AdminLayout (menu lateral)
-  const isAuthPage = pathname?.startsWith('/login') || 
-                     pathname?.startsWith('/signup') || 
-                     pathname?.startsWith('/reset-password') ||
-                     pathname?.startsWith('/auth/');
+  const isAuthPage = pathname?.startsWith('/auth/');
 
   return (
     <ThemeProvider>

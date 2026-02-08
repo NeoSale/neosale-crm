@@ -1,34 +1,20 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@neosale/auth'
 import { UserRole } from '@/types/auth'
 
 export function useRequireAuth(requiredRole?: UserRole) {
   const { user, profile, loading } = useAuth()
-  const router = useRouter()
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login')
+      const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:5000'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      const redirectUrl = encodeURIComponent(appUrl)
+      window.location.href = `${authUrl}/login?redirect_url=${redirectUrl}`
     }
-
-    if (!loading && user && requiredRole && profile) {
-      const roleHierarchy: Record<UserRole, number> = {
-        super_admin: 6,
-        admin: 5,
-        manager: 4,
-        salesperson: 3,
-        member: 2,
-        viewer: 1,
-      }
-
-      if (roleHierarchy[profile.role] < roleHierarchy[requiredRole]) {
-        router.push('/unauthorized')
-      }
-    }
-  }, [user, profile, loading, requiredRole, router])
+  }, [user, loading])
 
   return { user, profile, loading }
 }

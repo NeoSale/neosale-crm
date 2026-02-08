@@ -24,11 +24,8 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
 
     const saved = localStorage.getItem('selected_cliente_id')
     if (saved) {
-      console.log('📦 ClienteContext: Carregando cliente do localStorage:', saved)
       setSelectedClienteIdState(saved)
     } else if (profile?.cliente_id) {
-      // Fallback apenas se não houver valor salvo
-      console.log('📦 ClienteContext: Usando cliente do profile (fallback):', profile.cliente_id)
       setSelectedClienteIdState(profile.cliente_id)
       localStorage.setItem('selected_cliente_id', profile.cliente_id)
     }
@@ -36,10 +33,6 @@ export function ClienteProvider({ children }: { children: React.ReactNode }) {
 
   // Função para alterar o cliente selecionado
   const setSelectedClienteId = useCallback((clienteId: string | null) => {
-    // Log com stack trace para identificar quem está chamando
-    console.log('🔄 setSelectedClienteId chamado com:', clienteId)
-    console.trace('Stack trace:')
-
     setSelectedClienteIdState(clienteId)
 
     if (typeof window !== 'undefined') {
