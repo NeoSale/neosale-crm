@@ -285,23 +285,23 @@ mv neosale-auth-*.tgz neosale-auth.tgz
 
 echo -e "${GREEN}✅ Pacotes locais preparados${NC}"
 
+# Carregar variáveis de ambiente para o build
+if [ -f ".env.local" ]; then
+    echo -e "${YELLOW}📋 Carregando variáveis de .env.local...${NC}"
+    export $(grep -v '^#' .env.local | grep -v '^$' | xargs)
+fi
+
 # Build da imagem
 echo -e "${YELLOW}📦 Fazendo build da imagem...${NC}"
-echo -e "${YELLOW}💡 Variáveis NEXT_PUBLIC_* serão injetadas em runtime via EasyPanel${NC}"
+echo -e "${YELLOW}💡 Variáveis NEXT_PUBLIC_* reais serão injetadas em runtime via EasyPanel${NC}"
 
-if [ "$EASYPANEL_SUPPORT" = "true" ]; then
-    echo -e "${YELLOW}📦 Build otimizado para EasyPanel (runtime config)${NC}"
-    docker build \
-        --no-cache \
-        --platform linux/amd64 \
-        --build-arg BUILDKIT_INLINE_CACHE=1 \
-        -t $IMAGE_NAME:$VERSION \
-        .
-else
-    docker build \
-        -t $IMAGE_NAME:$VERSION \
-        .
-fi
+docker build \
+    --no-cache \
+    --platform linux/amd64 \
+    --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL}" \
+    --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+    -t $IMAGE_NAME:$VERSION \
+    .
 
 BUILD_EXIT=$?
 
