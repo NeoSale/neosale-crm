@@ -10,6 +10,12 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_APP_URL
 
 COPY package.json package-lock.json* ./
+
+# Substituir dependências locais por versões (necessário para build standalone fora do monorepo)
+RUN sed -i 's|"@neosale/auth": "file:../neosale-auth"|"@neosale/auth": "^2.1.0"|g' package.json && \
+    sed -i 's|"@neosale/core": "file:../neosale-core"|"@neosale/core": "^1.0.0"|g' package.json && \
+    sed -i 's|"@neosale/ui": "file:../neosale-ui"|"@neosale/ui": "^1.0.0"|g' package.json
+
 RUN npm install
 
 COPY . .
